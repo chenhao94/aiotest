@@ -53,7 +53,7 @@ namespace tai
     };
 
     template<size_t n, size_t... rest>
-    class BTreeNode<n, rest...> : public BTreeNodeBase
+    class BTreeNode : public BTreeNodeBase
     {
         static_assert(n <= sizeof(size_t), "B-tree node cannot be larger than the size of address space.");
         static_assert(n + ... + rest <= sizeof(size_t), "B-tree node cannot be larger than the size of address space.");
