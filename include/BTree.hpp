@@ -56,7 +56,7 @@ namespace tai
     class BTreeNode : public BTreeNodeBase
     {
         static_assert(n <= sizeof(size_t), "B-tree node cannot be larger than the size of address space.");
-        static_assert(n + ... + rest <= sizeof(size_t), "B-tree node cannot be larger than the size of address space.");
+        static_assert((n + ... + rest) <= sizeof(size_t), "B-tree node cannot be larger than the size of address space.");
 
         template<typename Fn>
         void rw(Fn op, const size_t& begin, const size_t& end, char* const& ptr)
@@ -93,7 +93,7 @@ namespace tai
         using Child = BTreeNode<rest...>;
 
         static constexpr auto N = 1 << n;
-        static constexpr auto m = rest + ...;
+        static constexpr auto m = (rest + ...);
         static constexpr auto M = 1 << m;
         static constexpr auto nm = n + m;
         static constexpr auto NM = N << m;
@@ -248,7 +248,7 @@ namespace tai
     template<size_t... n>
     class BTree : public BTreeNode<n...>
     {
-        static_assert(n + ... == sizeof(size_t), "B-tree must cover the entire address space.");
+        static_assert((n + ...) == sizeof(size_t), "B-tree must cover the entire address space.");
 
     public:
         static constexpr auto level = sizeof...(n);
