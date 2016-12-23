@@ -6,14 +6,15 @@
 #include <vector>
 #include <functional>
 
+#include "TLQ.hpp"
+
 namespace tai
 {
     class BTreeConfig
     {
     public:
         std::fstream file;
-        std::vector<std::function<void()>>& readyQueue;
-        std::vector<std::function<void()>>& waitQueue;
+        TLQ queue;
     };
 
     class BTreeNodeBase
@@ -49,7 +50,7 @@ namespace tai
         bool dirty = false;
         char* data = nullptr;
 
-        std::shared_ptr<BTreeConfig> config;
+        std::shared_ptr<BTreeConfig> config = nullptr;
     };
 
     template<size_t n, size_t... rest>
@@ -71,20 +72,20 @@ namespace tai
                 node = new Child(config);
 
             if (range.first == range.second)
-                config->waitQueue.emplace_back([=](){ node->*op(begin, end, ptr); });
+                config->queue([=](){ node->*op(begin, end, ptr); });
             else
             {
-                config->waitQueue.emplace_back([=](){ node->*op(begin, (begin & -M) + M, ptr); });
+                config->queue([=](){ node->*op(begin, (begin & -M) + M, ptr); });
                 auto suffix = ptr + (-begin & M - 1);
                 for (auto i = range.first; ++i != range.second; suffix += M)
                 {
                     if (!(node = child[i]))
                         child[i] = new Child(config);
-                    config->waitQueue.emplace_back([=](){ node->*op((begin & -NM) + (i << m), (begin & -NM) + (i << m) + M, suffix); });
+                    config->queue([=](){ node->*op((begin & -NM) + (i << m), (begin & -NM) + (i << m) + M, suffix); });
                 }
                 if (!(node = child[range.second]))
                     node = new Child(config);
-                config->waitQueue.emplace_back([=](){ node->*op(end - 1 & -M, end, suffix); });
+                config->queue([=](){ node->*op(end - 1 & -M, end, suffix); });
             }
         }
 
