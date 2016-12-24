@@ -30,11 +30,6 @@ namespace tai
             ready->clear();
             ready->shrink_to_fit();
             swap(wait, ready);
-            remain = (ssize_t)ready->size() - 1;
-        }
-
-        void pull()
-        {
             while (lckPending.test_and_set(std::memory_order_acquire));
             if (!pending.empty())
             {
@@ -45,6 +40,7 @@ namespace tai
             }
             else
                 lckPending.clear(std::memory_order_release);
+            remain = (ssize_t)ready->size() - 1;
         }
 
         auto operator ()()
