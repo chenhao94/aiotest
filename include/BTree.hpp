@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <memory>
 #include <fstream>
 #include <algorithm>
@@ -7,14 +8,33 @@
 #include <functional>
 
 #include "TLQ.hpp"
+#include "Worker.hpp"
 
 namespace tai
 {
+    class TLQ;
+    class Worker;
+
     class BTreeConfig
     {
     public:
+        const std::string path = "";
         std::fstream file;
-        TLQ queue;
+
+        BTreeConfig(const std::string &path) : path(path), file(path)
+        {
+        }
+
+        ~BTreeConfig()
+        {
+            if (file)
+                file.close();
+        }
+
+        operator bool()
+        {
+            return file.is_open();
+        }
     };
 
     class BTreeNodeBase
@@ -25,15 +45,15 @@ namespace tai
         virtual void read(const size_t& begin, const size_t& end, char* const& ptr) = 0;
         virtual void write(const size_t& begin, const size_t& end, char* const& ptr) = 0;
 
-        BTreeNodeBase(const std::shared_ptr<BTreeConfig>& config) : config(config)
+        BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf) : conf(conf)
         {
         }
 
-        BTreeNodeBase(const Self& _) : dirty(_.dirty), config(_.config)
+        BTreeNodeBase(const Self& _) : dirty(_.dirty), conf(_.conf)
         {
         }
 
-        BTreeNodeBase(Self&& _) : dirty(_.dirty), data(_.data), config(std::move(_.config))
+        BTreeNodeBase(Self&& _) : dirty(_.dirty), data(_.data), conf(std::move(_.conf))
         {
             _.data = nullptr;
         }
@@ -50,7 +70,7 @@ namespace tai
         bool dirty = false;
         char* data = nullptr;
 
-        std::shared_ptr<BTreeConfig> config = nullptr;
+        std::shared_ptr<BTreeConfig> conf = nullptr;
     };
 
     template<size_t n, size_t... rest>
@@ -69,23 +89,23 @@ namespace tai
 
             auto& node = child[range.first];
             if (!node)
-                node = new Child(config);
+                node = new Child(conf);
 
             if (range.first == range.second)
-                config->queue([=](){ node->*op(begin, end, ptr); });
+                Worker::push([=](){ node->*op(begin, end, ptr); });
             else
             {
-                config->queue([=](){ node->*op(begin, (begin & -M) + M, ptr); });
+                Worker::push([=](){ node->*op(begin, (begin & -M) + M, ptr); });
                 auto suffix = ptr + (-begin & M - 1);
                 for (auto i = range.first; ++i != range.second; suffix += M)
                 {
                     if (!(node = child[i]))
-                        child[i] = new Child(config);
-                    config->queue([=](){ node->*op((begin & -NM) + (i << m), (begin & -NM) + (i << m) + M, suffix); });
+                        child[i] = new Child(conf);
+                    Worker::push([=](){ node->*op((begin & -NM) + (i << m), (begin & -NM) + (i << m) + M, suffix); });
                 }
                 if (!(node = child[range.second]))
-                    node = new Child(config);
-                config->queue([=](){ node->*op(end - 1 & -M, end, suffix); });
+                    node = new Child(conf);
+                Worker::push([=](){ node->*op(end - 1 & -M, end, suffix); });
             }
         }
 
@@ -101,7 +121,7 @@ namespace tai
 
         std::vector<std::shared_ptr<Child>> child;
 
-        BTreeNode(const std::shared_ptr<BTreeConfig>& config) : BTreeNodeBase(config), child(1)
+        BTreeNode(const std::shared_ptr<BTreeConfig>& conf) : BTreeNodeBase(conf), child(1)
         {
         }
 
@@ -124,7 +144,7 @@ namespace tai
         {
             dirty = _.dirty;
             memcpy(data ? data : (data = new char[NM]), _.data, NM);
-            config = _.config;
+            conf = _.conf;
             child.clear();
             child.reserve(_.child.capacity());
             for (auto& i : _.child)
@@ -138,7 +158,7 @@ namespace tai
             delete[] data;
             data = _.data;
             _.data = nullptr;
-            config = std::move(_.config);
+            conf = std::move(_.conf);
             child = std::move(_.child);
             child.clear();
             child.shrink_to_fit();
@@ -150,8 +170,8 @@ namespace tai
                 rw(&Self::read, begin, end, ptr);
             else
             {
-                config->file.seekg(begin);
-                config->file.read(ptr, end - begin);
+                conf->file.seekg(begin);
+                conf->file.read(ptr, end - begin);
             }
         }
 
@@ -183,7 +203,7 @@ namespace tai
 
         static constexpr auto N = 1 << n;
 
-        BTreeNode(const std::shared_ptr<BTreeConfig>& config) : BTreeNodeBase(config)
+        BTreeNode(const std::shared_ptr<BTreeConfig>& conf) : BTreeNodeBase(conf)
         {
         }
 
@@ -200,7 +220,7 @@ namespace tai
         {
             dirty = _.dirty;
             memcpy(data ? data : (data = new char[N]), _.data, N);
-            config = _.config;
+            conf = _.conf;
         }
 
         auto& operator =(Self&& _) override
@@ -210,7 +230,7 @@ namespace tai
             delete[] data;
             data = _.data;
             _.data = nullptr;
-            config = std::move(_.config);
+            conf = std::move(_.conf);
         }
 
         void read(const size_t& begin, const size_t& end, char* const& ptr) override
@@ -219,8 +239,8 @@ namespace tai
                 memcpy(ptr, data + begin, end - begin);
             else
             {
-                config->file.seekg(begin);
-                config->file.read(ptr, end - begin);
+                conf->file.seekg(begin);
+                conf->file.read(ptr, end - begin);
             }
         }
 
@@ -232,13 +252,13 @@ namespace tai
                     data = new char[N];
                 if (begin & N)
                 {
-                    config->file.seekg(begin);
-                    config->file.read(data, begin & N - 1);
+                    conf->file.seekg(begin);
+                    conf->file.read(data, begin & N - 1);
                 }
                 if (end & N)
                 {
-                    config->file.seekg(end);
-                    config->file.read(data + (end & N - 1), -end & N - 1);
+                    conf->file.seekg(end);
+                    conf->file.read(data + (end & N - 1), -end & N - 1);
                 }
             }
             memcpy(data + (begin & N - 1), ptr, end - begin);
@@ -247,13 +267,21 @@ namespace tai
     };
 
     template<size_t... n>
-    class BTree : public BTreeNode<n...>
+    class BTree
     {
         static_assert((n + ...) == sizeof(size_t), "B-tree must cover the entire address space.");
+
+        std::atomic<size_t> count = {0};
+        BTreeConfig conf;
+        BTreeNode<n...> root;
 
     public:
         static constexpr auto level = sizeof...(n);
         static constexpr std::array<size_t, level> bits = {n...};
+
+        explicit BTree(const std::string &path) : conf(path), root(conf)
+        {
+        }
     };
 
     using BTreeDefault = BTree<34, 9, 9, 12>;
