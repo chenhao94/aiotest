@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <atomic>
+#include <thread>
 #include <functional>
 #include <vector>
 
@@ -25,11 +26,7 @@ namespace tai
         swap(wait, ready);
         Task* task = nullptr;
         if (pending.pop(task))
-        {
             ready->emplace_back(*task);
-            delete task;
-            task = nullptr;
-        }
     }
 
     void TLQ::setupReady()

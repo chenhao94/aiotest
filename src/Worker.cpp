@@ -95,13 +95,14 @@ namespace tai
             barrier(Running);
             steal();
             queue.setupDone();
-            barrier(GC);
+            barrier(Unlocking);
             steal();
-            barrier(Flushing);
-            for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > ctrl.lower && ctrl.cache.pop(node); delete node)
-            {
-                node->evict();
-            }
+            barrier(GC);
+            for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > ctrl.lower && ctrl.cache.pop(node);)
+                if (node->valid())
+                    node->evict();
+                else
+                    delete node;
             barrier(Pulling);
         }
     }

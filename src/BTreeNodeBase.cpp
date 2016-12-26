@@ -43,7 +43,27 @@ namespace tai
         }
     }
 
+    bool BTreeNodeBase::valid()
+    {
+        return parent;
+    }
+
     BTreeNodeBase::BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNodeBase* const parent) : conf(conf), offset(offset), parent(parent)
     {
+    }
+
+    size_t BTreeNodeBase::lock()
+    {
+        return lck.load(std::memory_order_relaxed);
+    }
+
+    void BTreeNodeBase::lock(const size_t& num)
+    {
+        lck.fetch_add(num, std::memory_order_relaxed);
+    }
+
+    void BTreeNodeBase::unlock()
+    {
+        Worker::pushDone([this](){ for (auto i = parent; i && i->lck.fetch_sub(1, std::memory_order_relaxed) == 1; i = i->parent); });
     }
 }

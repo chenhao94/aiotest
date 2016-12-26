@@ -33,6 +33,7 @@ namespace tai
         virtual void write(const size_t& begin, const size_t& end, char* const& ptr) = 0;
         virtual void flush() = 0;
         virtual void evict() = 0;
+        bool valid();
 
         BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNodeBase* const parent = nullptr);
         virtual ~BTreeNodeBase() = 0;
@@ -45,5 +46,9 @@ namespace tai
         bool dirty = false;
 
         std::shared_ptr<BTreeConfig> conf = nullptr;
+
+        size_t lock();
+        void lock(const size_t& num);
+        void unlock();
     };
 }

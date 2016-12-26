@@ -9,8 +9,8 @@ namespace tai
         Pulling,
         Ready,
         Running,
+        Unlocking,
         GC,
-        Flushing,
         Sync,
         Idle
     };

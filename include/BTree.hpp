@@ -139,11 +139,14 @@ namespace tai
         void read(const size_t& begin, const size_t& end, char* const& ptr) override
         {
             if (data)
+            {
                 memcpy(ptr, data + (begin & NM - 1), end - begin);
-            else if (lck.load(std::memory_order_relaxed) || end - begin < NM)
+                unlock();
+            }
+            else if (lock() || end - begin < NM)
             {
                 const auto range = getRange(begin, end);
-                lck.fetch_add(range.second - range.begin + 1, std::memory_order_relaxed);
+                lock(range.second - range.begin + 1);
                 if (child.size() < range.second)
                     child.resize(range.second);
 
@@ -167,11 +170,13 @@ namespace tai
             {
                 merge();
                 memcpy(ptr, data, NM);
+                unlock();
             }
             else
             {
                 conf->file.seekg(begin);
                 conf->file.read(ptr, NM);
+                unlock();
             }
         }
 
@@ -188,11 +193,12 @@ namespace tai
                         conf->file.seekp(begin);
                         conf->file.write(ptr, end - begin);
                     }
+                unlock();
             }
-            else if (lck.load(std::memory_order_relaxed) || end - begin < NM)
+            else if (lock() || end - begin < NM)
             {
                 const auto range = getRange(begin, end);
-                lck.fetch_add(range.second - range.begin + 1, std::memory_order_relaxed);
+                lock(range.second - range.begin + 1);
                 if (child.size() < range.second)
                     child.resize(range.second);
 
@@ -226,6 +232,7 @@ namespace tai
                     conf->file.seekp(begin);
                     conf->file.write(ptr, end - begin);
                 }
+                unlock();
             }
         }
 
@@ -303,6 +310,7 @@ namespace tai
                 conf->file.seekg(begin);
                 conf->file.read(ptr, end - begin);
             }
+            unlock();
         }
 
         void write(const size_t& begin, const size_t& end, char* const& ptr) override
@@ -335,6 +343,7 @@ namespace tai
                 conf->file.seekp(begin);
                 conf->file.write(ptr, end - begin);
             }
+            unlock();
         }
 
         void flush() override
