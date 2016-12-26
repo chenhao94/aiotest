@@ -6,6 +6,8 @@
 
 namespace tai
 {
+    class BTreeNodeBase;
+
     class BTreeConfig
     {
     public:
@@ -17,13 +19,13 @@ namespace tai
 
         operator bool();
 
-        auto operator()(const size_t& size);
-        void operator()(char*& ptr, const size_t& size);
+        void operator()(BTreeNodeBase* const node, const size_t& size);
     };
 
     class BTreeNodeBase
     {
     public:
+        friend class BTreeConfig;
         bool flushing = false;
 
         using Self = BTreeNodeBase;

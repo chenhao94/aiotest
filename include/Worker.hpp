@@ -4,6 +4,7 @@
 #include <thread>
 #include <array>
 
+#include "BTreeNodeBase.hpp"
 #include "TLQ.hpp"
 #include "State.hpp"
 #include "Controller.hpp"
@@ -42,11 +43,8 @@ namespace tai
             return queue(task);
         }
 
-        template<typename T>
-        static auto& remove(T&& node)
-        {
-            return queue.garbage->emplace_back(node);
-        }
+        static void recycle(BTreeNodeBase* const node);
+        static void recycle(std::vector<BTreeNodeBase*>& nodes);
 
         void broadcast(const State& _, const std::memory_order& sync = std::memory_order_seq_cst);
 

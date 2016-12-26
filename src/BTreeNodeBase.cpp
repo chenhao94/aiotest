@@ -27,19 +27,19 @@ namespace tai
         return file.is_open();
     }
 
-    auto BTreeConfig::operator()(const size_t& size)
+    void BTreeConfig::operator()(BTreeNodeBase* const node, const size_t& size)
     {
-        Controller::ctrl->used.fetch_add(size, std::memory_order_relaxed);
-        return new char[size];
-    }
-
-    void BTreeConfig::operator()(char*& ptr, const size_t& size)
-    {
-        if (ptr)
+        if (node->data)
         {
-            Controller::ctrl->used.fetch_sub(size, std::memory_order_relaxed) - size;
-            delete[] ptr;
-            ptr = nullptr;
+            Controller::ctrl->used.fetch_sub(size, std::memory_order_relaxed);
+            delete[] node->data;
+            node->data = nullptr;
+        }
+        else
+        {
+            Controller::ctrl->used.fetch_add(size, std::memory_order_relaxed);
+            Controller::ctrl->cache.push(node);
+            node->data = new char[size];
         }
     }
 

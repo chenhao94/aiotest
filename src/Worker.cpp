@@ -1,6 +1,7 @@
 #include <thread>
 #include <functional>
 
+#include "BTreeNodeBase.hpp"
 #include "Worker.hpp"
 
 namespace tai
@@ -27,6 +28,29 @@ namespace tai
     {
         if (handle)
             handle->join();
+    }
+
+    void Worker::recycle(BTreeNodeBase* const node)
+    {
+        if (node)
+            queue.garbage->emplace_back(node);
+    }
+
+    void Worker::recycle(std::vector<BTreeNodeBase*>& nodes)
+    {
+        if (nodes.empty())
+            return;
+
+        auto reserve = queue.garbage->size();
+        for (auto& i : nodes)
+            if (i)
+                ++reserve;
+        if (reserve > queue.garbage->capacity())
+            queue.garbage->reserve(reserve);
+        for (auto& i : nodes)
+            if (i)
+                queue.garbage->emplace_back(i);
+        nodes.clear();
     }
 
     void Worker::broadcast(const State& _, const std::memory_order& sync)
@@ -78,11 +102,9 @@ namespace tai
                 i->invalidate();
             swap(queue.garbage, queue.invalid);
             barrier(Flushing);
-            for (Controller::SafeNode* node; ctrl.used.load(std::memory_order_relaxed) > ctrl.lower && ctrl.dirty.pop(node); delete node)
+            for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > ctrl.lower && ctrl.cache.pop(node); delete node)
             {
-                node->node->evict();
-                node->node->flushing = false;
-                node->node = nullptr;
+                node->evict();
             }
             barrier(Pulling);
         }

@@ -27,21 +27,6 @@ namespace tai
             Full
         };
 
-        class SafeNode
-        {
-        public:
-            std::shared_ptr<BTreeNodeBase> node = nullptr;
-
-            template<typename T>
-            explicit SafeNode(T&& node) : node(std::forward<T>(node))
-            {
-            }
-
-            ~SafeNode()
-            {
-            }
-        };
-
         static thread_local Controller* ctrl;
         std::vector<Worker> workers;
         const size_t concurrency;
@@ -50,7 +35,7 @@ namespace tai
         const size_t lower;
         const size_t upper;
         std::atomic<size_t> used = {0};
-        boost::lockfree::queue<SafeNode*> dirty;
+        boost::lockfree::queue<BTreeNodeBase*> cache;
 
         explicit Controller(const size_t& lower, const size_t& upper, const size_t& concurrency = std::thread::hardware_concurrency());
 
