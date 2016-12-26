@@ -43,9 +43,6 @@ namespace tai
             return queue(task);
         }
 
-        static void recycle(BTreeNodeBase* const node);
-        static void recycle(std::vector<BTreeNodeBase*>& nodes);
-
         void broadcast(const State& _, const std::memory_order& sync = std::memory_order_seq_cst);
 
     protected:

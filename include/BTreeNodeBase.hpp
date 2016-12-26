@@ -26,7 +26,6 @@ namespace tai
     {
     public:
         friend class BTreeConfig;
-        bool flushing = false;
 
         using Self = BTreeNodeBase;
 
@@ -34,21 +33,16 @@ namespace tai
         virtual void write(const size_t& begin, const size_t& end, char* const& ptr) = 0;
         virtual void flush() = 0;
         virtual void evict() = 0;
-        virtual void invalidate() = 0;
 
-        BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset);
-        BTreeNodeBase(const Self&) = delete;
-        BTreeNodeBase(Self&& _);
+        BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNodeBase* const parent = nullptr);
         virtual ~BTreeNodeBase() = 0;
 
-        virtual Self& operator =(const Self&) = delete;
-        virtual Self& operator =(Self&& _) = 0;
-
     protected:
-        bool dirty = false;
+        std::atomic<size_t> lck = {0};
+        BTreeNodeBase* parent = nullptr;
         char* data = nullptr;
         size_t offset = 0;
-        bool invalid = false;
+        bool dirty = false;
 
         std::shared_ptr<BTreeConfig> conf = nullptr;
     };

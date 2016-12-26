@@ -43,41 +43,20 @@ namespace tai
         auto touch(const size_t& i)
         {
             if (!child[i])
-                child[i] = new Child(conf, offset ^ i << m);
+                child[i] = new Child(conf, offset ^ i << m, this);
             return child[i];
         }
 
         auto touch(const size_t& i, const size_t& offset)
         {
             if (!child[i])
-                child[i] = new Child(conf, offset);
+                child[i] = new Child(conf, offset, this);
             return child[i];
         }
 
     public:
-        BTreeNode(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset) : BTreeNodeBase(conf, offset), child(1)
+        BTreeNode(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNode* const parent = nullptr) : BTreeNodeBase(conf, offset, parent), child(1)
         {
-        }
-
-        BTreeNode(const Self&) = delete;
-
-        BTreeNode(Self&& _) : BTreeNodeBase(std::forward<Self>(_)), child(std::move(_.child))
-        {
-            child.clear();
-            child.shrink_to_fit();
-        }
-
-        auto& operator =(Self&& _) override
-        {
-            dirty = _.dirty;
-            _.dirty = false;
-            delete[] data;
-            data = _.data;
-            _.data = nullptr;
-            conf = std::move(_.conf);
-            child = std::move(_.child);
-            child.clear();
-            child.shrink_to_fit();
         }
 
         ~BTreeNode() override
@@ -85,83 +64,135 @@ namespace tai
             evict();
         }
 
-        void read(const size_t& begin, const size_t& end, char* const& ptr) override
+        void merge(char* ptr)
         {
-            if (invalid)
-                return;
-
             if (data)
-                memcpy(ptr, data + (begin & NM - 1), end - begin);
+            {
+                memcpy(data, ptr, NM);
+                parent = nullptr;
+            }
             else
             {
-                if (dirty)
+                for (size_t i = 0; i < child.size(); ++i)
                 {
-                    const auto range = getRange(begin, end);
-                    if (child.size() < range.second)
-                        child.resize(range.second);
-
-                    auto node = touch(range.first, begin & -M);
-                    if (range.first == range.second)
-                        Worker::push([=](){ node->read(begin, end, ptr); });
+                    if (child[i])
+                        child[i]->merge(ptr);
                     else
                     {
-                        Worker::push([=](){ node->read(begin, (begin & -M) + M, ptr); });
-                        auto suffix = ptr + (begin & M - 1 ? -begin & M - 1 : M);
-                        for (auto i = range.first; ++i != range.second; suffix += M)
-                        {
-                            node = touch(i);
-                            Worker::push([=](){ node->read(offset ^ i << m, offset ^ i + 1 << m, suffix); });
-                        }
-                        node = touch(range.second, end - 1 & -M);
-                        Worker::push([=](){ node->read(end - 1 & -M, end, suffix); });
+                        conf->file.seekg(offset ^ i << m);
+                        conf->file.read(ptr, M);
                     }
+                    ptr += M;
                 }
-                else if (end - begin >> nm && Controller::ctrl->usage(NM) != Controller::Full)
+                if (child.size() < N)
                 {
-                    (*conf)(this, NM);
-                    conf->file.seekg(begin);
-                    conf->file.read(data, NM);
-                    memcpy(ptr, data, NM);
-                    Worker::recycle(child);
+                    conf->file.seekg(offset ^ child.size() << m);
+                    conf->file.read(ptr, N - child.size() << m);
                 }
+
+                delete this;
+            }
+        }
+
+        void drop()
+        {
+            if (data)
+                parent = nullptr;
+            else
+            {
+                for (auto& i : child)
+                    if (i)
+                        i->drop();
+                delete this;
+            }
+        }
+
+    private:
+        void merge()
+        {
+            (*conf)(this, NM);
+            for (size_t i = 0; i < child.size(); ++i)
+                if (child[i])
+                    child[i]->merge(data + i << m);
                 else
                 {
-                    conf->file.seekg(begin);
-                    conf->file.read(ptr, end - begin);
+                    conf->file.seekg(offset ^ i << m);
+                    conf->file.read(data + (i << m), M);
                 }
+            if (child.size() < N)
+            {
+                conf->file.seekg(offset ^ child.size() << m);
+                conf->file.read(data + (child.size() << m), N - child.size() << m);
+            }
+            child.clear();
+        }
+
+        void dropChild()
+        {
+            for (auto& i : child)
+                if (i)
+                    i->drop();
+            child.clear();
+        }
+
+    public:
+        void read(const size_t& begin, const size_t& end, char* const& ptr) override
+        {
+            if (data)
+                memcpy(ptr, data + (begin & NM - 1), end - begin);
+            else if (lck.load(std::memory_order_relaxed) || end - begin < NM)
+            {
+                const auto range = getRange(begin, end);
+                lck.fetch_add(range.second - range.begin + 1, std::memory_order_relaxed);
+                if (child.size() < range.second)
+                    child.resize(range.second);
+
+                auto node = touch(range.first, begin & -M);
+                if (range.first == range.second)
+                    Worker::push([=](){ node->read(begin, end, ptr); });
+                else
+                {
+                    Worker::push([=](){ node->read(begin, (begin & -M) + M, ptr); });
+                    auto suffix = ptr + (begin & M - 1 ? -begin & M - 1 : M);
+                    for (auto i = range.first; ++i != range.second; suffix += M)
+                    {
+                        node = touch(i);
+                        Worker::push([=](){ node->read(offset ^ i << m, offset ^ i + 1 << m, suffix); });
+                    }
+                    node = touch(range.second, end - 1 & -M);
+                    Worker::push([=](){ node->read(end - 1 & -M, end, suffix); });
+                }
+            }
+            else if (Controller::ctrl->usage(NM) != Controller::Full)
+            {
+                merge();
+                memcpy(ptr, data, NM);
+            }
+            else
+            {
+                conf->file.seekg(begin);
+                conf->file.read(ptr, NM);
             }
         }
 
         void write(const size_t& begin, const size_t& end, char* const& ptr) override
         {
-            if (invalid)
-                return;
-
             if (data)
             {
                 memcpy(data + (begin & NM - 1), ptr, end - begin);
-                dirty = true;
+                if (!dirty)
+                    if (end - begin > NM >> 1)
+                        dirty = true;
+                    else
+                    {
+                        conf->file.seekp(begin);
+                        conf->file.write(ptr, end - begin);
+                    }
             }
-            else if (end - begin >> nm)
+            else if (lck.load(std::memory_order_relaxed) || end - begin < NM)
             {
-                if (Controller::ctrl->usage(NM) != Controller::Full)
-                {
-                    (*conf)(this, NM);
-                    memcpy(data, ptr, NM);
-                    dirty = true;
-                }
-                else
-                {
-                    conf->file.seekp(begin);
-                    conf->file.write(ptr, end - begin);
-                }
-                Worker::recycle(child);
-            }
-            else
-            {
-                dirty = true;
-
                 const auto range = getRange(begin, end);
+                lck.fetch_add(range.second - range.begin + 1, std::memory_order_relaxed);
                 if (child.size() < range.second)
                     child.resize(range.second);
 
@@ -181,11 +212,26 @@ namespace tai
                     Worker::push([=](){ node->write(end - 1 & -M, end, suffix); });
                 }
             }
+            else
+            {
+                dropChild();
+                if (Controller::ctrl->usage(NM) != Controller::Full)
+                {
+                    (*conf)(this, NM);
+                    memcpy(data, ptr, NM);
+                    dirty = true;
+                }
+                else
+                {
+                    conf->file.seekp(begin);
+                    conf->file.write(ptr, end - begin);
+                }
+            }
         }
 
         void flush()
         {
-            if (data && dirty)
+            if (dirty)
             {
                 conf->file.seekp(offset);
                 conf->file.write(data, NM);
@@ -195,25 +241,9 @@ namespace tai
 
         void evict()
         {
+            flush();
             if (data)
-            {
-                if (dirty)
-                {
-                    conf->file.seekp(offset);
-                    conf->file.write(data, NM);
-                    dirty = false;
-                }
                 (*conf)(data, NM);
-            }
-        }
-
-        void invalidate() override
-        {
-            invalid = true;
-            dirty = false;
-            for (auto& i : child)
-                if (i)
-                    i->invalidate();
         }
     };
 
@@ -227,14 +257,7 @@ namespace tai
 
         static constexpr auto N = 1 << n;
 
-        BTreeNode(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset) : BTreeNodeBase(conf, offset)
-        {
-        }
-
-
-        BTreeNode(const Self&) = delete;
-
-        BTreeNode(Self&& _) : BTreeNodeBase(std::forward<Self>(_))
+        BTreeNode(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNode* const parent = nullptr) : BTreeNodeBase(conf, offset, parent)
         {
         }
 
@@ -243,21 +266,30 @@ namespace tai
             evict();
         }
 
-        auto& operator =(Self&& _) override
+        void merge(char* const& ptr)
         {
-            dirty = _.dirty;
-            _.dirty = false;
-            delete[] data;
-            data = _.data;
-            _.data = nullptr;
-            conf = std::move(_.conf);
+            if (data)
+            {
+                memcpy(data, ptr, N);
+                parent = nullptr;
+            }
+            else
+            {
+                conf->file.seekg(offset);
+                conf->file.read(ptr, N);
+            }
+        }
+
+        void drop()
+        {
+            if (data)
+                parent = nullptr;
+            else
+                delete this;
         }
 
         void read(const size_t& begin, const size_t& end, char* const& ptr) override
         {
-            if (invalid)
-                return;
-
             if (!data && Controller::ctrl->usage(N) != Controller::Full)
             {
                 (*conf)(this, N);
@@ -275,39 +307,39 @@ namespace tai
 
         void write(const size_t& begin, const size_t& end, char* const& ptr) override
         {
-            if (invalid)
-                return;
-
-            if (!data)
-                if (Controller::ctrl->usage(N) == Controller::Full)
-                {
-                    conf->file.seekp(begin);
-                    conf->file.write(ptr, end - begin);
-                }
-                else
-                {
-                    (*conf)(this, N);
-                    if (begin & N)
-                    {
-                        conf->file.seekg(begin);
-                        conf->file.read(data, begin & N - 1);
-                    }
-                    if (end & N)
-                    {
-                        conf->file.seekg(end);
-                        conf->file.read(data + (end & N - 1), -end & N - 1);
-                    }
-                }
-            if (data)
+            if (dirty)
+                memcpy(data + (begin & N - 1), ptr, end - begin);
+            else if (data)
             {
                 memcpy(data + (begin & N - 1), ptr, end - begin);
                 dirty = true;
+            }
+            else if (Controller::ctrl->usage(N) != Controller::Full)
+            {
+                (*conf)(this, N);
+                memcpy(data + (begin & N - 1), ptr, end - begin);
+                if (begin & N)
+                {
+                    conf->file.seekg(begin);
+                    conf->file.read(data, begin & N - 1);
+                }
+                if (end & N)
+                {
+                    conf->file.seekg(end);
+                    conf->file.read(data + (end & N - 1), -end & N - 1);
+                }
+                dirty = true;
+            }
+            else
+            {
+                conf->file.seekp(begin);
+                conf->file.write(ptr, end - begin);
             }
         }
 
         void flush() override
         {
-            if (dirty && data)
+            if (dirty)
             {
                 conf->file.seekp(offset);
                 conf->file.write(data, N);
@@ -317,21 +349,9 @@ namespace tai
 
         void evict()
         {
+            flush();
             if (data)
-            {
-                if (dirty)
-                {
-                    conf->file.seekp(offset);
-                    conf->file.write(data, N);
-                    dirty = false;
-                }
                 (*conf)(this, N);
-            }
-        }
-
-        void invalidate() override
-        {
-            invalid = true;
         }
     };
 
@@ -348,7 +368,7 @@ namespace tai
         static constexpr auto level = sizeof...(rest) + 1;
         static constexpr std::array<size_t, level> bits = {n, rest...};
 
-        explicit BTree(const std::string &path) : conf(path), root(conf)
+        explicit BTree(const std::string &path) : conf(path), root(conf, 0)
         {
         }
     };

@@ -24,8 +24,7 @@ namespace tai
         std::atomic<ssize_t> remain = {-1};
 
     public:
-        std::unique_ptr<std::vector<std::shared_ptr<BTreeNodeBase>>> garbage;
-        std::unique_ptr<std::vector<std::shared_ptr<BTreeNodeBase>>> invalid;
+        std::vector<BTreeNodeBase*> done;
 
         TLQ();
         ~TLQ();

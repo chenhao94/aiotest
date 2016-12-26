@@ -43,12 +43,7 @@ namespace tai
         }
     }
 
-    BTreeNodeBase::BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset) : conf(conf), offset(offset)
+    BTreeNodeBase::BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNodeBase* const parent) : conf(conf), offset(offset), parent(parent)
     {
-    }
-
-    BTreeNodeBase::BTreeNodeBase(Self&& _) : dirty(_.dirty), data(_.data), conf(std::move(_.conf)), offset(_.offset), invalid(_.invalid), flushing(_.flushing)
-    {
-        _.data = nullptr;
     }
 }
