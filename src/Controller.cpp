@@ -25,4 +25,16 @@ namespace tai
         for (auto& i : workers)
             while (i.state.load(sync) != _);
     }
+
+    Controller::Usage Controller::usage(const size_t& alloc)
+    {
+        const auto space = used.load(std::memory_order_relaxed) + alloc;
+        if (space >= upper)
+            return Full;
+        if (space > lower)
+            return High;
+        if (space > 0)
+            return Low;
+        return Empty;
+    }
 }

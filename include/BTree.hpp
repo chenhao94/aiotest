@@ -16,43 +16,11 @@
 
 namespace tai
 {
-    class TLQ;
-
     template<size_t n, size_t... rest>
     class BTreeNode : public BTreeNodeBase
     {
         static_assert(n <= sizeof(size_t), "B-tree node cannot be larger than the size of address space.");
         static_assert((n + ... + rest) <= sizeof(size_t), "B-tree node cannot be larger than the size of address space.");
-
-        template<typename Fn>
-        void rw(Fn op, const size_t& begin, const size_t& end, char* const& ptr)
-        {
-            const std::pair<size_t, size_t> range = {begin >> m & N - 1, end - 1 >> m & N - 1};
-
-            if (child.size() < range.second)
-                child.resize(range.second);
-
-            auto& node = child[range.first];
-            if (!node)
-                node = new Child(conf, begin & -M);
-
-            if (range.first == range.second)
-                Worker::push([=](){ node->*op(begin, end, ptr); });
-            else
-            {
-                Worker::push([=](){ node->*op(begin, (begin & -M) + M, ptr); });
-                auto suffix = ptr + (-begin & M - 1);
-                for (auto i = range.first; ++i != range.second; suffix += M)
-                {
-                    if (!(node = child[i]))
-                        child[i] = new Child(conf, begin & -NM ^ i + 1 << m);
-                    Worker::push([=](){ node->*op(begin & -NM ^ i << m, begin & -NM ^ i + 1 << m, suffix); });
-                }
-                if (!(node = child[range.second]))
-                    node = new Child(conf, end - 1 & -M);
-                Worker::push([=](){ node->*op(end - 1 & -M, end, suffix); });
-            }
-        }
 
     public:
         using Self = BTreeNode<n, rest...>;
@@ -66,40 +34,28 @@ namespace tai
 
         std::vector<std::shared_ptr<Child>> child;
 
+    private:
+        void cacheQueue(std::shared_ptr<Child>& node)
+        {
+            if (!node->flushing)
+            {
+                node->flushing = true;
+                Controller::ctrl->dirty.push(new Controller::SafeNode(node));
+            }
+        }
+
+    public:
         BTreeNode(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset) : BTreeNodeBase(conf, offset), child(1)
         {
         }
 
         BTreeNode(const Self&) = delete;
-        /*
-        BTreeNode(const Self& _) : BTreeNodeBase(_)
-        {
-            memcpy(data ? data : (data = new char[NM]), _.data, NM);
-            child.clear();
-            child.reserve(_.child.capacity());
-            for (auto& i : _.child)
-                child.emplace_back(new Child(*i));
-        }
-        */
 
         BTreeNode(Self&& _) : BTreeNodeBase(std::forward<Self>(_)), child(std::move(_.child))
         {
             child.clear();
             child.shrink_to_fit();
         }
-
-        /*
-        auto& operator =(const Self& _) override
-        {
-            dirty = _.dirty;
-            memcpy(data ? data : (data = new char[NM]), _.data, NM);
-            conf = _.conf;
-            child.clear();
-            child.reserve(_.child.capacity());
-            for (auto& i : _.child)
-                child.emplace_back(new Child(*i));
-        }
-        */
 
         auto& operator =(Self&& _) override
         {
@@ -116,8 +72,7 @@ namespace tai
 
         ~BTreeNode() override
         {
-            if (data)
-                (*conf)(data, NM);
+            evict();
         }
 
         void read(const size_t& begin, const size_t& end, char* const& ptr) override
@@ -125,21 +80,46 @@ namespace tai
             if (invalid)
             {
                 dirty = false;
-                if (data)
-                    (*conf)(data, NM);
+                (*conf)(data, NM);
                 return;
             }
 
             if (data)
                 memcpy(ptr, data + (begin & NM - 1), end - begin);
             else if (dirty)
-                rw(&Self::read, begin, end, ptr);
+            {
+                const std::pair<size_t, size_t> range = {begin >> m & N - 1, end - 1 >> m & N - 1};
+
+                if (child.size() < range.second)
+                    child.resize(range.second);
+
+                auto& node = child[range.first];
+                if (!node)
+                    node = new Child(conf, begin & -M);
+
+                if (range.first == range.second)
+                    Worker::push([=](){ node->read(begin, end, ptr); });
+                else
+                {
+                    Worker::push([=](){ node->read(begin, (begin & -M) + M, ptr); });
+                    auto suffix = ptr + (-begin & M - 1);
+                    for (auto i = range.first; ++i != range.second; suffix += M)
+                    {
+                        if (!(node = child[i]))
+                            child[i] = new Child(conf, begin & -NM ^ i + 1 << m);
+                        Worker::push([=](){ node->read(begin & -NM ^ i << m, begin & -NM ^ i + 1 << m, suffix); });
+                    }
+                    if (!(node = child[range.second]))
+                        node = new Child(conf, end - 1 & -M);
+                    Worker::push([=](){ node->read(end - 1 & -M, end, suffix); });
+                }
+            }
             else
             {
                 conf->file.seekg(begin);
                 conf->file.read(ptr, end - begin);
             }
-            if (end - begin >> nm)
+            if (end - begin >> nm && (data || Controller::ctrl->usage(NM) != Controller::Full))
             {
                 memcpy(data ? data : (data = (*conf)(NM)), ptr, NM);
                 for (auto& i : child)
@@ -154,14 +134,19 @@ namespace tai
             if (invalid)
             {
                 dirty = false;
-                if (data)
-                    (*conf)(data, NM);
+                (*conf)(data, NM);
                 return;
             }
 
             if (data || end - begin >> nm)
             {
-                memcpy(data ? data : (data = (*conf)(NM)), ptr, NM);
+                if (data || Controller::ctrl->usage(NM) != Controller::Full)
+                    memcpy(data ? data : (data = (*conf)(NM)), ptr, NM);
+                else
+                {
+                    conf->file.seekp(begin);
+                    conf->file.write(ptr, end - begin);
+                }
                 dirty = true;
                 for (auto& i : child)
                     if (i)
@@ -171,7 +156,37 @@ namespace tai
             else
             {
                 dirty = true;
-                rw(&Self::write, begin, end, ptr);
+                const std::pair<size_t, size_t> range = {begin >> m & N - 1, end - 1 >> m & N - 1};
+
+                if (child.size() < range.second)
+                    child.resize(range.second);
+
+                auto& node = child[range.first];
+                if (node)
+                    cacheQueue(node);
+                else
+                    node = new Child(conf, begin & -M);
+
+                if (range.first == range.second)
+                    Worker::push([=](){ node->write(begin, end, ptr); });
+                else
+                {
+                    Worker::push([=](){ node->write(begin, (begin & -M) + M, ptr); });
+                    auto suffix = ptr + (-begin & M - 1);
+                    for (auto i = range.first; ++i != range.second; suffix += M)
+                    {
+                        if (!(node = child[i]))
+                            child[i] = new Child(conf, begin & -NM ^ i + 1 << m);
+                        else
+                            cacheQueue(node);
+                        Worker::push([=](){ node->write(begin & -NM ^ i << m, begin & -NM ^ i + 1 << m, suffix); });
+                    }
+                    if (!(node = child[range.second]))
+                        node = new Child(conf, end - 1 & -M);
+                    else
+                        cacheQueue(node);
+                    Worker::push([=](){ node->write(end - 1 & -M, end, suffix); });
+                }
             }
         }
 
@@ -181,13 +196,28 @@ namespace tai
             {
                 conf->file.seekp(offset);
                 conf->file.write(data, NM);
+                dirty = false;
+            }
+        }
+
+        void evict()
+        {
+            if (data)
+            {
+                if (dirty)
+                {
+                    conf->file.seekp(offset);
+                    conf->file.write(data, NM);
+                }
                 (*conf)(data, NM);
+                dirty = false;
             }
         }
 
         void invalidate() override
         {
             invalid = true;
+            dirty = false;
             for (auto& i : child)
                 if (i)
                     i->invalidate();
@@ -210,30 +240,14 @@ namespace tai
 
 
         BTreeNode(const Self&) = delete;
-        /*
-        BTreeNode(const Self& _) : BTreeNodeBase(_)
-        {
-            memcpy(data ? data : (data = new char[N]), _.data, N);
-        }
-        */
 
         BTreeNode(Self&& _) : BTreeNodeBase(std::forward<Self>(_))
         {
         }
 
-        /*
-        auto& operator =(const Self& _) override
-        {
-            dirty = _.dirty;
-            memcpy(data ? data : (data = new char[N]), _.data, N);
-            conf = _.conf;
-        }
-        */
-
         ~BTreeNode() override
         {
-            if (data)
-                (*conf)(data, N);
+            evict();
         }
 
         auto& operator =(Self&& _) override
@@ -251,11 +265,15 @@ namespace tai
             if (invalid)
             {
                 dirty = false;
-                if (data)
-                    (*conf)(data, N);
+                (*conf)(data, N);
                 return;
             }
 
+            if (!data && Controller::ctrl->usage(N) != Controller::Full)
+            {
+                conf->file.seekg(offset);
+                conf->file.read(data = (*conf)(N), N);
+            }
             if (data)
                 memcpy(ptr, data + begin, end - begin);
             else
@@ -270,27 +288,35 @@ namespace tai
             if (invalid)
             {
                 dirty = false;
-                if (data)
-                    (*conf)(data, N);
+                (*conf)(data, N);
                 return;
             }
 
             if (!data)
+                if (Controller::ctrl->usage(N) == Controller::Full)
+                {
+                    conf->file.seekp(begin);
+                    conf->file.write(ptr, end - begin);
+                }
+                else
+                {
+                    data = (*conf)(N);
+                    if (begin & N)
+                    {
+                        conf->file.seekg(begin);
+                        conf->file.read(data, begin & N - 1);
+                    }
+                    if (end & N)
+                    {
+                        conf->file.seekg(end);
+                        conf->file.read(data + (end & N - 1), -end & N - 1);
+                    }
+                }
+            if (data)
             {
-                data = (*conf)(N);
-                if (begin & N)
-                {
-                    conf->file.seekg(begin);
-                    conf->file.read(data, begin & N - 1);
-                }
-                if (end & N)
-                {
-                    conf->file.seekg(end);
-                    conf->file.read(data + (end & N - 1), -end & N - 1);
-                }
+                memcpy(data + (begin & N - 1), ptr, end - begin);
+                dirty = true;
             }
-            memcpy(data + (begin & N - 1), ptr, end - begin);
-            dirty = true;
         }
 
         void flush() override
@@ -299,7 +325,21 @@ namespace tai
             {
                 conf->file.seekp(offset);
                 conf->file.write(data, N);
+                dirty = false;
+            }
+        }
+
+        void evict()
+        {
+            if (data)
+            {
+                if (dirty)
+                {
+                    conf->file.seekp(offset);
+                    conf->file.write(data, N);
+                }
                 (*conf)(data, N);
+                dirty = false;
             }
         }
 

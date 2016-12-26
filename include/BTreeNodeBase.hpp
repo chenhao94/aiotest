@@ -18,17 +18,20 @@ namespace tai
         operator bool();
 
         auto operator()(const size_t& size);
-        auto operator()(char*& ptr, const size_t& size);
+        void operator()(char*& ptr, const size_t& size);
     };
 
     class BTreeNodeBase
     {
     public:
+        bool flushing = false;
+
         using Self = BTreeNodeBase;
 
         virtual void read(const size_t& begin, const size_t& end, char* const& ptr) = 0;
         virtual void write(const size_t& begin, const size_t& end, char* const& ptr) = 0;
         virtual void flush() = 0;
+        virtual void evict() = 0;
         virtual void invalidate() = 0;
 
         BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset);

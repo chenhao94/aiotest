@@ -78,7 +78,12 @@ namespace tai
                 i->invalidate();
             swap(queue.garbage, queue.invalid);
             barrier(Flushing);
-            // for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > ctrl.lower && ctrl.dirty.pop(node); node->flush());
+            for (Controller::SafeNode* node; ctrl.used.load(std::memory_order_relaxed) > ctrl.lower && ctrl.dirty.pop(node); delete node)
+            {
+                node->node->evict();
+                node->node->flushing = false;
+                node->node = nullptr;
+            }
             barrier(Pulling);
         }
     }

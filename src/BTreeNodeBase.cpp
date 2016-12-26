@@ -33,18 +33,21 @@ namespace tai
         return new char[size];
     }
 
-    auto BTreeConfig::operator()(char*& ptr, const size_t& size)
+    void BTreeConfig::operator()(char*& ptr, const size_t& size)
     {
-        return Controller::ctrl->used.fetch_sub(size, std::memory_order_relaxed) - size;
-        delete[] ptr;
-        ptr = nullptr;
+        if (ptr)
+        {
+            Controller::ctrl->used.fetch_sub(size, std::memory_order_relaxed) - size;
+            delete[] ptr;
+            ptr = nullptr;
+        }
     }
 
     BTreeNodeBase::BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset) : conf(conf), offset(offset)
     {
     }
 
-    BTreeNodeBase::BTreeNodeBase(Self&& _) : dirty(_.dirty), data(_.data), conf(std::move(_.conf)), offset(_.offset), invalid(_.invalid)
+    BTreeNodeBase::BTreeNodeBase(Self&& _) : dirty(_.dirty), data(_.data), conf(std::move(_.conf)), offset(_.offset), invalid(_.invalid), flushing(_.flushing)
     {
         _.data = nullptr;
     }

@@ -19,23 +19,26 @@ namespace tai
     class Controller
     {
     public:
-        class SafeTask
+        enum Usage
         {
-            std::shared_ptr<BTreeNodeBase> host = nullptr;
-            std::function<void()> task;
+            Empty,
+            Low,
+            High,
+            Full
+        };
 
-            template<typename T, typename Fn>
-            SafeTask(T&& host, Fn&& task) : host(std::forward<T>(host)), task(std::forward<Fn>(task))
+        class SafeNode
+        {
+        public:
+            std::shared_ptr<BTreeNodeBase> node = nullptr;
+
+            template<typename T>
+            explicit SafeNode(T&& node) : node(std::forward<T>(node))
             {
             }
 
-            ~SafeTask()
+            ~SafeNode()
             {
-                if (host)
-                {
-                    task();
-                    host = nullptr;
-                }
             }
         };
 
@@ -47,11 +50,13 @@ namespace tai
         const size_t lower;
         const size_t upper;
         std::atomic<size_t> used = {0};
-        boost::lockfree::queue<SafeTask*> dirty;
+        boost::lockfree::queue<SafeNode*> dirty;
 
         explicit Controller(const size_t& lower, const size_t& upper, const size_t& concurrency = std::thread::hardware_concurrency());
 
         ~Controller();
+
+        Usage usage(const size_t& alloc = 0);
 
     protected:
         void wait(const WorkerState& _, const std::memory_order& sync = std::memory_order_seq_cst);
