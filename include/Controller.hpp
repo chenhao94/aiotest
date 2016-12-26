@@ -3,6 +3,7 @@
 #include <vector>
 #include <atomic>
 #include <thread>
+#include <functional>
 
 #include <boost/lockfree/queue.hpp>
 
@@ -18,6 +19,26 @@ namespace tai
     class Controller
     {
     public:
+        class SafeTask
+        {
+            std::shared_ptr<BTreeNodeBase> host = nullptr;
+            std::function<void()> task;
+
+            template<typename T, typename Fn>
+            SafeTask(T&& host, Fn&& task) : host(std::forward<T>(host)), task(std::forward<Fn>(task))
+            {
+            }
+
+            ~SafeTask()
+            {
+                if (host)
+                {
+                    task();
+                    host = nullptr;
+                }
+            }
+        };
+
         static thread_local Controller* ctrl;
         std::vector<Worker> workers;
         const size_t concurrency;
@@ -26,7 +47,7 @@ namespace tai
         const size_t lower;
         const size_t upper;
         std::atomic<size_t> used = {0};
-        boost::lockfree::queue<BTreeNodeBase*> dirty;
+        boost::lockfree::queue<SafeTask*> dirty;
 
         explicit Controller(const size_t& lower, const size_t& upper, const size_t& concurrency = std::thread::hardware_concurrency());
 

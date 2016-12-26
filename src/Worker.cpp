@@ -77,6 +77,7 @@ namespace tai
             for (auto& i : *queue.garbage)
                 i->invalidate();
             swap(queue.garbage, queue.invalid);
+            barrier(Flushing);
             // for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > ctrl.lower && ctrl.dirty.pop(node); node->flush());
             barrier(Pulling);
         }

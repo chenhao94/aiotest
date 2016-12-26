@@ -17,8 +17,6 @@
 namespace tai
 {
     class TLQ;
-    class Controller;
-    class Worker;
 
     template<size_t n, size_t... rest>
     class BTreeNode : public BTreeNodeBase
@@ -66,7 +64,7 @@ namespace tai
         static constexpr auto nm = n + m;
         static constexpr auto NM = N << m;
 
-        std::vector<std::unique_ptr<Child>> child;
+        std::vector<std::shared_ptr<Child>> child;
 
         BTreeNode(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset) : BTreeNodeBase(conf, offset), child(1)
         {

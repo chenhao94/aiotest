@@ -10,7 +10,7 @@ namespace tai
         Ready,
         Running,
         GC,
-        Done,
+        Flushing,
         Sync,
         Idle
     };

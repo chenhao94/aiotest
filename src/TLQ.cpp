@@ -13,8 +13,8 @@ namespace tai
     TLQ::TLQ():
         wait(new std::vector<Task>),
         ready(new std::vector<Task>),
-        garbage(new std::vector<std::unique_ptr<BTreeNodeBase>>),
-        invalid(new std::vector<std::unique_ptr<BTreeNodeBase>>)
+        garbage(new std::vector<std::shared_ptr<BTreeNodeBase>>),
+        invalid(new std::vector<std::shared_ptr<BTreeNodeBase>>)
     {
     }
 
