@@ -22,8 +22,6 @@ namespace tai
 
     void TLQ::roll()
     {
-        ready->clear();
-        ready->shrink_to_fit();
         swap(wait, ready);
         Task* task = nullptr;
         if (pending.pop(task))
@@ -32,6 +30,42 @@ namespace tai
             delete task;
             task = nullptr;
         }
-        remain = (ssize_t)ready->size() - 1;
+    }
+
+    void TLQ::setupReady()
+    {
+        remain.store(ready->size(), std::memory_order_relaxed);
+        current = ready.get();
+    }
+
+    void TLQ::setupDone()
+    {
+        ready->clear();
+        ready->shrink_to_fit();
+        remain.store(done.size(), std::memory_order_relaxed);
+        current = &done;
+    }
+
+    size_t TLQ::operator ()()
+    {
+        auto i = remain.fetch_sub(1, std::memory_order_relaxed);
+        if (i)
+            (*current)[i - 1]();
+        return i;
+    }
+
+    void TLQ::pushWait(const Task& task)
+    {
+        wait->emplace_back(task);
+    }
+
+    void TLQ::pushDone(const Task& task)
+    {
+        done.emplace_back(task);
+    }
+
+    void TLQ::pushPending(const Task& task)
+    {
+        pending.push(new Task(task));
     }
 }

@@ -149,18 +149,18 @@ namespace tai
 
                 auto node = touch(range.first, begin & -M);
                 if (range.first == range.second)
-                    Worker::push([=](){ node->read(begin, end, ptr); });
+                    Worker::pushWait([=](){ node->read(begin, end, ptr); });
                 else
                 {
-                    Worker::push([=](){ node->read(begin, (begin & -M) + M, ptr); });
+                    Worker::pushWait([=](){ node->read(begin, (begin & -M) + M, ptr); });
                     auto suffix = ptr + (begin & M - 1 ? -begin & M - 1 : M);
                     for (auto i = range.first; ++i != range.second; suffix += M)
                     {
                         node = touch(i);
-                        Worker::push([=](){ node->read(offset ^ i << m, offset ^ i + 1 << m, suffix); });
+                        Worker::pushWait([=](){ node->read(offset ^ i << m, offset ^ i + 1 << m, suffix); });
                     }
                     node = touch(range.second, end - 1 & -M);
-                    Worker::push([=](){ node->read(end - 1 & -M, end, suffix); });
+                    Worker::pushWait([=](){ node->read(end - 1 & -M, end, suffix); });
                 }
             }
             else if (Controller::ctrl->usage(NM) != Controller::Full)
@@ -198,18 +198,18 @@ namespace tai
 
                 auto node = touch(range.first, begin & -M);
                 if (range.first == range.second)
-                    Worker::push([=](){ node->write(begin, end, ptr); });
+                    Worker::pushWait([=](){ node->write(begin, end, ptr); });
                 else
                 {
-                    Worker::push([=](){ node->write(begin, (begin & -M) + M, ptr); });
+                    Worker::pushWait([=](){ node->write(begin, (begin & -M) + M, ptr); });
                     auto suffix = ptr + (-begin & M - 1);
                     for (auto i = range.first; ++i != range.second; suffix += M)
                     {
                         node = touch(i);
-                        Worker::push([=](){ node->write(begin & -NM ^ i << m, begin & -NM ^ i + 1 << m, suffix); });
+                        Worker::pushWait([=](){ node->write(begin & -NM ^ i << m, begin & -NM ^ i + 1 << m, suffix); });
                     }
                     node = touch(range.second, end - 1 & -M);
-                    Worker::push([=](){ node->write(end - 1 & -M, end, suffix); });
+                    Worker::pushWait([=](){ node->write(end - 1 & -M, end, suffix); });
                 }
             }
             else

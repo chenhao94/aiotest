@@ -3,6 +3,7 @@
 #include <atomic>
 #include <thread>
 #include <array>
+#include <functional>
 
 #include "BTreeNodeBase.hpp"
 #include "TLQ.hpp"
@@ -27,6 +28,8 @@ namespace tai
         std::array<size_t, 2> neighbor;
 
     public:
+        using Task = std::function<void()>;
+
         std::atomic<State> state = {Pending};
 
         const size_t spin = 256;
@@ -37,16 +40,16 @@ namespace tai
 
         ~Worker();
 
-        template<typename Fn>
-        static auto& push(Fn&& task)
-        {
-            return queue(task);
-        }
+        static void pushWait(const Task& task);
+        static void pushDone(const Task& task);
+        static void pushPending(const Task& task);
 
         void broadcast(const State& _, const std::memory_order& sync = std::memory_order_seq_cst);
 
     protected:
         void barrier(const State& post, const std::memory_order& sync = std::memory_order_seq_cst);
+
+        void steal();
 
         void run();
     };

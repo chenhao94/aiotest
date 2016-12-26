@@ -30,6 +30,21 @@ namespace tai
             handle->join();
     }
 
+    void Worker::pushWait(const Task& task)
+    {
+        queue.pushWait(task);
+    }
+
+    void Worker::pushDone(const Task& task)
+    {
+        queue.pushDone(task);
+    }
+
+    void Worker::pushPending(const Task& task)
+    {
+        queue.pushPending(task);
+    }
+
     void Worker::broadcast(const State& _, const std::memory_order& sync)
     {
         for (auto& i : neighbor)
@@ -58,6 +73,15 @@ namespace tai
         }
     }
 
+    void Worker::steal()
+    {
+        while (queue());
+        for (auto i = id + 1; i != ctrl.workers.size(); ++i)
+            while((*ctrl.workers[i].foreign)());
+        for (size_t i = 0; i != id; ++i)
+            while((*ctrl.workers[i].foreign)());
+    }
+
     void Worker::run()
     {
         Controller::ctrl = &ctrl;
@@ -67,14 +91,12 @@ namespace tai
         while (ctrl.ready.test_and_set())
         {
             queue.roll();
+            queue.setupReady();
             barrier(Running);
-            while (queue());
-            for (auto i = id + 1; i != ctrl.workers.size(); ++i)
-                while((*ctrl.workers[i].foreign)());
-            for (size_t i = 0; i != id; ++i)
-                while((*ctrl.workers[i].foreign)());
+            steal();
+            queue.setupDone();
             barrier(GC);
-            queue.done.clear();
+            steal();
             barrier(Flushing);
             for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > ctrl.lower && ctrl.cache.pop(node); delete node)
             {

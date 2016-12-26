@@ -21,34 +21,23 @@ namespace tai
 
         std::unique_ptr<std::vector<Task>> wait = nullptr;
         std::unique_ptr<std::vector<Task>> ready = nullptr;
-        std::atomic<ssize_t> remain = {-1};
+        std::vector<Task> done;
+        std::atomic<size_t> remain = {0};
+
+        std::vector<Task>* current = nullptr;
 
     public:
-        std::vector<BTreeNodeBase*> done;
 
         TLQ();
         ~TLQ();
 
         void roll();
+        void setupReady();
+        void setupDone();
 
-        auto operator ()()
-        {
-            auto i = remain.fetch_sub(1, std::memory_order_relaxed);
-            if (i >= 0)
-                (*ready)[i]();
-            return i;
-        }
-
-        template<typename Fn>
-        auto& operator ()(Fn&& task)
-        {
-            return wait->emplace_back(std::forward<Fn>(task));
-        }
-
-        template<typename Fn>
-        void push(Fn&& task)
-        {
-            pending.push(new Task(task));
-        }
+        size_t operator ()();
+        void pushWait(const Task& task);
+        void pushDone(const Task& task);
+        void pushPending(const Task& task);
     };
 }
