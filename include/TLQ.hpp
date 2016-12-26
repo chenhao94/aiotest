@@ -2,46 +2,35 @@
 
 #include <algorithm>
 #include <atomic>
-#include <mutex>
 #include <functional>
 #include <vector>
-#include <queue>
+
+#include <boost/lockfree/queue.hpp>
+
+#include "BTreeNodeBase.hpp"
 
 namespace tai
 {
     class TLQ
     {
-        std::atomic_flag lckPending = ATOMIC_FLAG_INIT;
-        std::deque<std::function<void()>> pending;
+    public:
+        using Task = std::function<void()>;
 
-        std::unique_ptr<std::vector<std::function<void()>>> wait = nullptr;
-        std::unique_ptr<std::vector<std::function<void()>>> ready = nullptr;
+    private:
+        boost::lockfree::queue<Task*> pending;
+
+        std::unique_ptr<std::vector<Task>> wait = nullptr;
+        std::unique_ptr<std::vector<Task>> ready = nullptr;
         std::atomic<ssize_t> remain = {-1};
 
     public:
-        TLQ():
-            wait(new std::vector<std::function<void()>>),
-            ready(new std::vector<std::function<void()>>)
-        {
-        }
+        std::unique_ptr<std::vector<std::shared_ptr<BTreeNodeBase>>> garbage;
+        std::unique_ptr<std::vector<std::shared_ptr<BTreeNodeBase>>> invalid;
 
-        void roll()
-        {
-            ready->clear();
-            ready->shrink_to_fit();
-            swap(wait, ready);
-            while (lckPending.test_and_set(std::memory_order_acquire));
-            if (!pending.empty())
-            {
-                auto&& task = pending.front();
-                pending.pop_front();
-                lckPending.clear(std::memory_order_release);
-                ready->emplace_back(task);
-            }
-            else
-                lckPending.clear(std::memory_order_release);
-            remain = (ssize_t)ready->size() - 1;
-        }
+        TLQ();
+        ~TLQ();
+
+        void roll();
 
         auto operator ()()
         {
@@ -60,9 +49,7 @@ namespace tai
         template<typename Fn>
         void push(Fn&& task)
         {
-            while (lckPending.test_and_set(std::memory_order_acquire));
-            pending.emplace_back(task);
-            lckPending.clear(std::memory_order_release);
+            pending.push(new Task(task));
         }
     };
 }

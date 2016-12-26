@@ -3,7 +3,9 @@
 
 namespace tai
 {
-    Controller::Controller(const size_t& concurrency) : concurrency(concurrency)
+    thread_local Controller* Controller::ctrl = nullptr;
+
+    Controller::Controller(const size_t& lower, const size_t& upper, const size_t& concurrency) : concurrency(concurrency), lower(lower), upper(upper)
     {
         ready.test_and_set(std::memory_order_relaxed);
         workers.reserve(concurrency);
