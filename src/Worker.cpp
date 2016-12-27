@@ -58,11 +58,19 @@ namespace tai
                 ctrl.workers[i].state.store(_, sync);
     }
 
-    void Worker::barrier(const State& post)
+    Worker::State Worker::barrier(const State& post)
     {
+        barrier([post](){ return post; });
+        return post;
+    }
+
+    Worker::State Worker::barrier(const std::function<State()>& f)
+    {
+        State post;
         state.store(Sync, std::memory_order_release);
         if (id)
         {
+            post = f();
             for (auto i = Controller::spin; i-- && state.load(std::memory_order_relaxed) != post;);
             for (; state.load(std::memory_order_relaxed) != post; std::this_thread::yield());
         }
@@ -73,9 +81,11 @@ namespace tai
                 for (auto j = Controller::spin; j-- && ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync;);
                 for (; ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
             }
+            post = f();
             state.store(post, std::memory_order_acquire);
         }
         broadcast(post, std::memory_order_acquire);
+        return post;
     }
 
     void Worker::steal()

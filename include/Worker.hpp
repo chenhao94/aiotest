@@ -73,7 +73,8 @@ namespace tai
         void broadcast(const State& _, const std::memory_order& sync = std::memory_order_seq_cst);
 
     protected:
-        void barrier(const State& post);
+        State barrier(const State& post);
+        State barrier(const std::function<State()>& f);
 
         void steal();
 
