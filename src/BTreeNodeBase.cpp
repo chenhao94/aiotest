@@ -12,19 +12,12 @@
 
 namespace tai
 {
-    BTreeConfig::BTreeConfig(const std::string& path) : path(path), file(path)
+    BTreeConfig::BTreeConfig(const std::string& path) : path(path)
     {
     }
 
     BTreeConfig::~BTreeConfig()
     {
-        if (file)
-            file.close();
-    }
-
-    BTreeConfig::operator bool()
-    {
-        return file.is_open();
     }
 
     void BTreeConfig::operator()(BTreeNodeBase* const node, const size_t& size)
@@ -52,7 +45,25 @@ namespace tai
     {
     }
 
-    size_t BTreeNodeBase::lock()
+    void BTreeNodeBase::fread(char* const& buf, const size_t& pos, const size_t&len)
+    {
+        auto& file = Worker::getTL(conf->files);
+        if (!file.is_open())
+            file.open(conf->path);
+        file.seekg(pos);
+        file.read(buf, len);
+    }
+
+    void BTreeNodeBase::fwrite(char* const& buf, const size_t& pos, const size_t&len)
+    {
+        auto& file = Worker::getTL(conf->files);
+        if (!file.is_open())
+            file.open(conf->path);
+        file.seekp(pos);
+        file.write(buf, len);
+    }
+
+    size_t BTreeNodeBase::locked()
     {
         return lck.load(std::memory_order_relaxed);
     }
@@ -64,6 +75,13 @@ namespace tai
 
     void BTreeNodeBase::unlock()
     {
-        Worker::pushDone([this](){ for (auto i = parent; i && i->lck.fetch_sub(1, std::memory_order_relaxed) == 1; i = i->parent); });
+        if (parent)
+            Worker::pushDone([this](){ for (auto i = parent; i && i->lck.fetch_sub(1, std::memory_order_relaxed) == 1; i = i->parent); });
+    }
+
+    void BTreeNodeBase::unlock(const size_t& num)
+    {
+        if (parent)
+            Worker::pushDone([this, num](){ for (auto i = parent; i && i->lck.fetch_sub(num, std::memory_order_relaxed) == num; i = i->parent); });
     }
 }

@@ -32,6 +32,7 @@ namespace tai
         ~TLQ();
 
         void roll();
+        void setup(std::vector<Task>* const& queue);
         void setupReady();
         void setupDone();
 

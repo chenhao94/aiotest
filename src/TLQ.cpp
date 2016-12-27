@@ -26,21 +26,31 @@ namespace tai
         swap(wait, ready);
         Task* task = nullptr;
         if (pending.pop(task))
+        {
             ready->emplace_back(*task);
+            delete task;
+            task = nullptr;
+        }
+    }
+
+    void TLQ::setup(std::vector<Task>* const& queue)
+    {
+        if (current)
+        {
+            current->clear();
+            current->shrink_to_fit();
+        }
+        remain.store((current = queue)->size(), std::memory_order_relaxed);
     }
 
     void TLQ::setupReady()
     {
-        remain.store(ready->size(), std::memory_order_relaxed);
-        current = ready.get();
+        setup(ready.get());
     }
 
     void TLQ::setupDone()
     {
-        ready->clear();
-        ready->shrink_to_fit();
-        remain.store(done.size(), std::memory_order_relaxed);
-        current = &done;
+        setup(&done);
     }
 
     size_t TLQ::operator ()()

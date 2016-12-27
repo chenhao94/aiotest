@@ -2,7 +2,10 @@
 
 #include <string>
 #include <fstream>
+#include <vector>
 #include <functional>
+
+#include "IOCtrl.hpp"
 
 namespace tai
 {
@@ -12,12 +15,10 @@ namespace tai
     {
     public:
         const std::string path = "";
-        std::fstream file;
+        std::vector<std::fstream> files;
 
         BTreeConfig(const std::string& path);
         ~BTreeConfig();
-
-        operator bool();
 
         void operator()(BTreeNodeBase* const node, const size_t& size);
     };
@@ -29,8 +30,8 @@ namespace tai
 
         using Self = BTreeNodeBase;
 
-        virtual void read(const size_t& begin, const size_t& end, char* const& ptr) = 0;
-        virtual void write(const size_t& begin, const size_t& end, char* const& ptr) = 0;
+        virtual void read(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) = 0;
+        virtual void write(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) = 0;
         virtual void flush() = 0;
         virtual void evict() = 0;
         bool valid();
@@ -47,8 +48,12 @@ namespace tai
 
         std::shared_ptr<BTreeConfig> conf = nullptr;
 
-        size_t lock();
-        void lock(const size_t& num);
+        void fread(char* const& buf, const size_t& pos, const size_t&len);
+        void fwrite(char* const& buf, const size_t& pos, const size_t&len);
+
+        size_t locked();
+        void lock(const size_t& num = 1);
         void unlock();
+        void unlock(const size_t& num);
     };
 }

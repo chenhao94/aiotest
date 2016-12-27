@@ -20,12 +20,6 @@ namespace tai
         ready.clear(std::memory_order_relaxed);
     }
 
-    void Controller::wait(const WorkerState& _, const std::memory_order& sync)
-    {
-        for (auto& i : workers)
-            while (i.state.load(sync) != _);
-    }
-
     Controller::Usage Controller::usage(const size_t& alloc)
     {
         const auto space = used.load(std::memory_order_relaxed) + alloc;
@@ -36,5 +30,11 @@ namespace tai
         if (space > 0)
             return Low;
         return Empty;
+    }
+
+    void Controller::wait(const WorkerState& _, const std::memory_order& sync)
+    {
+        for (auto& i : workers)
+            while (i.state.load(sync) != _);
     }
 }

@@ -12,6 +12,8 @@ namespace tai
 
     Worker::Worker(Controller& ctrl, const size_t& id) : ctrl(ctrl), id(id)
     {
+        if (!pool.pop(gid))
+            gid = poolSize.fetch_add(1, std::memory_order_relaxed);
         neighbor[0] = id * neighbor.size();
         if (neighbor.size() > 1)
             for (size_t i = 1; i < neighbor.size(); ++i)
@@ -28,6 +30,7 @@ namespace tai
     {
         if (handle)
             handle->join();
+        pool.push(gid);
     }
 
     void Worker::pushWait(const Task& task)
@@ -85,6 +88,7 @@ namespace tai
     void Worker::run()
     {
         Controller::ctrl = &ctrl;
+        sgid = gid;
         foreign = &queue;
         state.store(Created, std::memory_order_release);
         while (state.load(std::memory_order_acquire) != Pulling);
@@ -94,15 +98,15 @@ namespace tai
             queue.setupReady();
             barrier(Running);
             steal();
-            queue.setupDone();
-            barrier(Unlocking);
-            steal();
             barrier(GC);
             for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > ctrl.lower && ctrl.cache.pop(node);)
                 if (node->valid())
                     node->evict();
                 else
                     delete node;
+            queue.setupDone();
+            barrier(Unlocking);
+            steal();
             barrier(Pulling);
         }
     }

@@ -5,6 +5,8 @@
 #include <array>
 #include <functional>
 
+#include <boost/lockfree/stack.hpp>
+
 #include "BTreeNodeBase.hpp"
 #include "TLQ.hpp"
 #include "State.hpp"
@@ -19,7 +21,14 @@ namespace tai
         using State = WorkerState;
     protected:
         Controller& ctrl;
+
         const size_t id;
+
+        static std::atomic<size_t> poolSize;
+        static boost::lockfree::stack<size_t> pool;
+        size_t gid;
+        static thread_local size_t sgid;
+
         static thread_local TLQ queue;
         TLQ* foreign;
 
@@ -39,6 +48,24 @@ namespace tai
         Worker(Controller& ctrl, const size_t& id);
 
         ~Worker();
+
+        auto getGID() const
+        {
+            return gid;
+        }
+
+        static auto getSGID()
+        {
+            return sgid;
+        }
+
+        template<typename T>
+        static auto& getTL(T&& table)
+        {
+            if (sgid + 1 > table.size())
+                table.resize(sgid + 1);
+            return table[sgid];
+        }
 
         static void pushWait(const Task& task);
         static void pushDone(const Task& task);

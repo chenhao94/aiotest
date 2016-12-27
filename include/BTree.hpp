@@ -9,6 +9,7 @@
 
 #include <boost/lockfree/queue.hpp>
 
+#include "IOCtrl.hpp"
 #include "BTreeNodeBase.hpp"
 #include "TLQ.hpp"
 #include "Controller.hpp"
@@ -78,17 +79,11 @@ namespace tai
                     if (child[i])
                         child[i]->merge(ptr);
                     else
-                    {
-                        conf->file.seekg(offset ^ i << m);
-                        conf->file.read(ptr, M);
-                    }
+                        fread(ptr, offset ^ i << m, M);
                     ptr += M;
                 }
                 if (child.size() < N)
-                {
-                    conf->file.seekg(offset ^ child.size() << m);
-                    conf->file.read(ptr, N - child.size() << m);
-                }
+                    fread(ptr, offset ^ child.size() << m, N - child.size() << m);
 
                 delete this;
             }
@@ -115,15 +110,9 @@ namespace tai
                 if (child[i])
                     child[i]->merge(data + i << m);
                 else
-                {
-                    conf->file.seekg(offset ^ i << m);
-                    conf->file.read(data + (i << m), M);
-                }
+                    fread(data + (i << m), offset ^ i << m, M);
             if (child.size() < N)
-            {
-                conf->file.seekg(offset ^ child.size() << m);
-                conf->file.read(data + (child.size() << m), N - child.size() << m);
-            }
+                fread(data + (child.size() << m), offset ^ child.size() << m, N - child.size() << m);
             child.clear();
         }
 
@@ -136,17 +125,19 @@ namespace tai
         }
 
     public:
-        void read(const size_t& begin, const size_t& end, char* const& ptr) override
+        void read(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) override
         {
             if (data)
             {
                 memcpy(ptr, data + (begin & NM - 1), end - begin);
                 unlock();
+                io->unlock();
             }
-            else if (lock() || end - begin < NM)
+            else if (locked() || end - begin < NM)
             {
                 const auto range = getRange(begin, end);
                 lock(range.second - range.begin + 1);
+                io->lock(range.second - range.begin);
                 if (child.size() < range.second)
                     child.resize(range.second);
 
@@ -171,34 +162,37 @@ namespace tai
                 merge();
                 memcpy(ptr, data, NM);
                 unlock();
+                io->unlock();
             }
             else
             {
-                conf->file.seekg(begin);
-                conf->file.read(ptr, NM);
+                fread(ptr, begin, NM);
                 unlock();
+                io->unlock();
             }
         }
 
-        void write(const size_t& begin, const size_t& end, char* const& ptr) override
+        void write(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) override
         {
             if (data)
             {
                 memcpy(data + (begin & NM - 1), ptr, end - begin);
-                if (!dirty)
-                    if (end - begin > NM >> 1)
-                        dirty = true;
-                    else
-                    {
-                        conf->file.seekp(begin);
-                        conf->file.write(ptr, end - begin);
-                    }
-                unlock();
+                if (dirty)
+                    unlock();
+                else if (end - begin > NM >> 1)
+                    dirty = true;
+                else
+                {
+                    fwrite(ptr, begin, end - begin);
+                    unlock();
+                }
+                io->unlock();
             }
-            else if (lock() || end - begin < NM)
+            else if (locked() || end - begin < NM)
             {
                 const auto range = getRange(begin, end);
                 lock(range.second - range.begin + 1);
+                io->lock(range.second - range.begin);
                 if (child.size() < range.second)
                     child.resize(range.second);
 
@@ -229,10 +223,10 @@ namespace tai
                 }
                 else
                 {
-                    conf->file.seekp(begin);
-                    conf->file.write(ptr, end - begin);
+                    fwrite(ptr, begin, end - begin);
+                    unlock();
                 }
-                unlock();
+                io->unlock();
             }
         }
 
@@ -240,9 +234,9 @@ namespace tai
         {
             if (dirty)
             {
-                conf->file.seekp(offset);
-                conf->file.write(data, NM);
+                fwrite(data, offset, NM);
                 dirty = false;
+                unlock();
             }
         }
 
@@ -281,10 +275,7 @@ namespace tai
                 parent = nullptr;
             }
             else
-            {
-                conf->file.seekg(offset);
-                conf->file.read(ptr, N);
-            }
+                fread(ptr, offset, N);
         }
 
         void drop()
@@ -295,28 +286,28 @@ namespace tai
                 delete this;
         }
 
-        void read(const size_t& begin, const size_t& end, char* const& ptr) override
+        void read(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) override
         {
             if (!data && Controller::ctrl->usage(N) != Controller::Full)
             {
                 (*conf)(this, N);
-                conf->file.seekg(offset);
-                conf->file.read(data, N);
+                fread(data, offset, N);
             }
             if (data)
                 memcpy(ptr, data + begin, end - begin);
             else
-            {
-                conf->file.seekg(begin);
-                conf->file.read(ptr, end - begin);
-            }
+                fread(ptr, begin, end - begin);
             unlock();
+            io->unlock();
         }
 
-        void write(const size_t& begin, const size_t& end, char* const& ptr) override
+        void write(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) override
         {
             if (dirty)
+            {
                 memcpy(data + (begin & N - 1), ptr, end - begin);
+                unlock();
+            }
             else if (data)
             {
                 memcpy(data + (begin & N - 1), ptr, end - begin);
@@ -327,32 +318,26 @@ namespace tai
                 (*conf)(this, N);
                 memcpy(data + (begin & N - 1), ptr, end - begin);
                 if (begin & N)
-                {
-                    conf->file.seekg(begin);
-                    conf->file.read(data, begin & N - 1);
-                }
+                    fread(data, begin, begin & N - 1);
                 if (end & N)
-                {
-                    conf->file.seekg(end);
-                    conf->file.read(data + (end & N - 1), -end & N - 1);
-                }
+                    fread(data + (end & N - 1), end, -end & N - 1);
                 dirty = true;
             }
             else
             {
-                conf->file.seekp(begin);
-                conf->file.write(ptr, end - begin);
+                fwrite(ptr, begin, end - begin);
+                unlock();
             }
-            unlock();
+            io->unlock();
         }
 
         void flush() override
         {
             if (dirty)
             {
-                conf->file.seekp(offset);
-                conf->file.write(data, N);
+                fwrite(data, offset, N);
                 dirty = false;
+                unlock();
             }
         }
 
@@ -379,6 +364,27 @@ namespace tai
 
         explicit BTree(const std::string &path) : conf(path), root(conf, 0)
         {
+        }
+
+        IOCtrl* read(const size_t& begin, const size_t& end, char* const& ptr)
+        {
+            auto io = new IOCtrl();
+            io->lock();
+            Worker::pushPending([=](){ root.read(begin, end, ptr, io); });
+            return io;
+        }
+
+        IOCtrl* write(const size_t& begin, const size_t& end, char* const& ptr)
+        {
+            auto io = new IOCtrl();
+            io->lock();
+            Worker::pushPending([=](){ root.write(begin, end, ptr, io); });
+            return io;
+        }
+
+        void close()
+        {
+            conf.files.clear();
         }
     };
 
