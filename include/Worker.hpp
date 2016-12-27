@@ -41,8 +41,6 @@ namespace tai
 
         std::atomic<State> state = {Pending};
 
-        const size_t spin = 256;
-
         Worker(Worker&& _);
 
         Worker(Controller& ctrl, const size_t& id);

@@ -60,14 +60,14 @@ namespace tai
         state.store(Sync, std::memory_order_release);
         if (id)
         {
-            for (auto i = spin; i-- && state.load(std::memory_order_relaxed) != post;);
+            for (auto i = Controller::spin; i-- && state.load(std::memory_order_relaxed) != post;);
             for (; state.load(std::memory_order_relaxed) != post; std::this_thread::yield());
         }
         else
         {
             for (size_t i = 1; i < ctrl.concurrency; ++i)
             {
-                for (auto j = spin; j-- && ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync;);
+                for (auto j = Controller::spin; j-- && ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync;);
                 for (; ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
             }
             state.store(post, std::memory_order_acquire);

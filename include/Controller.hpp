@@ -27,6 +27,8 @@ namespace tai
             Full
         };
 
+        static constexpr size_t spin = 256;
+
         static thread_local Controller* ctrl;
         std::vector<Worker> workers;
         const size_t concurrency;
