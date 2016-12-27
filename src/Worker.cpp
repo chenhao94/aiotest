@@ -55,25 +55,24 @@ namespace tai
                 ctrl.workers[i].state.store(_, sync);
     }
 
-    void Worker::barrier(const State& post, const std::memory_order& sync)
+    void Worker::barrier(const State& post)
     {
+        state.store(Sync, std::memory_order_release);
         if (id)
         {
-            state.store(Sync, sync);
-            for (auto i = spin; i-- && state.load(sync) != post;);
-            for (; state.load(sync) != post; std::this_thread::yield());
-            broadcast(post, sync);
+            for (auto i = spin; i-- && state.load(std::memory_order_relaxed) != post;);
+            for (; state.load(std::memory_order_relaxed) != post; std::this_thread::yield());
         }
         else
         {
             for (size_t i = 1; i < ctrl.concurrency; ++i)
             {
-                for (auto j = spin; j-- && ctrl.workers[i].state.load(sync) != Sync;);
-                for (; ctrl.workers[i].state.load(sync) != Sync; std::this_thread::yield());
+                for (auto j = spin; j-- && ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync;);
+                for (; ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
             }
-            state.store(post);
-            broadcast(post, sync);
+            state.store(post, std::memory_order_acquire);
         }
+        broadcast(post, std::memory_order_acquire);
     }
 
     void Worker::steal()

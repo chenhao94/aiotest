@@ -10,9 +10,10 @@ namespace tai
         ready.test_and_set(std::memory_order_relaxed);
         workers.reserve(concurrency);
         for (size_t i = 0; i < concurrency; workers.emplace_back(*this, i++));
-        wait(Created, std::memory_order_consume);
+        wait(Created, std::memory_order_relaxed);
+        atomic_thread_fence(std::memory_order_acq_rel);
         for (auto& i : workers)
-            i.state.store(Pulling, std::memory_order_acq_rel);
+            i.state.store(Pulling, std::memory_order_relaxed);
     }
 
     Controller::~Controller()
