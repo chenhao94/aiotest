@@ -19,20 +19,16 @@ namespace tai
     private:
         boost::lockfree::queue<Task*> pending;
 
-        std::unique_ptr<std::vector<Task>> wait = nullptr;
-        std::unique_ptr<std::vector<Task>> ready = nullptr;
+        std::vector<Task> wait;
+        std::vector<Task> ready;
         std::vector<Task> done;
         std::atomic<size_t> remain = {0};
 
         std::vector<Task>* current = nullptr;
 
     public:
-
-        TLQ();
-        ~TLQ();
-
         void roll();
-        void setup(std::vector<Task>* const& queue);
+        void setup(std::vector<Task>& queue);
         void setupReady();
         void setupDone();
 

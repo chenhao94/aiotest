@@ -4,8 +4,12 @@
 #include <memory>
 #include <fstream>
 #include <algorithm>
+#include <mutex>
 #include <vector>
+#include <unordered_set>
 #include <functional>
+#include <random>
+#include <chrono>
 
 #include <boost/lockfree/queue.hpp>
 
@@ -358,27 +362,45 @@ namespace tai
         BTreeConfig conf;
         BTreeNode<n, rest...> root;
 
+        static std::unordered_set<size_t> usedID;
+        static std::mutex mtxUsedID;
+
+        size_t id = 0;
+
+        static std::default_random_engine rand;
+
     public:
         static constexpr auto level = sizeof...(rest) + 1;
         static constexpr std::array<size_t, level> bits = {n, rest...};
 
         explicit BTree(const std::string &path) : conf(path), root(conf, 0)
         {
+            std::lock_guard<std::mutex> lck(mtxUsedID);
+            if (usedID.empty())
+                rand.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+            while (usedID.count(id = rand()));
+            usedID.insert(id);
         }
 
-        IOCtrl* read(const size_t& begin, const size_t& end, char* const& ptr)
+        ~BTree()
+        {
+            std::lock_guard<std::mutex> lck(mtxUsedID);
+            usedID.erase(id);
+        }
+
+        IOCtrl* read(Controller& ctrl, const size_t& begin, const size_t& end, char* const& ptr)
         {
             auto io = new IOCtrl();
             io->lock();
-            Worker::pushPending([=](){ root.read(begin, end, ptr, io); });
+            ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(begin, end, ptr, io); });
             return io;
         }
 
-        IOCtrl* write(const size_t& begin, const size_t& end, char* const& ptr)
+        IOCtrl* write(Controller& ctrl, const size_t& begin, const size_t& end, char* const& ptr)
         {
             auto io = new IOCtrl();
             io->lock();
-            Worker::pushPending([=](){ root.write(begin, end, ptr, io); });
+            ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(begin, end, ptr, io); });
             return io;
         }
 

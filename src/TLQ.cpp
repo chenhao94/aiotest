@@ -11,46 +11,36 @@
 
 namespace tai
 {
-    TLQ::TLQ():
-        wait(new std::vector<Task>),
-        ready(new std::vector<Task>)
-    {
-    }
-
-    TLQ::~TLQ()
-    {
-    }
-
     void TLQ::roll()
     {
-        swap(wait, ready);
+        ready.swap(wait);
         Task* task = nullptr;
         if (pending.pop(task))
         {
-            ready->emplace_back(*task);
+            ready.emplace_back(*task);
             delete task;
             task = nullptr;
         }
     }
 
-    void TLQ::setup(std::vector<Task>* const& queue)
+    void TLQ::setup(std::vector<Task>& queue)
     {
         if (current)
         {
             current->clear();
             current->shrink_to_fit();
         }
-        remain.store((current = queue)->size(), std::memory_order_relaxed);
+        remain.store((current = &queue)->size(), std::memory_order_relaxed);
     }
 
     void TLQ::setupReady()
     {
-        setup(ready.get());
+        setup(ready);
     }
 
     void TLQ::setupDone()
     {
-        setup(&done);
+        setup(done);
     }
 
     size_t TLQ::operator ()()
@@ -63,7 +53,7 @@ namespace tai
 
     void TLQ::pushWait(const Task& task)
     {
-        wait->emplace_back(task);
+        wait.emplace_back(task);
     }
 
     void TLQ::pushDone(const Task& task)

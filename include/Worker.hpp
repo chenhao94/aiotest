@@ -69,7 +69,7 @@ namespace tai
 
         static void pushWait(const Task& task);
         static void pushDone(const Task& task);
-        static void pushPending(const Task& task);
+        void pushPending(const Task& task);
 
         void broadcast(const State& _, const std::memory_order& sync = std::memory_order_seq_cst);
 
