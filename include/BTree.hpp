@@ -82,12 +82,12 @@ namespace tai
                 {
                     if (child[i])
                         child[i]->merge(ptr);
-                    else
-                        fread(ptr, offset ^ i << m, M);
+                    else if (!fread(ptr, offset ^ i << m, M))
+                        fail();
                     ptr += M;
                 }
-                if (child.size() < N)
-                    fread(ptr, offset ^ child.size() << m, N - child.size() << m);
+                if (child.size() < N && !fread(ptr, offset ^ child.size() << m, N - child.size() << m))
+                    fail();
 
                 delete this;
             }
@@ -113,10 +113,10 @@ namespace tai
             for (size_t i = 0; i < child.size(); ++i)
                 if (child[i])
                     child[i]->merge(data + i << m);
-                else
-                    fread(data + (i << m), offset ^ i << m, M);
-            if (child.size() < N)
-                fread(data + (child.size() << m), offset ^ child.size() << m, N - child.size() << m);
+                else if (!fread(data + (i << m), offset ^ i << m, M))
+                    fail();
+            if (child.size() < N && !fread(data + (child.size() << m), offset ^ child.size() << m, N - child.size() << m))
+                fail();
             child.clear();
         }
 
@@ -170,7 +170,8 @@ namespace tai
             }
             else
             {
-                fread(ptr, begin, NM);
+                if (!fread(ptr, begin, NM))
+                    io->fail();
                 unlock();
                 io->unlock();
             }
@@ -187,7 +188,8 @@ namespace tai
                     dirty = true;
                 else
                 {
-                    fwrite(ptr, begin, end - begin);
+                    if (!fwrite(ptr, begin, end - begin))
+                        io->fail();
                     unlock();
                 }
                 io->unlock();
@@ -227,18 +229,42 @@ namespace tai
                 }
                 else
                 {
-                    fwrite(ptr, begin, end - begin);
+                    if (!fwrite(ptr, begin, end - begin))
+                        io->fail();
                     unlock();
                 }
                 io->unlock();
             }
         }
 
+        static void sync(IOCtrl* const& io)
+        {
+            Worker::pushWait([=](){ Child::sync(io); });
+        }
+
+        void flush(IOCtrl* const& io) override
+        {
+            if (dirty)
+            {
+                if (!fwrite(data, offset, N))
+                    io->fail();
+                else
+                {
+                    dirty = false;
+                    unlock();
+                }
+            }
+            else if (!data && locked())
+                for (auto& i : child)
+                    Worker::pushWait([=](){ i->flush(io); });
+        }
+
         void flush()
         {
             if (dirty)
             {
-                fwrite(data, offset, NM);
+                if (!fwrite(data, offset, NM))
+                    fail();
                 dirty = false;
                 unlock();
             }
@@ -278,8 +304,8 @@ namespace tai
                 memcpy(data, ptr, N);
                 parent = nullptr;
             }
-            else
-                fread(ptr, offset, N);
+            else if (!fread(ptr, offset, N))
+                fail();
         }
 
         void drop()
@@ -295,12 +321,13 @@ namespace tai
             if (!data && Controller::ctrl->usage(N) != Controller::Full)
             {
                 (*conf)(this, N);
-                fread(data, offset, N);
+                if (!fread(data, offset, N))
+                    io->fail();
             }
             if (data)
                 memcpy(ptr, data + begin, end - begin);
-            else
-                fread(ptr, begin, end - begin);
+            else if (!fread(ptr, begin, end - begin))
+                io->fail();
             unlock();
             io->unlock();
         }
@@ -321,25 +348,44 @@ namespace tai
             {
                 (*conf)(this, N);
                 memcpy(data + (begin & N - 1), ptr, end - begin);
-                if (begin & N)
-                    fread(data, begin, begin & N - 1);
-                if (end & N)
-                    fread(data + (end & N - 1), end, -end & N - 1);
+                if (begin & N && !fread(data, begin, begin & N - 1))
+                    io->fail();
+                if (end & N && !fread(data + (end & N - 1), end, -end & N - 1))
+                    io->fail();
                 dirty = true;
             }
             else
             {
-                fwrite(ptr, begin, end - begin);
+                if (!fwrite(ptr, begin, end - begin))
+                    io->fail();
                 unlock();
             }
             io->unlock();
+        }
+
+        static void sync(IOCtrl* const& io)
+        {
+            io->unlock();
+        }
+
+        void flush(IOCtrl* const& io) override
+        {
+            if (dirty)
+                if (!fwrite(data, offset, N))
+                    io->fail();
+                else
+                {
+                    dirty = false;
+                    unlock();
+                }
         }
 
         void flush() override
         {
             if (dirty)
             {
-                fwrite(data, offset, N);
+                if (!fwrite(data, offset, N))
+                    fail();
                 dirty = false;
                 unlock();
             }
@@ -357,10 +403,13 @@ namespace tai
     class BTree
     {
         static_assert((n + ... + rest) == sizeof(size_t), "B-tree must cover the entire address space.");
+    
+    public:
+        using Root = BTreeNode<n, rest...>;
 
         std::atomic<size_t> count = {0};
         BTreeConfig conf;
-        BTreeNode<n, rest...> root;
+        Root root;
 
         static std::unordered_set<size_t> usedID;
         static std::mutex mtxUsedID;
@@ -402,6 +451,15 @@ namespace tai
             auto io = new IOCtrl();
             io->lock();
             if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(begin, end, ptr, io); }))
+                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            return io;
+        }
+
+        auto sync(Controller& ctrl)
+        {
+            auto io = new IOCtrl();
+            io->lock();
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.flush(io); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }

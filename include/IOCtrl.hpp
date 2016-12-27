@@ -7,6 +7,9 @@ namespace tai
 {
     class IOCtrl
     {
+    protected:
+        std::atomic<bool> failed = { false };
+
     public:
         enum State
         {
@@ -18,7 +21,6 @@ namespace tai
 
         std::atomic<size_t> dep = { 0 };
         std::atomic<State> state = { Running };
-        std::atomic<bool> failed = { false };
 
         auto lock(const size_t& num = 1)
         {
@@ -35,6 +37,11 @@ namespace tai
             if (const auto ret = dep.load(std::memory_order_relaxed))
                 return ret;
             return dep.load(std::memory_order_acquire);
+        }
+
+        void fail()
+        {
+            failed.store(true, std::memory_order_relaxed);
         }
 
         State operator ()()

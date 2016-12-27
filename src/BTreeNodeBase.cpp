@@ -12,14 +12,6 @@
 
 namespace tai
 {
-    BTreeConfig::BTreeConfig(const std::string& path) : path(path)
-    {
-    }
-
-    BTreeConfig::~BTreeConfig()
-    {
-    }
-
     void BTreeConfig::operator()(BTreeNodeBase* const node, const size_t& size)
     {
         if (node->data)
@@ -36,41 +28,22 @@ namespace tai
         }
     }
 
-    bool BTreeNodeBase::valid()
-    {
-        return parent;
-    }
-
-    BTreeNodeBase::BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNodeBase* const parent) : conf(conf), offset(offset), parent(parent)
-    {
-    }
-
-    void BTreeNodeBase::fread(char* const& buf, const size_t& pos, const size_t&len)
+    bool BTreeNodeBase::fread(char* const& buf, const size_t& pos, const size_t&len)
     {
         auto& file = Worker::getTL(conf->files);
         if (!file.is_open())
-            file.open(conf->path);
+            file.open(conf->path, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
         file.seekg(pos);
-        file.read(buf, len);
+        return !file.read(buf, len).fail();
     }
 
-    void BTreeNodeBase::fwrite(char* const& buf, const size_t& pos, const size_t&len)
+    bool BTreeNodeBase::fwrite(char* const& buf, const size_t& pos, const size_t&len)
     {
         auto& file = Worker::getTL(conf->files);
         if (!file.is_open())
-            file.open(conf->path);
+            file.open(conf->path, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
         file.seekp(pos);
-        file.write(buf, len);
-    }
-
-    size_t BTreeNodeBase::locked()
-    {
-        return lck.load(std::memory_order_relaxed);
-    }
-
-    void BTreeNodeBase::lock(const size_t& num)
-    {
-        lck.fetch_add(num, std::memory_order_relaxed);
+        return !file.write(buf, len).flush().fail();
     }
 
     void BTreeNodeBase::unlock()
