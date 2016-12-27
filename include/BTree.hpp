@@ -388,19 +388,21 @@ namespace tai
             usedID.erase(id);
         }
 
-        IOCtrl* read(Controller& ctrl, const size_t& begin, const size_t& end, char* const& ptr)
+        auto read(Controller& ctrl, const size_t& begin, const size_t& end, char* const& ptr)
         {
             auto io = new IOCtrl();
             io->lock();
-            ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(begin, end, ptr, io); });
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(begin, end, ptr, io); }))
+                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
 
-        IOCtrl* write(Controller& ctrl, const size_t& begin, const size_t& end, char* const& ptr)
+        auto write(Controller& ctrl, const size_t& begin, const size_t& end, char* const& ptr)
         {
             auto io = new IOCtrl();
             io->lock();
-            ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(begin, end, ptr, io); });
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(begin, end, ptr, io); }))
+                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
 

@@ -5,7 +5,7 @@
 #include <array>
 #include <functional>
 
-#include <boost/lockfree/stack.hpp>
+#include <boost/lockfree/queue.hpp>
 
 #include "BTreeNodeBase.hpp"
 #include "TLQ.hpp"
@@ -25,7 +25,7 @@ namespace tai
         const size_t id;
 
         static std::atomic<size_t> poolSize;
-        static boost::lockfree::stack<size_t> pool;
+        static boost::lockfree::queue<size_t> pool;
         size_t gid;
         static thread_local size_t sgid;
 
@@ -40,6 +40,7 @@ namespace tai
         using Task = std::function<void()>;
 
         std::atomic<State> state = {Pending};
+        std::atomic_flag block = ATOMIC_FLAG_INIT;
 
         Worker(Worker&& _);
 
@@ -67,7 +68,7 @@ namespace tai
 
         static void pushWait(const Task& task);
         static void pushDone(const Task& task);
-        void pushPending(const Task& task);
+        bool pushPending(const Task& task);
 
         void broadcast(const State& _, const std::memory_order& sync = std::memory_order_seq_cst);
 

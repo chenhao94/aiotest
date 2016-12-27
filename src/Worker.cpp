@@ -43,9 +43,12 @@ namespace tai
         queue.pushDone(task);
     }
 
-    void Worker::pushPending(const Task& task)
+    bool Worker::pushPending(const Task& task)
     {
+        if (block.test_and_set())
+            return false;
         queue.pushPending(task);
+        return true;
     }
 
     void Worker::broadcast(const State& _, const std::memory_order& sync)
