@@ -109,19 +109,25 @@ namespace tai
         {
             queue.roll();
             queue.setupReady();
-            if (barrier([](){ return queue.busy() ? Running : GC; }) == Running)
+            if (barrier([](){ return queue.popTodo() ? Running : GC; }) == GC)
+                ++roundIdle;
+            else
             {
                 roundIdle = 0;
                 steal();
                 barrier(GC);
             }
+            const auto exceed = roundIdle - Controller::roundIdle;
+            if (!roundIdle || ctrl.lower >> std::max(exceed - 1, (ssize_t)0))
+            {
+                const auto lower = ctrl.lower >> std::max(exceed, (ssize_t)0);
+                for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > lower && ctrl.cache.pop(node); node->valid() ? node->evict() : node->suicide());
+                queue.setupDone();
+                barrier(Unlocking);
+                steal();
+            }
             else
-                ++roundIdle;
-            const auto lower = ctrl.lower >> std::max(roundIdle - Controller::roundIdle, (ssize_t)0);
-            for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > lower && ctrl.cache.pop(node); node->valid() ? node->evict() : node->suicide());
-            queue.setupDone();
-            barrier(Unlocking);
-            steal();
+                std::this_thread::yield();
             barrier(Pulling);
         }
     }

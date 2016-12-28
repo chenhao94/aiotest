@@ -45,6 +45,14 @@ namespace tai
             return todo.load(std::memory_order_relaxed);
         }
 
+        // Pull and clear todo counter;
+        auto popTodo()
+        {
+            const auto ret = todo.load(std::memory_order_relaxed);
+            todo.store(0, std::memory_order_relaxed);
+            return ret;
+        }
+
         // Switch wait/ready queue and pull at most one pending task.
         void roll()
         {
@@ -81,12 +89,6 @@ namespace tai
         void setupDone()
         {
             setup(done);
-        }
-
-        // Clear todo counter;
-        void clearTodo()
-        {
-            todo.store(0, std::memory_order_relaxed);
         }
 
         // Pop and execute one task from the current queue.
