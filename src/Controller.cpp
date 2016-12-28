@@ -18,11 +18,9 @@ namespace tai
 
     Controller::~Controller()
     {
-        ready.clear(std::memory_order_relaxed);
         for (auto& i : workers)
-        {
-            i.block.test_and_set(std::memory_order_relaxed);
-        }
+            i.reject.test_and_set(std::memory_order_relaxed);
+        ready.clear(std::memory_order_relaxed);
     }
 
     Controller::Usage Controller::usage(const size_t& alloc)

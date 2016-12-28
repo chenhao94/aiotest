@@ -49,7 +49,7 @@ namespace tai
         using Task = std::function<void()>;
 
         std::atomic<State> state = {Pending};
-        std::atomic_flag block = ATOMIC_FLAG_INIT;
+        std::atomic_flag reject = ATOMIC_FLAG_INIT;
 
         Worker(Worker&& _);
 

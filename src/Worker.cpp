@@ -46,7 +46,7 @@ namespace tai
 
     bool Worker::pushPending(const Task& task)
     {
-        if (block.test_and_set())
+        if (reject.test_and_set())
             return false;
         queue.pushPending(task);
         return true;
