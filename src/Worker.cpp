@@ -105,7 +105,7 @@ namespace tai
         foreign = &queue;
         state.store(Created, std::memory_order_release);
         while (state.load(std::memory_order_acquire) != Pulling);
-        for (size_t roundIdle = 0; ctrl.ready.test_and_set();)
+        for (ssize_t roundIdle = 0; ctrl.ready.test_and_set();)
         {
             queue.roll();
             queue.setupReady();
@@ -117,7 +117,7 @@ namespace tai
             }
             else
                 ++roundIdle;
-            const auto lower = ctrl.lower >> std::max(roundIdle - Controller::roundIdle, (size_t)0);
+            const auto lower = ctrl.lower >> std::max(roundIdle - Controller::roundIdle, (ssize_t)0);
             for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > lower && ctrl.cache.pop(node); node->valid() ? node->evict() : node->suicide());
             queue.setupDone();
             barrier(Unlocking);

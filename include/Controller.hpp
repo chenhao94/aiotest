@@ -31,7 +31,7 @@ namespace tai
         static constexpr size_t spin = 256;
 
         // Idle time before dropping cache.
-        static constexpr size_t roundIdle = 10;
+        static constexpr ssize_t roundIdle = 10;
 
         // Used for static reference from worker thread.
         // Worker may have member for this functionality but that's not accessible from other classes.
