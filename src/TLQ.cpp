@@ -28,13 +28,15 @@ namespace tai
         if (current)
         {
             current->clear();
-            current->shrink_to_fit();
+            if (!(rand() & 255))
+                current->shrink_to_fit();
         }
         remain.store((current = &queue)->size(), std::memory_order_relaxed);
     }
 
     void TLQ::setupReady()
     {
+        todo.fetch_add(ready.size(), std::memory_order_relaxed);
         setup(ready);
     }
 

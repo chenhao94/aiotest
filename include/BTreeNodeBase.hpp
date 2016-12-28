@@ -61,6 +61,12 @@ namespace tai
             conf->failed.store(std::memory_order_relaxed);
         }
 
+        // Delete this node.
+        void suicide()
+        {
+            delete this;
+        }
+
         BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNodeBase* const parent = nullptr) : conf(conf), offset(offset), parent(parent)
         {
         }

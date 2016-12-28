@@ -1,5 +1,6 @@
 #include <thread>
 #include <functional>
+#include <algorithm>
 
 #include "BTreeNodeBase.hpp"
 #include "Worker.hpp"
@@ -51,7 +52,6 @@ namespace tai
         return true;
     }
 
-    // Broadcast a state to neighbors.
     void Worker::broadcast(const State& _, const std::memory_order& sync)
     {
         for (auto& i : neighbor)
@@ -105,18 +105,20 @@ namespace tai
         foreign = &queue;
         state.store(Created, std::memory_order_release);
         while (state.load(std::memory_order_acquire) != Pulling);
-        while (ctrl.ready.test_and_set())
+        for (size_t roundIdle = 0; ctrl.ready.test_and_set();)
         {
             queue.roll();
             queue.setupReady();
-            barrier(Running);
-            steal();
-            barrier(GC);
-            for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > ctrl.lower && ctrl.cache.pop(node);)
-                if (node->valid())
-                    node->evict();
-                else
-                    delete node;
+            if (barrier([](){ return queue.busy() ? Running : GC; }) == Running)
+            {
+                roundIdle = 0;
+                steal();
+                barrier(GC);
+            }
+            else
+                ++roundIdle;
+            const auto lower = ctrl.lower >> std::max(roundIdle - Controller::roundIdle, (size_t)0);
+            for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > lower && ctrl.cache.pop(node); node->valid() ? node->evict() : node->suicide());
             queue.setupDone();
             barrier(Unlocking);
             steal();

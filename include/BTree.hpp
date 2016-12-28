@@ -414,21 +414,22 @@ namespace tai
     public:
         using Root = BTreeNode<n, rest...>;
 
-        std::atomic<size_t> count = {0};
         BTreeConfig conf;
         Root root;
 
+        // Reuseable global ID for worker association.
         static std::unordered_set<size_t> usedID;
         static std::mutex mtxUsedID;
-
         size_t id = 0;
 
+        // Random engine.
         static std::default_random_engine rand;
 
     public:
         static constexpr auto level = sizeof...(rest) + 1;
         static constexpr std::array<size_t, level> bits = {n, rest...};
 
+        // Bind to the file from given path.
         explicit BTree(const std::string &path) : conf(path), root(conf, 0)
         {
             std::lock_guard<std::mutex> lck(mtxUsedID);
@@ -444,6 +445,7 @@ namespace tai
             usedID.erase(id);
         }
 
+        // Issue a read request ont this file to the given controller.
         auto read(Controller& ctrl, const size_t& begin, const size_t& end, char* const& ptr)
         {
             auto io = new IOCtrl();
@@ -453,6 +455,7 @@ namespace tai
             return io;
         }
 
+        // Issue a write request ont this file to the given controller.
         auto write(Controller& ctrl, const size_t& begin, const size_t& end, char* const& ptr)
         {
             auto io = new IOCtrl();
@@ -462,6 +465,7 @@ namespace tai
             return io;
         }
 
+        // Issue a sync request ont this file to the given controller.
         auto sync(Controller& ctrl)
         {
             auto io = new IOCtrl();
@@ -471,11 +475,13 @@ namespace tai
             return io;
         }
 
+        // Close the file.
         void close()
         {
             conf.files.clear();
         }
     };
 
+    // Default hierarchy.
     using BTreeDefault = BTree<32, 2, 9, 9, 12>;
 }
