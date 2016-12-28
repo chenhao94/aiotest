@@ -71,8 +71,8 @@ namespace tai
         if (id)
         {
             post = f();
-            for (auto i = Controller::spin; i-- && state.load(std::memory_order_relaxed) != post;);
-            for (; state.load(std::memory_order_relaxed) != post; std::this_thread::yield());
+            for (auto i = Controller::spin; i-- && state.load(std::memory_order_relaxed) == Sync;);
+            for (; state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
         }
         else
         {
@@ -81,8 +81,7 @@ namespace tai
                 for (auto j = Controller::spin; j-- && ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync;);
                 for (; ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
             }
-            post = f();
-            state.store(post, std::memory_order_acquire);
+            state.store(post = f(), std::memory_order_acquire);
         }
         broadcast(post, std::memory_order_acquire);
         return post;
