@@ -40,11 +40,13 @@ namespace tai
         std::vector<Child*> child;
 
     private:
+        // Convert file address into child indices.
         auto getRange(const size_t& begin, const size_t& end) const
         {
             return std::pair<size_t, size_t>{begin >> m & N - 1, end - 1 >> m & N - 1};
         }
 
+        // Touch a child node to make sure it exists.
         auto touch(const size_t& i)
         {
             if (!child[i])
@@ -52,6 +54,8 @@ namespace tai
             return child[i];
         }
 
+        // Touch a child node to make sure it exists.
+        // Use offset hint to reduce redundant computation.
         auto touch(const size_t& i, const size_t& offset)
         {
             if (!child[i])
@@ -69,7 +73,7 @@ namespace tai
             evict();
         }
 
-        void merge(char* ptr)
+        void merge(char* const& ptr) override
         {
             if (data)
             {
@@ -78,22 +82,23 @@ namespace tai
             }
             else
             {
+                auto dst = ptr;
                 for (size_t i = 0; i < child.size(); ++i)
                 {
                     if (child[i])
-                        child[i]->merge(ptr);
-                    else if (!fread(ptr, offset ^ i << m, M))
+                        child[i]->merge(dst);
+                    else if (!fread(dst, offset ^ i << m, M))
                         fail();
-                    ptr += M;
+                    dst += M;
                 }
-                if (child.size() < N && !fread(ptr, offset ^ child.size() << m, N - child.size() << m))
+                if (child.size() < N && !fread(dst, offset ^ child.size() << m, N - child.size() << m))
                     fail();
 
                 delete this;
             }
         }
 
-        void drop()
+        void drop() override
         {
             if (data)
                 parent = nullptr;
@@ -107,6 +112,7 @@ namespace tai
         }
 
     private:
+        // Merge subtree cache into node cache.
         void merge()
         {
             (*conf)(this, NM);
@@ -120,6 +126,7 @@ namespace tai
             child.clear();
         }
 
+        // Unlink all child subtrees.
         void dropChild()
         {
             for (auto& i : child)
@@ -297,7 +304,7 @@ namespace tai
             evict();
         }
 
-        void merge(char* const& ptr)
+        void merge(char* const& ptr) override
         {
             if (data)
             {
@@ -308,7 +315,7 @@ namespace tai
                 fail();
         }
 
-        void drop()
+        void drop() override
         {
             if (data)
                 parent = nullptr;

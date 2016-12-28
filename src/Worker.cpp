@@ -51,6 +51,7 @@ namespace tai
         return true;
     }
 
+    // Broadcast a state to neighbors.
     void Worker::broadcast(const State& _, const std::memory_order& sync)
     {
         for (auto& i : neighbor)
@@ -66,20 +67,21 @@ namespace tai
 
     Worker::State Worker::barrier(const std::function<State()>& f)
     {
-        State post;
+        auto post = Sync;
         state.store(Sync, std::memory_order_release);
         if (id)
         {
-            post = f();
-            for (auto i = Controller::spin; i-- && state.load(std::memory_order_relaxed) == Sync;);
-            for (; state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
+            for (auto i = Controller::spin; i-- && (post = state.load(std::memory_order_relaxed)) == Sync;);
+            if (post == Sync)
+                for (; (post = state.load(std::memory_order_relaxed)) == Sync; std::this_thread::yield());
         }
         else
         {
             for (size_t i = 1; i < ctrl.concurrency; ++i)
             {
-                for (auto j = Controller::spin; j-- && ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync;);
-                for (; ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
+                for (auto j = Controller::spin; j-- && (post = ctrl.workers[i].state.load(std::memory_order_relaxed)) != Sync;);
+                if (post != Sync)
+                    for (; ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
             }
             state.store(post = f(), std::memory_order_acquire);
         }
