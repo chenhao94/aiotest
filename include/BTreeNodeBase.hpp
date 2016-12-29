@@ -71,7 +71,9 @@ namespace tai
         {
         }
 
-        virtual ~BTreeNodeBase() = 0;
+        virtual ~BTreeNodeBase()
+        {
+        }
 
     protected:
         // Shared configuration.

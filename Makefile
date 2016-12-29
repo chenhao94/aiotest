@@ -25,7 +25,7 @@ all: $(INCS) $(SRCS)
 	# $(CXX) $(CXXFLAGS) $(SRCS) -c
 	$(RM) libtai.a
 	# $(AR) -r libtai.a $(wildcard *.o)
-	#$(CXX) $(CXXFLAGS) -L. -ltai -o tai
+	# $(CXX) $(CXXFLAGS) -L. -ltai -o tai
 	$(CXX) $(CXXFLAGS) $(SRCS) -o tai
 
 .PHONY: clean

@@ -134,4 +134,7 @@ namespace tai
 
     std::atomic<size_t> Worker::poolSize;
     boost::lockfree::queue<size_t> Worker::pool;
+
+    thread_local size_t Worker::sgid;
+    thread_local TLQ Worker::queue;
 }
