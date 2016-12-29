@@ -31,7 +31,7 @@ namespace tai
         std::vector<Task> ready;
         std::vector<Task> done;
         // LIFO head.
-        std::atomic<size_t> remain = { 0 };
+        std::atomic<ssize_t> remain = { 0 };
 
         // Number of tasks to do in this round.
         std::atomic<size_t> todo = { 0 };
@@ -109,9 +109,9 @@ namespace tai
         auto operator ()()
         {
             auto i = remain.fetch_sub(1, std::memory_order_relaxed);
-            if (i)
+            if (i > 0)
                 (*current)[i - 1]();
-            return i;
+            return i > 0;
         }
 
         // Push a task into "wait" queue.

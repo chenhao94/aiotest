@@ -97,7 +97,7 @@ namespace tai
     void Worker::steal()
     {
         while (queue());
-        for (auto i = id + 1; i != ctrl.workers.size(); ++i)
+        for (auto i = id; ++i != ctrl.workers.size();)
             while((*ctrl.workers[i].foreign)());
         for (size_t i = 0; i != id; ++i)
             while((*ctrl.workers[i].foreign)());
