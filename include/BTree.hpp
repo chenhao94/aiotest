@@ -24,16 +24,16 @@ namespace tai
     template<size_t n, size_t... rest>
     class BTreeNode : public BTreeNodeBase
     {
-        static_assert(n <= sizeof(size_t), "B-tree node cannot be larger than the size of address space.");
-        static_assert((n + ... + rest) <= sizeof(size_t), "B-tree node cannot be larger than the size of address space.");
+        static_assert(n <= sizeof(size_t) << 3, "B-tree node cannot be larger than the size of address space.");
+        static_assert((n + ... + rest) <= sizeof(size_t) << 3, "B-tree node cannot be larger than the size of address space.");
 
     public:
         using Self = BTreeNode<n, rest...>;
         using Child = BTreeNode<rest...>;
 
-        static constexpr auto N = 1 << n;
+        static constexpr auto N = (size_t)1 << n;
         static constexpr auto m = (rest + ...);
-        static constexpr auto M = 1 << m;
+        static constexpr auto M = (size_t)1 << m;
         static constexpr auto nm = n + m;
         static constexpr auto NM = N << m;
 
@@ -41,13 +41,13 @@ namespace tai
 
     private:
         // Convert file address into child indices.
-        auto getRange(const size_t& begin, const size_t& end) const
+        auto getRange(size_t begin, size_t end) const
         {
             return std::pair<size_t, size_t>{begin >> m & N - 1, end - 1 >> m & N - 1};
         }
 
         // Touch a child node to make sure it exists.
-        auto touch(const size_t& i)
+        auto touch(size_t i)
         {
             if (!child[i])
                 child[i] = new Child(conf, offset ^ i << m, this);
@@ -56,7 +56,7 @@ namespace tai
 
         // Touch a child node to make sure it exists.
         // Use offset hint to reduce redundant computation.
-        auto touch(const size_t& i, const size_t& offset)
+        auto touch(size_t i, size_t offset)
         {
             if (!child[i])
                 child[i] = new Child(conf, offset, this);
@@ -64,7 +64,7 @@ namespace tai
         }
 
     public:
-        BTreeNode(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNode* const parent = nullptr) : BTreeNodeBase(conf, offset, parent), child(1)
+        BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : BTreeNodeBase(conf, offset, parent), child(1)
         {
         }
 
@@ -73,7 +73,7 @@ namespace tai
             evict();
         }
 
-        void merge(char* const& ptr) override
+        void merge(char* ptr) override
         {
             if (data)
             {
@@ -115,10 +115,10 @@ namespace tai
         // Merge subtree cache into node cache.
         void merge()
         {
-            (*conf)(this, NM);
+            conf(this, NM);
             for (size_t i = 0; i < child.size(); ++i)
                 if (child[i])
-                    child[i]->merge(data + i << m);
+                    child[i]->merge(data + (i << m));
                 else if (!fread(data + (i << m), offset ^ i << m, M))
                     fail();
             if (child.size() < N && !fread(data + (child.size() << m), offset ^ child.size() << m, N - child.size() << m))
@@ -136,7 +136,7 @@ namespace tai
         }
 
     public:
-        void read(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) override
+        void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             if (data)
             {
@@ -147,25 +147,25 @@ namespace tai
             else if (locked() || end - begin < NM)
             {
                 const auto range = getRange(begin, end);
-                lock(range.second - range.begin + 1);
-                io->lock(range.second - range.begin);
+                lock(range.second - range.first + 1);
+                io->lock(range.second - range.first);
                 if (child.size() < range.second)
                     child.resize(range.second);
 
                 auto node = touch(range.first, begin & -M);
                 if (range.first == range.second)
-                    Worker::pushWait([=](){ node->read(begin, end, ptr); });
+                    Worker::pushWait([=](){ node->read(begin, end, ptr, io); });
                 else
                 {
-                    Worker::pushWait([=](){ node->read(begin, (begin & -M) + M, ptr); });
+                    Worker::pushWait([=](){ node->read(begin, (begin & -M) + M, ptr, io); });
                     auto suffix = ptr + (begin & M - 1 ? -begin & M - 1 : M);
                     for (auto i = range.first; ++i != range.second; suffix += M)
                     {
                         node = touch(i);
-                        Worker::pushWait([=](){ node->read(offset ^ i << m, offset ^ i + 1 << m, suffix); });
+                        Worker::pushWait([=](){ node->read(offset ^ i << m, offset ^ i + 1 << m, suffix, io); });
                     }
                     node = touch(range.second, end - 1 & -M);
-                    Worker::pushWait([=](){ node->read(end - 1 & -M, end, suffix); });
+                    Worker::pushWait([=](){ node->read(end - 1 & -M, end, suffix, io); });
                 }
             }
             else if (Controller::ctrl->usage(NM) != Controller::Full)
@@ -184,7 +184,7 @@ namespace tai
             }
         }
 
-        void write(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) override
+        void write(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             if (data)
             {
@@ -204,25 +204,25 @@ namespace tai
             else if (locked() || end - begin < NM)
             {
                 const auto range = getRange(begin, end);
-                lock(range.second - range.begin + 1);
-                io->lock(range.second - range.begin);
+                lock(range.second - range.first + 1);
+                io->lock(range.second - range.first);
                 if (child.size() < range.second)
                     child.resize(range.second);
 
                 auto node = touch(range.first, begin & -M);
                 if (range.first == range.second)
-                    Worker::pushWait([=](){ node->write(begin, end, ptr); });
+                    Worker::pushWait([=](){ node->write(begin, end, ptr, io); });
                 else
                 {
-                    Worker::pushWait([=](){ node->write(begin, (begin & -M) + M, ptr); });
+                    Worker::pushWait([=](){ node->write(begin, (begin & -M) + M, ptr, io); });
                     auto suffix = ptr + (-begin & M - 1);
                     for (auto i = range.first; ++i != range.second; suffix += M)
                     {
                         node = touch(i);
-                        Worker::pushWait([=](){ node->write(begin & -NM ^ i << m, begin & -NM ^ i + 1 << m, suffix); });
+                        Worker::pushWait([=](){ node->write(begin & -NM ^ i << m, begin & -NM ^ i + 1 << m, suffix, io); });
                     }
                     node = touch(range.second, end - 1 & -M);
-                    Worker::pushWait([=](){ node->write(end - 1 & -M, end, suffix); });
+                    Worker::pushWait([=](){ node->write(end - 1 & -M, end, suffix, io); });
                 }
             }
             else
@@ -230,7 +230,7 @@ namespace tai
                 dropChild();
                 if (Controller::ctrl->usage(NM) != Controller::Full)
                 {
-                    (*conf)(this, NM);
+                    conf(this, NM);
                     memcpy(data, ptr, NM);
                     dirty = true;
                 }
@@ -244,12 +244,12 @@ namespace tai
             }
         }
 
-        static void sync(IOCtrl* const& io)
+        static void sync(IOCtrl* io)
         {
             Worker::pushWait([=](){ Child::sync(io); });
         }
 
-        void flush(IOCtrl* const& io) override
+        void flush(IOCtrl* io) override
         {
             if (dirty)
             {
@@ -266,7 +266,7 @@ namespace tai
                     Worker::pushWait([=](){ i->flush(io); });
         }
 
-        void flush()
+        void flush() override
         {
             if (dirty)
             {
@@ -277,25 +277,25 @@ namespace tai
             }
         }
 
-        void evict()
+        void evict() override
         {
             flush();
             if (data)
-                (*conf)(data, NM);
+                conf(this, NM);
         }
     };
 
     template<size_t n>
     class BTreeNode<n> : public BTreeNodeBase
     {
-        static_assert(n <= sizeof(size_t), "B-tree node cannot be larger than the size of address space.");
+        static_assert(n <= sizeof(size_t) << 3, "B-tree node cannot be larger than the size of address space.");
 
     public:
         using Self = BTreeNode<n>;
 
-        static constexpr auto N = 1 << n;
+        static constexpr auto N = (size_t)1 << n;
 
-        BTreeNode(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNode* const parent = nullptr) : BTreeNodeBase(conf, offset, parent)
+        BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : BTreeNodeBase(conf, offset, parent)
         {
         }
 
@@ -304,7 +304,7 @@ namespace tai
             evict();
         }
 
-        void merge(char* const& ptr) override
+        void merge(char* ptr) override
         {
             if (data)
             {
@@ -323,11 +323,11 @@ namespace tai
                 delete this;
         }
 
-        void read(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) override
+        void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             if (!data && Controller::ctrl->usage(N) != Controller::Full)
             {
-                (*conf)(this, N);
+                conf(this, N);
                 if (!fread(data, offset, N))
                     io->fail();
             }
@@ -339,7 +339,7 @@ namespace tai
             io->unlock();
         }
 
-        void write(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) override
+        void write(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             if (dirty)
             {
@@ -353,7 +353,7 @@ namespace tai
             }
             else if (Controller::ctrl->usage(N) != Controller::Full)
             {
-                (*conf)(this, N);
+                conf(this, N);
                 memcpy(data + (begin & N - 1), ptr, end - begin);
                 if (begin & N && !fread(data, begin, begin & N - 1))
                     io->fail();
@@ -370,12 +370,12 @@ namespace tai
             io->unlock();
         }
 
-        static void sync(IOCtrl* const& io)
+        static void sync(IOCtrl* io)
         {
             io->unlock();
         }
 
-        void flush(IOCtrl* const& io) override
+        void flush(IOCtrl* io) override
         {
             if (dirty)
                 if (!fwrite(data, offset, N))
@@ -398,25 +398,17 @@ namespace tai
             }
         }
 
-        void evict()
+        void evict() override
         {
             flush();
             if (data)
-                (*conf)(this, N);
+                conf(this, N);
         }
     };
 
-    template<size_t n, size_t... rest>
-    class BTree
+    class BTreeBase
     {
-        static_assert((n + ... + rest) == sizeof(size_t), "B-tree must cover the entire address space.");
-    
     public:
-        using Root = BTreeNode<n, rest...>;
-
-        BTreeConfig conf;
-        Root root;
-
         // Reuseable global ID for worker association.
         static std::unordered_set<size_t> usedID;
         static std::mutex mtxUsedID;
@@ -425,12 +417,36 @@ namespace tai
         // Random engine.
         static std::default_random_engine rand;
 
+        // Configuration.
+        BTreeConfig conf;
+
+        BTreeBase(const std::string& path) : conf(path)
+        {
+        }
+    };
+
+    template<size_t... n>
+    class BTree
+    {
+        static_assert(sizeof...(n), "Illegal template argument list.");
+    };
+
+    template<size_t n, size_t... rest>
+    class BTree<n, rest...> : public BTreeBase
+    {
+        static_assert((n + ... + rest) == sizeof(size_t) << 3, "B-tree must cover the entire address space.");
+    
+    public:
+        using Root = BTreeNode<n, rest...>;
+
+        Root root;
+
     public:
         static constexpr auto level = sizeof...(rest) + 1;
         static constexpr std::array<size_t, level> bits = {n, rest...};
 
         // Bind to the file from given path.
-        explicit BTree(const std::string &path) : conf(path), root(conf, 0)
+        explicit BTree(const std::string &path) : BTreeBase(path), root(conf, 0)
         {
             std::lock_guard<std::mutex> lck(mtxUsedID);
             if (usedID.empty())
@@ -446,7 +462,7 @@ namespace tai
         }
 
         // Issue a read request ont this file to the given controller.
-        auto read(Controller& ctrl, const size_t& begin, const size_t& end, char* const& ptr)
+        auto read(Controller& ctrl, size_t begin, size_t end, char* ptr)
         {
             auto io = new IOCtrl();
             io->lock();
@@ -456,7 +472,7 @@ namespace tai
         }
 
         // Issue a write request ont this file to the given controller.
-        auto write(Controller& ctrl, const size_t& begin, const size_t& end, char* const& ptr)
+        auto write(Controller& ctrl, size_t begin, size_t end, char* ptr)
         {
             auto io = new IOCtrl();
             io->lock();
@@ -481,6 +497,10 @@ namespace tai
             conf.files.clear();
         }
     };
+
+    std::unordered_set<size_t> BTreeBase::usedID;
+    std::mutex BTreeBase::mtxUsedID;
+    std::default_random_engine BTreeBase::rand;
 
     // Default hierarchy.
     using BTreeDefault = BTree<32, 2, 9, 9, 12>;

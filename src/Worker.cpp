@@ -11,7 +11,7 @@ namespace tai
     {
     }
 
-    Worker::Worker(Controller& ctrl, const size_t& id) : ctrl(ctrl), id(id)
+    Worker::Worker(Controller& ctrl, size_t id) : ctrl(ctrl), id(id)
     {
         if (!pool.pop(gid))
             gid = poolSize.fetch_add(1, std::memory_order_relaxed);
@@ -34,17 +34,17 @@ namespace tai
         pool.push(gid);
     }
 
-    void Worker::pushWait(const Task& task)
+    void Worker::pushWait(Task task)
     {
         queue.pushWait(task);
     }
 
-    void Worker::pushDone(const Task& task)
+    void Worker::pushDone(Task task)
     {
         queue.pushDone(task);
     }
 
-    bool Worker::pushPending(const Task& task)
+    bool Worker::pushPending(Task task)
     {
         if (reject.test_and_set())
             return false;
@@ -52,20 +52,20 @@ namespace tai
         return true;
     }
 
-    void Worker::broadcast(const State& _, const std::memory_order& sync)
+    void Worker::broadcast(State _, std::memory_order sync)
     {
         for (auto& i : neighbor)
             if (~i)
                 ctrl.workers[i].state.store(_, sync);
     }
 
-    Worker::State Worker::barrier(const State& post)
+    Worker::State Worker::barrier(State post)
     {
         barrier([post](){ return post; });
         return post;
     }
 
-    Worker::State Worker::barrier(const std::function<State()>& f)
+    Worker::State Worker::barrier(std::function<State()> f)
     {
         auto post = Sync;
         state.store(Sync, std::memory_order_release);
@@ -131,4 +131,7 @@ namespace tai
             barrier(Pulling);
         }
     }
+
+    std::atomic<size_t> Worker::poolSize;
+    boost::lockfree::queue<size_t> Worker::pool;
 }

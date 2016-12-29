@@ -22,7 +22,7 @@ namespace tai
         {
         }
 
-        void operator()(BTreeNodeBase* const node, const size_t& size);
+        void operator()(BTreeNodeBase* node, size_t size);
     };
 
     class BTreeNodeBase
@@ -33,16 +33,16 @@ namespace tai
         using Self = BTreeNodeBase;
 
         // Merge cache to ptr.
-        virtual void merge(char* const& ptr) = 0;
+        virtual void merge(char* ptr) = 0;
 
         // Unlink the subtree.
         virtual void drop() = 0;
 
         // Read/write [begin, end - 1] to/from ptr[0..end - begin].
-        virtual void read(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) = 0;
-        virtual void write(const size_t& begin, const size_t& end, char* const& ptr, IOCtrl* const& io) = 0;
+        virtual void read(size_t begin, size_t end, char* ptr, IOCtrl* io) = 0;
+        virtual void write(size_t begin, size_t end, char* ptr, IOCtrl* io) = 0;
         // Flush subtree cache.
-        virtual void flush(IOCtrl* const& io) = 0;
+        virtual void flush(IOCtrl* io) = 0;
         // Flush node cache.
         virtual void flush() = 0;
         // Evict (flush+drop) node cache.
@@ -58,7 +58,7 @@ namespace tai
         // Used when no IOCtrl is responsible for the failure.
         void fail()
         {
-            conf->failed.store(std::memory_order_relaxed);
+            conf.failed.store(std::memory_order_relaxed);
         }
 
         // Delete this node.
@@ -67,7 +67,7 @@ namespace tai
             delete this;
         }
 
-        BTreeNodeBase(const std::shared_ptr<BTreeConfig>& conf, const size_t& offset, BTreeNodeBase* const parent = nullptr) : conf(conf), offset(offset), parent(parent)
+        BTreeNodeBase(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : conf(conf), offset(offset), parent(parent)
         {
         }
 
@@ -75,7 +75,7 @@ namespace tai
 
     protected:
         // Shared configuration.
-        std::shared_ptr<BTreeConfig> conf = nullptr;
+        BTreeConfig& conf;
 
         std::atomic<size_t> lck = { 0 };
         char* data = nullptr;
@@ -84,8 +84,8 @@ namespace tai
         bool dirty = false;
 
         // Read/write file.
-        bool fread(char* const& buf, const size_t& pos, const size_t&len);
-        bool fwrite(char* const& buf, const size_t& pos, const size_t&len);
+        bool fread(char* buf, size_t pos, size_t len);
+        bool fwrite(char* buf, size_t pos, size_t len);
 
         // Check if the subtree is locked.
         // A subtree is locked if any read/write is in progress.
@@ -97,13 +97,13 @@ namespace tai
         }
 
         // Lock this subtree.
-        void lock(const size_t& num = 1)
+        void lock(size_t num = 1)
         {
             lck.fetch_add(num, std::memory_order_relaxed);
         }
 
         // Unlock the subtree, including its parents if necessary.
         void unlock();
-        void unlock(const size_t& num);
+        void unlock(size_t num);
     };
 }

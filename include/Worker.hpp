@@ -54,7 +54,7 @@ namespace tai
         Worker(Worker&& _);
 
         // Construct as the id-th worker of the controller.
-        Worker(Controller& ctrl, const size_t& id);
+        Worker(Controller& ctrl, size_t id);
 
         ~Worker();
 
@@ -81,17 +81,17 @@ namespace tai
         }
 
         // Push task into the queue specified.
-        static void pushWait(const Task& task);
-        static void pushDone(const Task& task);
-        bool pushPending(const Task& task);
+        static void pushWait(Task task);
+        static void pushDone(Task task);
+        bool pushPending(Task task);
 
         // Broadcast a state to neighbors.
-        void broadcast(const State& _, const std::memory_order& sync = std::memory_order_seq_cst);
+        void broadcast(State _, std::memory_order sync = std::memory_order_seq_cst);
 
     protected:
         // Set worker state to "Sync", wait for all workers to sync and advance to next state.
-        State barrier(const State& post);
-        State barrier(const std::function<State()>& f);
+        State barrier(State post);
+        State barrier(std::function<State()> f);
 
         // Work stealing.
         void steal();

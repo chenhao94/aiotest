@@ -5,7 +5,7 @@ namespace tai
 {
     thread_local Controller* Controller::ctrl = nullptr;
 
-    Controller::Controller(const size_t& lower, const size_t& upper, const size_t& concurrency) : concurrency(concurrency), lower(lower), upper(upper)
+    Controller::Controller(size_t lower, size_t upper, size_t concurrency) : concurrency(concurrency), lower(lower), upper(upper)
     {
         ready.test_and_set(std::memory_order_relaxed);
         workers.reserve(concurrency);
@@ -23,7 +23,7 @@ namespace tai
         ready.clear(std::memory_order_relaxed);
     }
 
-    Controller::Usage Controller::usage(const size_t& alloc)
+    Controller::Usage Controller::usage(size_t alloc)
     {
         const auto space = used.load(std::memory_order_relaxed) + alloc;
         if (space >= upper)
@@ -35,7 +35,7 @@ namespace tai
         return Empty;
     }
 
-    void Controller::wait(const WorkerState& _, const std::memory_order& sync)
+    void Controller::wait(WorkerState _, std::memory_order sync)
     {
         for (auto& i : workers)
             while (i.state.load(sync) != _);

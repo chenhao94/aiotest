@@ -54,15 +54,15 @@ namespace tai
         // Cahce queue for GC.
         boost::lockfree::queue<BTreeNodeBase*> cache;
 
-        explicit Controller(const size_t& lower, const size_t& upper, const size_t& concurrency = std::thread::hardware_concurrency());
+        explicit Controller(size_t lower, size_t upper, size_t concurrency = std::thread::hardware_concurrency());
 
         ~Controller();
 
         // Ask if it is OK to allocate more memory.
-        Usage usage(const size_t& alloc = 0);
+        Usage usage(size_t alloc = 0);
 
     protected:
         // Wait until all worker reaches the given state.
-        void wait(const WorkerState& _, const std::memory_order& sync = std::memory_order_seq_cst);
+        void wait(WorkerState _, std::memory_order sync = std::memory_order_seq_cst);
     };
 }

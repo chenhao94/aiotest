@@ -101,19 +101,19 @@ namespace tai
         }
 
         // Push a task into "wait" queue.
-        void pushWait(const Task& task)
+        void pushWait(Task task)
         {
             wait.emplace_back(task);
         }
 
         // Push a task into "done" queue.
-        void pushDone(const Task& task)
+        void pushDone(Task task)
         {
             done.emplace_back(task);
         }
 
         // Push a task into "pending" queue.
-        void pushPending(const Task& task)
+        void pushPending(Task task)
         {
             pending.push(new Task(task));
         }

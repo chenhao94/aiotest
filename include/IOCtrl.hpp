@@ -26,13 +26,13 @@ namespace tai
         std::atomic<State> state = { Running };
 
         // Lock for certain times.
-        auto lock(const size_t& num = 1)
+        auto lock(size_t num = 1)
         {
             return dep.fetch_add(num, std::memory_order_relaxed) + num;
         }
 
         // Unlock for certain times.
-        auto unlock(const size_t& num = 1)
+        auto unlock(size_t num = 1)
         {
             return dep.fetch_sub(num, std::memory_order_release) - num;
         }
