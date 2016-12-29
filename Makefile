@@ -10,6 +10,10 @@ export TESTS_DIR = $(DIR)/test
 
 export INCS = $(wildcard $(INCS_DIR)/*.h) $(wildcard $(INCS_DIR)/*.hpp)
 export SRCS = $(wildcard $(SRCS_DIR)/*.cpp)
+export DEPS = $(patsubst $(INCS_DIR)/%,$(DEPS_DIR)/%.d,$(INCS)) $(patsubst $(SRCS_DIR)/%,$(DEPS_DIR)/%.d,$(SRCS))
+export OBJS = $(patsubst $(SRCS_DIR)/%,$(OBJS_DIR)/%.o,$(SRCS))
+
+export LIBTAI = $(LIBS_DIR)/libtai.a
 
 export CXX = clang
 export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g -I$(INCS_DIR) -I/usr/local/include -stdlib=libc++ -lc++ -lc++abi -lm -lpthread
@@ -20,15 +24,25 @@ export INSTALL = install
 export RM = rm -rf
 
 .PHONY: all
-all: $(INCS) $(SRCS)
-	# $(CXX) $(CXXFLAGS) $(INCS)
-	# $(CXX) $(CXXFLAGS) $(SRCS) -c
-	$(RM) libtai.a
-	# $(AR) -r libtai.a $(wildcard *.o)
-	# $(CXX) $(CXXFLAGS) -L. -ltai -o tai
-	$(CXX) $(CXXFLAGS) $(SRCS) -o tai
+all: $(LIBTAI)
+	$(CXX) $(CXXFLAGS) -L$(LIBS_DIR) -ltai -o tai
+
+$(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/%
+	@mkdir -p $(OBJS_DIR)
+	$(CXX) $(CXXFLAGS) -c $^ -o $@
+
+$(DEPS): $(DEPS_DIR)/%.d: $(SRCS_DIR)/%
+	@mkdir -p $(DEPS_DIR)
+	$(CXX) $(CXXFLAGS) -MM $^ -o $@
+
+$(LIBTAI): $(OBJS)
+	@mkdir -p $(LIBS_DIR)
+	$(AR) -r $(LIBTAI) $(OBJS)
+
+ifneq ($(MAKECMDGOALS),clean)
+sinclude $(DEPS)
+endif
 
 .PHONY: clean
 clean:
-	@$(MAKE) --no-print-directory -C $(SRCS_DIR)/ clean
-	@$(RM) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) tmp
+	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR)
