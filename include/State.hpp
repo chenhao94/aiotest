@@ -11,6 +11,7 @@ namespace tai
         Running,
         Unlocking,
         GC,
+        Closing,
         Sync,
         Idle
     };

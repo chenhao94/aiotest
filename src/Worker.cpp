@@ -46,7 +46,7 @@ namespace tai
 
     bool Worker::pushPending(Task task)
     {
-        if (reject.test_and_set())
+        if (reject.load(std::memory_order_relaxed))
             return false;
         queue.pushPending(task);
         return true;
@@ -57,6 +57,11 @@ namespace tai
         for (auto& i : neighbor)
             if (~i)
                 ctrl.workers[i].state.store(_, sync);
+    }
+
+    bool Worker::closing()
+    {
+        return !ctrl.ready.load(std::memory_order_relaxed);
     }
 
     Worker::State Worker::barrier(State post)
@@ -105,7 +110,7 @@ namespace tai
         foreign = &queue;
         state.store(Created, std::memory_order_release);
         while (state.load(std::memory_order_acquire) != Pulling);
-        for (ssize_t roundIdle = 0; ctrl.ready.test_and_set();)
+        for (ssize_t roundIdle = 0; ;)
         {
             queue.roll();
             queue.setupReady();
@@ -117,23 +122,39 @@ namespace tai
                 steal();
                 barrier(GC);
             }
+            queue.clearCurrent();
             const auto exceed = roundIdle - Controller::roundIdle;
             if (!roundIdle || ctrl.lower >> std::max(exceed - 1, (ssize_t)0))
             {
                 const auto lower = ctrl.lower >> std::max(exceed, (ssize_t)0);
-                for (BTreeNodeBase* node; ctrl.used.load(std::memory_order_relaxed) > lower && ctrl.cache.pop(node); node->valid() ? node->evict() : node->suicide());
+                while (ctrl.used.load(std::memory_order_relaxed) > lower && ctrl.cache.consume_one([](auto i){ i->valid() ? i->evict() : i->suicide(); }));
                 queue.setupDone();
                 barrier(Unlocking);
                 steal();
+                if (barrier([this](){ return closing() ? GC : Pulling; }) == GC)
+                {
+                    queue.clearCurrent();
+                    break;
+                }
+                else
+                    queue.clearCurrent();
             }
             else
+            {
                 std::this_thread::yield();
-            barrier(Pulling);
+                if (barrier([this](){ return closing() ? GC : Pulling; }) == GC)
+                    break;
+            }
         }
+        ctrl.cache.consume_all([](auto i){ i->valid() ? i->evict() : i->suicide(); });
+        queue.setupDone();
+        barrier(Unlocking);
+        steal();
+        barrier(Closing);
     }
 
     std::atomic<size_t> Worker::poolSize;
-    boost::lockfree::queue<size_t> Worker::pool;
+    boost::lockfree::queue<size_t> Worker::pool(std::thread::hardware_concurrency());
 
     thread_local size_t Worker::sgid;
     thread_local TLQ Worker::queue;

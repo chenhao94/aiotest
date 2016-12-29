@@ -5,9 +5,8 @@ namespace tai
 {
     thread_local Controller* Controller::ctrl = nullptr;
 
-    Controller::Controller(size_t lower, size_t upper, size_t concurrency) : concurrency(concurrency), lower(lower), upper(upper)
+    Controller::Controller(size_t lower, size_t upper, size_t concurrency) : concurrency(concurrency), lower(lower), upper(upper), cache(131072)
     {
-        ready.test_and_set(std::memory_order_relaxed);
         workers.reserve(concurrency);
         for (size_t i = 0; i < concurrency; workers.emplace_back(*this, i++));
         wait(Created, std::memory_order_relaxed);
@@ -19,8 +18,8 @@ namespace tai
     Controller::~Controller()
     {
         for (auto& i : workers)
-            i.reject.test_and_set(std::memory_order_relaxed);
-        ready.clear(std::memory_order_relaxed);
+            i.reject.store(true, std::memory_order_relaxed);
+        ready.store(false, std::memory_order_relaxed);
     }
 
     Controller::Usage Controller::usage(size_t alloc)

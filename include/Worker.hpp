@@ -48,8 +48,8 @@ namespace tai
     public:
         using Task = std::function<void()>;
 
-        std::atomic<State> state = {Pending};
-        std::atomic_flag reject = ATOMIC_FLAG_INIT;
+        std::atomic<State> state = { Pending };
+        std::atomic<bool> reject = { false };
 
         Worker(Worker&& _);
 
@@ -89,6 +89,9 @@ namespace tai
         void broadcast(State _, std::memory_order sync = std::memory_order_seq_cst);
 
     protected:
+        // Decide whether this worker should close.
+        bool closing();
+
         // Set worker state to "Sync", wait for all workers to sync and advance to next state.
         State barrier(State post);
         State barrier(std::function<State()> f);

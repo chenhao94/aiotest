@@ -42,7 +42,7 @@ namespace tai
         const size_t concurrency;
 
         // Main loop switch.
-        std::atomic_flag ready = ATOMIC_FLAG_INIT;
+        std::atomic<bool> ready = { true };
 
         // GC until memory usage goes down to lower bound.
         const size_t lower;

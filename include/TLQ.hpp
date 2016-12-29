@@ -20,10 +20,11 @@ namespace tai
         using Task = std::function<void()>;
 
     private:
-        boost::lockfree::queue<Task*> pending;
-
         // Random engine.
-        std::default_random_engine rand = std::default_random_engine(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+        std::default_random_engine rand;
+
+        // Pending queue.
+        boost::lockfree::queue<Task*> pending;
 
         // Task LIFO queue.
         std::vector<Task> wait;
@@ -39,6 +40,15 @@ namespace tai
         std::vector<Task>* current = nullptr;
 
     public:
+        TLQ() :
+            rand(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
+            pending(std::thread::hardware_concurrency()),
+            wait(),
+            ready(),
+            done()
+        {
+        }
+
         // Check if there's anything to do.
         auto busy()
         {
@@ -66,8 +76,7 @@ namespace tai
             }
         }
 
-        // Clear and setup current queue for next phase.
-        void setup(std::vector<Task>& queue)
+        void clearCurrent()
         {
             if (current)
             {
@@ -75,6 +84,11 @@ namespace tai
                 if (!(rand() & 255))
                     current->shrink_to_fit();
             }
+        }
+
+        // Clear and setup current queue for next phase.
+        void setup(std::vector<Task>& queue)
+        {
             remain.store((current = &queue)->size(), std::memory_order_relaxed);
         }
 
