@@ -1,3 +1,4 @@
+#include <iostream>
 #include <thread>
 #include <functional>
 #include <algorithm>
@@ -89,6 +90,35 @@ namespace tai
                     for (; ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
             }
             state.store(post = f(), std::memory_order_acquire);
+            /*
+            switch (post)
+            {
+            case Pending:
+                std::cerr << "Pending\n";
+                break;
+            case Created:
+                std::cerr << "Created\n";
+                break;
+            case Pulling:
+                std::cerr << "Pulling\n";
+                break;
+            case Running:
+                std::cerr << "Running\n";
+                break;
+            case Unlocking:
+                std::cerr << "Unlocking\n";
+                break;
+            case GC:
+                std::cerr << "GC\n";
+                break;
+            case Sync:
+                std::cerr << "Sync\n";
+                break;
+            default:
+                std::cerr << "Unknown state\n";
+            }
+            std::cerr << std::flush;
+            */
         }
         broadcast(post, std::memory_order_acquire);
         return post;
@@ -126,31 +156,21 @@ namespace tai
             const auto exceed = roundIdle - Controller::roundIdle;
             if (!roundIdle || ctrl.lower >> std::max(exceed - 1, (ssize_t)0))
             {
-                const auto lower = ctrl.lower >> std::max(exceed, (ssize_t)0);
+                const auto lower = cleanup ? 0 : ctrl.lower >> std::max(exceed, (ssize_t)0);
                 while (ctrl.used.load(std::memory_order_relaxed) > lower && ctrl.cache.consume_one([](auto i){ i->valid() ? i->evict() : i->suicide(); }));
                 queue.setupDone();
                 barrier(Unlocking);
                 steal();
-                if (barrier([this](){ return closing() ? GC : Pulling; }) == GC)
-                {
-                    queue.clearCurrent();
-                    break;
-                }
-                else
-                    queue.clearCurrent();
+                cleanup = barrier([this](){ return closing() ? GC : Pulling; }) == GC;
+                queue.clearCurrent();
             }
             else
             {
-                std::this_thread::yield();
+                // std::this_thread::yield();
                 if (barrier([this](){ return closing() ? GC : Pulling; }) == GC)
                     break;
             }
         }
-        ctrl.cache.consume_all([](auto i){ i->valid() ? i->evict() : i->suicide(); });
-        queue.setupDone();
-        barrier(Unlocking);
-        steal();
-        barrier(Closing);
     }
 
     std::atomic<size_t> Worker::poolSize;

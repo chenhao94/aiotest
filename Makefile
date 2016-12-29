@@ -8,7 +8,7 @@ export OBJS_DIR = $(DIR)/obj
 export TARGETS_DIR = $(DIR)/bin
 export TESTS_DIR = $(DIR)/test
 
-export INCS = $(wildcard $(INCS_DIR)/*.h) $(wildcard $(INCS_DIR)/*.hpp)
+export INCS = $(wildcard $(INCS_DIR)/*.hpp)
 export SRCS = $(wildcard $(SRCS_DIR)/*.cpp)
 export DEPS = $(patsubst $(INCS_DIR)/%,$(DEPS_DIR)/%.d,$(INCS)) $(patsubst $(SRCS_DIR)/%,$(DEPS_DIR)/%.d,$(SRCS))
 export OBJS = $(patsubst $(SRCS_DIR)/%,$(OBJS_DIR)/%.o,$(SRCS))
@@ -37,7 +37,8 @@ $(DEPS): $(DEPS_DIR)/%.d: $(SRCS_DIR)/%
 
 $(LIBTAI): $(OBJS)
 	@mkdir -p $(LIBS_DIR)
-	$(AR) -r $(LIBTAI) $(OBJS)
+	$(RM) $@
+	$(AR) -r $@ $(OBJS)
 
 ifneq ($(MAKECMDGOALS),clean)
 sinclude $(DEPS)

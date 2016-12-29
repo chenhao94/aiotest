@@ -185,7 +185,7 @@ namespace tai
             }
         }
 
-        void write(size_t begin, size_t end, char* ptr, IOCtrl* io) override
+        void write(size_t begin, size_t end, char* const ptr, IOCtrl* io) override
         {
             if (data)
             {
@@ -340,7 +340,7 @@ namespace tai
             io->unlock();
         }
 
-        void write(size_t begin, size_t end, char* ptr, IOCtrl* io) override
+        void write(size_t begin, size_t end, char* const ptr, IOCtrl* io) override
         {
             if (dirty)
             {
@@ -454,7 +454,7 @@ namespace tai
         }
 
         // Issue a write request ont this file to the given controller.
-        auto write(Controller& ctrl, size_t begin, size_t end, char* ptr)
+        auto write(Controller& ctrl, size_t begin, size_t end, char* const ptr)
         {
             auto io = new IOCtrl();
             io->lock();

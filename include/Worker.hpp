@@ -34,6 +34,9 @@ namespace tai
         size_t gid;
         static thread_local size_t sgid;
 
+        // Cleanup mode.
+        bool cleanup = false;
+
         // Thread-local queue.
         static thread_local TLQ queue;
         // For referencing TLQ from other threads.
