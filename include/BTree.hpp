@@ -15,6 +15,7 @@
 
 #include "IOCtrl.hpp"
 #include "BTreeNodeBase.hpp"
+#include "BTreeBase.hpp"
 #include "TLQ.hpp"
 #include "Controller.hpp"
 #include "Worker.hpp"
@@ -406,25 +407,6 @@ namespace tai
         }
     };
 
-    class BTreeBase
-    {
-    public:
-        // Reuseable global ID for worker association.
-        static std::unordered_set<size_t> usedID;
-        static std::mutex mtxUsedID;
-        size_t id = 0;
-
-        // Random engine.
-        static std::default_random_engine rand;
-
-        // Configuration.
-        BTreeConfig conf;
-
-        BTreeBase(const std::string& path) : conf(path)
-        {
-        }
-    };
-
     template<size_t... n>
     class BTree
     {
@@ -497,10 +479,6 @@ namespace tai
             conf.files.clear();
         }
     };
-
-    std::unordered_set<size_t> BTreeBase::usedID;
-    std::mutex BTreeBase::mtxUsedID;
-    std::default_random_engine BTreeBase::rand;
 
     // Default hierarchy.
     using BTreeDefault = BTree<32, 2, 9, 9, 12>;
