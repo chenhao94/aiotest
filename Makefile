@@ -23,8 +23,9 @@ export RM = rm -rf
 all: $(INCS) $(SRCS)
 	# $(CXX) $(CXXFLAGS) $(INCS)
 	# $(CXX) $(CXXFLAGS) $(SRCS) -c
-	$(RM) tai.a
-	# $(AR) -r tai.a $(wildcard *.o)
+	$(RM) libtai.a
+	# $(AR) -r libtai.a $(wildcard *.o)
+	#$(CXX) $(CXXFLAGS) -L. -ltai -o tai
 	$(CXX) $(CXXFLAGS) $(SRCS) -o tai
 
 .PHONY: clean
