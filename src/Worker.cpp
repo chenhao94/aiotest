@@ -126,16 +126,19 @@ namespace tai
         for (ssize_t roundIdle = 0; ;)
         {
             queue.roll();
-            queue.setupReady();
             if (barrier([this](){ return queue.popTodo() ? Running : GC; }) == GC)
+            {
                 ++roundIdle;
+                queue.clearCurrent("Idle");
+            }
             else
             {
+                std::cerr << "Steal\n" << std::flush;
                 roundIdle = 0;
                 steal();
                 barrier(GC);
+                queue.clearCurrent("Ready");
             }
-            queue.clearCurrent();
             const auto exceed = roundIdle - Controller::roundIdle;
             if (!roundIdle || ctrl.lower >> std::max(exceed - 1, (ssize_t)0))
             {
@@ -145,7 +148,7 @@ namespace tai
                 barrier(Unlocking);
                 steal();
                 cleanup = barrier([this](){ return closing() ? GC : Pulling; }) == GC;
-                queue.clearCurrent();
+                queue.clearCurrent("Done");
             }
             else
             {

@@ -61,6 +61,8 @@ namespace tai
         {
             const auto ret = todo.load(std::memory_order_relaxed);
             todo.store(0, std::memory_order_relaxed);
+            if (ret)
+                std::cerr << "Pop " + std::to_string(ret) + "\n" << std::flush;
             return ret;
         }
 
@@ -75,12 +77,18 @@ namespace tai
                 delete task;
                 task = nullptr;
             }
+            todo.fetch_add(ready.size(), std::memory_order_relaxed);
+            setup(ready);
+            if (current->size())
+                std::cerr << std::to_string(current->size()) + " task(s) have been added to <" + (current == &ready ? "ready" : "non-ready") + "> queue\n" << std::flush;
         }
 
-        void clearCurrent()
+        void clearCurrent(const char* hint)
         {
             if (current)
             {
+                if (current->size())
+                    std::cerr << std::to_string(current->size()) + " task(s) have been cleared from <" + (current == &ready ? "ready" : "non-ready") + "> queue (Hint: " + hint + ")\n" << std::flush;
                 current->clear();
                 if (!(rand() & 255))
                     current->shrink_to_fit();
@@ -91,13 +99,6 @@ namespace tai
         void setup(std::vector<Task>& queue)
         {
             remain.store((current = &queue)->size(), std::memory_order_relaxed);
-        }
-
-        // Setup "Ready" phase.
-        void setupReady()
-        {
-            todo.fetch_add(ready.size(), std::memory_order_relaxed);
-            setup(ready);
         }
 
         // Setup "Done" phase.

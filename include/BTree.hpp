@@ -187,6 +187,7 @@ namespace tai
 
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
+            std::cerr << "[" + std::to_string(begin) + ", " + std::to_string(end) + "]\n" << std::flush;
             if (data)
             {
                 memcpy(data + (begin & NM - 1), ptr, end - begin);
