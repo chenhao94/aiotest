@@ -73,36 +73,13 @@ namespace tai
                     for (; ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
             }
             state.store(post = f(), std::memory_order_acquire);
-            /*
-            switch (post)
-            {
-            case Pending:
-                std::cerr << "Pending\n";
-                break;
-            case Created:
-                std::cerr << "Created\n";
-                break;
-            case Pulling:
-                std::cerr << "Pulling\n";
-                break;
-            case Running:
-                std::cerr << "Running\n";
-                break;
-            case Unlocking:
-                std::cerr << "Unlocking\n";
-                break;
-            case GC:
-                std::cerr << "GC\n";
-                break;
-            case Sync:
-                std::cerr << "Sync\n";
-                break;
-            default:
-                std::cerr << "Unknown state\n";
-            }
-            std::cerr << std::flush;
-            */
         }
+        /*
+        std::cerr << "[" + std::to_string(id) + "] "
+            + "Switch state to <" + to_string(post)
+            + ">\n"
+            << std::flush;
+        */
         broadcast(post, std::memory_order_acquire);
         return post;
     }
@@ -127,18 +104,15 @@ namespace tai
         {
             queue.roll();
             if (barrier([this](){ return queue.popTodo() ? Running : GC; }) == GC)
-            {
                 ++roundIdle;
-                queue.clearCurrent("Idle");
-            }
             else
             {
                 std::cerr << "Steal\n" << std::flush;
                 roundIdle = 0;
                 steal();
                 barrier(GC);
-                queue.clearCurrent("Ready");
             }
+            queue.clearCurrent();
             const auto exceed = roundIdle - Controller::roundIdle;
             if (!roundIdle || ctrl.lower >> std::max(exceed - 1, (ssize_t)0))
             {
@@ -162,6 +136,6 @@ namespace tai
     std::atomic<size_t> Worker::poolSize;
     boost::lockfree::queue<size_t> Worker::pool(std::thread::hardware_concurrency());
 
-    thread_local size_t Worker::sgid;
-    thread_local Worker* Worker::worker;
+    thread_local size_t Worker::sgid = -1;
+    thread_local Worker* Worker::worker = nullptr;
 }

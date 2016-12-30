@@ -34,9 +34,6 @@ namespace tai
         // LIFO head.
         std::atomic<ssize_t> remain = { 0 };
 
-        // Number of tasks to do in this round.
-        std::atomic<size_t> todo = { 0 };
-
         // Reference the queue for current phase.
         std::vector<Task>* current = nullptr;
 
@@ -51,51 +48,18 @@ namespace tai
         }
 
         // Check if there's anything to do.
-        auto busy()
-        {
-            return todo.load(std::memory_order_relaxed);
-        }
+        size_t busy();
 
         // Pull and clear todo counter;
-        auto popTodo()
-        {
-            const auto ret = todo.load(std::memory_order_relaxed);
-            todo.store(0, std::memory_order_relaxed);
-            if (ret)
-                std::cerr << "Pop " + std::to_string(ret) + "\n" << std::flush;
-            return ret;
-        }
+        size_t popTodo();
 
         // Switch wait/ready queue and pull at most one pending task.
-        void roll()
-        {
-            ready.swap(wait);
-            Task* task = nullptr;
-            if (pending.pop(task))
-            {
-                ready.emplace_back(*task);
-                delete task;
-                task = nullptr;
-            }
-            todo.fetch_add(ready.size(), std::memory_order_relaxed);
-            setup(ready);
-            if (current->size())
-                std::cerr << std::to_string(current->size()) + " task(s) have been added to <" + (current == &ready ? "ready" : "non-ready") + "> queue\n" << std::flush;
-        }
+        void roll();
 
-        void clearCurrent(const char* hint)
-        {
-            if (current)
-            {
-                if (current->size())
-                    std::cerr << std::to_string(current->size()) + " task(s) have been cleared from <" + (current == &ready ? "ready" : "non-ready") + "> queue (Hint: " + hint + ")\n" << std::flush;
-                current->clear();
-                if (!(rand() & 255))
-                    current->shrink_to_fit();
-            }
-        }
+        // Clear current queue.
+        void clearCurrent(const char* reason = nullptr);
 
-        // Clear and setup current queue for next phase.
+        // Setup current queue for next phase.
         void setup(std::vector<Task>& queue)
         {
             remain.store((current = &queue)->size(), std::memory_order_relaxed);

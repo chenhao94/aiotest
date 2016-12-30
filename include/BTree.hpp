@@ -25,8 +25,8 @@ namespace tai
     template<size_t n, size_t... rest>
     class BTreeNode : public BTreeNodeBase
     {
-        static_assert(n <= sizeof(size_t) << 3, "B-tree node cannot be larger than the size of address space.");
-        static_assert((n + ... + rest) <= sizeof(size_t) << 3, "B-tree node cannot be larger than the size of address space.");
+        static_assert(n <= sizeof(size_t) * 8 - 1, "B-tree node cannot be larger than the size of address space.");
+        static_assert((n + ... + rest) <= sizeof(size_t) * 8 - 1, "B-tree node cannot be larger than the size of address space.");
 
     public:
         using Self = BTreeNode<n, rest...>;
@@ -187,9 +187,10 @@ namespace tai
 
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
-            std::cerr << "[" + std::to_string(begin) + ", " + std::to_string(end) + "]\n" << std::flush;
+            std::cerr << "{" + std::to_string(offset) + ", " + std::to_string(offset + NM) + "} [" + std::to_string(begin) + ", " + std::to_string(end) + "]\n" << std::flush;
             if (data)
             {
+                std::cerr << "{" + std::to_string(offset) + ", " + std::to_string(offset + NM) + "} [" + std::to_string(begin) + ", " + std::to_string(end) + "] data != nullptr\n" << std::flush;
                 memcpy(data + (begin & NM - 1), ptr, end - begin);
                 if (dirty)
                     unlock();
@@ -205,6 +206,7 @@ namespace tai
             }
             else if (locked() || end - begin < NM)
             {
+                std::cerr << "{" + std::to_string(offset) + ", " + std::to_string(offset + NM) + "} [" + std::to_string(begin) + ", " + std::to_string(end) + "] Locked or small\n" << std::flush;
                 const auto range = getRange(begin, end);
                 lock(range.second - range.first + 1);
                 io->lock(range.second - range.first);
@@ -229,6 +231,7 @@ namespace tai
             }
             else
             {
+                std::cerr << "{" + std::to_string(offset) + ", " + std::to_string(offset + NM) + "} [" + std::to_string(begin) + ", " + std::to_string(end) + "] Otherwise\n" << std::flush;
                 dropChild();
                 if (Controller::ctrl->usage(NM) != Controller::Full)
                 {
@@ -290,7 +293,7 @@ namespace tai
     template<size_t n>
     class BTreeNode<n> : public BTreeNodeBase
     {
-        static_assert(n <= sizeof(size_t) << 3, "B-tree node cannot be larger than the size of address space.");
+        static_assert(n <= sizeof(size_t) * 8 - 1, "B-tree node cannot be larger than the size of address space.");
 
     public:
         using Self = BTreeNode<n>;
@@ -402,6 +405,7 @@ namespace tai
 
         void evict() override
         {
+            std::cerr << "Evicting {" + std::to_string(offset) + ", " << std::to_string(offset + N) << "}\n" << std::flush;
             flush();
             if (data)
                 conf(this, N);
@@ -417,7 +421,7 @@ namespace tai
     template<size_t n, size_t... rest>
     class BTree<n, rest...> : public BTreeBase
     {
-        static_assert((n + ... + rest) == sizeof(size_t) << 3, "B-tree must cover the entire address space.");
+        static_assert((n + ... + rest) == sizeof(size_t) * 8 - 1, "B-tree must cover the entire address space.");
     
     public:
         using Root = BTreeNode<n, rest...>;
@@ -480,5 +484,5 @@ namespace tai
     };
 
     // Default hierarchy.
-    using BTreeDefault = BTree<32, 2, 9, 9, 12>;
+    using BTreeDefault = BTree<31, 2, 9, 9, 12>;
 }

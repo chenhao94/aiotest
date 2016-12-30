@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace tai
 {
     enum WorkerState
@@ -12,4 +14,6 @@ namespace tai
         GC,
         Sync
     };
+
+    std::string to_string(const WorkerState& state);
 }

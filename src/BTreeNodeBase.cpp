@@ -41,7 +41,10 @@ namespace tai
     {
         auto& file = Worker::getTL(conf.files);
         if (!file.is_open())
+        {
+            std::cerr << "Open with \"" + conf.path + "\"\n" << std::flush;
             file.open(conf.path, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+        }
         file.seekp(pos);
         return !file.write(buf, len).flush().fail();
     }
