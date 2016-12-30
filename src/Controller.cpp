@@ -9,6 +9,8 @@ namespace tai
     {
         workers.reserve(concurrency);
         for (size_t i = 0; i < concurrency; workers.emplace_back(*this, i++));
+        for (auto& i : workers)
+            i.go();
         wait(Created, std::memory_order_relaxed);
         atomic_thread_fence(std::memory_order_acq_rel);
         for (auto& i : workers)

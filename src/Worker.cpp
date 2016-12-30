@@ -8,10 +8,6 @@
 
 namespace tai
 {
-    Worker::Worker(Worker&& _) : ctrl(_.ctrl), id(_.id), foreign(_.foreign), handle(std::move(_.handle)), neighbor(std::move(_.neighbor))
-    {
-    }
-
     Worker::Worker(Controller& ctrl, size_t id) : ctrl(ctrl), id(id)
     {
         if (!pool.pop(gid))
@@ -25,30 +21,23 @@ namespace tai
         for (auto& i : neighbor)
             if (i >= ctrl.concurrency)
                 i = -1;
-        handle.reset(new std::thread([this](){ run(); }));
-    }
-
-    Worker::~Worker()
-    {
-        if (handle)
-            handle->join();
-        pool.push(gid);
     }
 
     void Worker::pushWait(Task task)
     {
-        queue.pushWait(task);
+        worker->queue.pushWait(task);
     }
 
     void Worker::pushDone(Task task)
     {
-        queue.pushDone(task);
+        worker->queue.pushDone(task);
     }
 
     bool Worker::pushPending(Task task)
     {
         if (reject.load(std::memory_order_relaxed))
             return false;
+        std::cerr << "[" + std::to_string(id) + "] Push a pending task\n" << std::flush;
         queue.pushPending(task);
         return true;
     }
@@ -63,12 +52,6 @@ namespace tai
     bool Worker::closing()
     {
         return !ctrl.ready.load(std::memory_order_relaxed);
-    }
-
-    Worker::State Worker::barrier(State post)
-    {
-        barrier([post](){ return post; });
-        return post;
     }
 
     Worker::State Worker::barrier(std::function<State()> f)
@@ -128,23 +111,23 @@ namespace tai
     {
         while (queue());
         for (auto i = id; ++i != ctrl.workers.size();)
-            while((*ctrl.workers[i].foreign)());
+            while(ctrl.workers[i].queue());
         for (size_t i = 0; i != id; ++i)
-            while((*ctrl.workers[i].foreign)());
+            while(ctrl.workers[i].queue());
     }
 
     void Worker::run()
     {
         Controller::ctrl = &ctrl;
+        worker = this;
         sgid = gid;
-        foreign = &queue;
         state.store(Created, std::memory_order_release);
         while (state.load(std::memory_order_acquire) != Pulling);
         for (ssize_t roundIdle = 0; ;)
         {
             queue.roll();
             queue.setupReady();
-            if (barrier([](){ return queue.popTodo() ? Running : GC; }) == GC)
+            if (barrier([this](){ return queue.popTodo() ? Running : GC; }) == GC)
                 ++roundIdle;
             else
             {
@@ -177,5 +160,5 @@ namespace tai
     boost::lockfree::queue<size_t> Worker::pool(std::thread::hardware_concurrency());
 
     thread_local size_t Worker::sgid;
-    thread_local TLQ Worker::queue;
+    thread_local Worker* Worker::worker;
 }

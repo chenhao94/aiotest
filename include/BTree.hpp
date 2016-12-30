@@ -185,7 +185,7 @@ namespace tai
             }
         }
 
-        void write(size_t begin, size_t end, char* const ptr, IOCtrl* io) override
+        void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
             if (data)
             {
@@ -340,7 +340,7 @@ namespace tai
             io->unlock();
         }
 
-        void write(size_t begin, size_t end, char* const ptr, IOCtrl* io) override
+        void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
             if (dirty)
             {
@@ -431,8 +431,6 @@ namespace tai
         explicit BTree(const std::string &path) : BTreeBase(path), root(conf, 0)
         {
             std::lock_guard<std::mutex> lck(mtxUsedID);
-            if (usedID.empty())
-                rand.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
             while (usedID.count(id = rand()));
             usedID.insert(id);
         }
@@ -454,7 +452,7 @@ namespace tai
         }
 
         // Issue a write request ont this file to the given controller.
-        auto write(Controller& ctrl, size_t begin, size_t end, char* const ptr)
+        auto write(Controller& ctrl, size_t begin, size_t end, const char* ptr)
         {
             auto io = new IOCtrl();
             io->lock();

@@ -22,7 +22,7 @@ int main()
     Controller ctrl(1 << 28, 1 << 30);
 
     cerr << "Writing...\n" << flush;
-    unique_ptr<IOCtrl> io(bt.write(ctrl, 0, 10, (char*)"1234567890"));
+    unique_ptr<IOCtrl> io(bt.write(ctrl, 0, 10, "1234567890"));
 
     for (; (*io)() == IOCtrl::Running; sleep_for(seconds(1)))
         cerr << "Still running...\n" << flush;

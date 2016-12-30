@@ -23,9 +23,6 @@ namespace tai
         // Controller of this worker.
         Controller& ctrl;
 
-        // Local ID in the controller.
-        const size_t id;
-
         // Global ID pool.
         static std::atomic<size_t> poolSize;
         static boost::lockfree::queue<size_t> pool;
@@ -38,9 +35,7 @@ namespace tai
         bool cleanup = false;
 
         // Thread-local queue.
-        static thread_local TLQ queue;
-        // For referencing TLQ from other threads.
-        TLQ* foreign;
+        TLQ queue;
 
         // Worker thread handle.
         std::unique_ptr<std::thread> handle = nullptr;
@@ -51,15 +46,40 @@ namespace tai
     public:
         using Task = std::function<void()>;
 
+        static thread_local Worker* worker;
+
+        // Local ID in the controller.
+        const size_t id;
+
         std::atomic<State> state = { Pending };
         std::atomic<bool> reject = { false };
-
-        Worker(Worker&& _);
 
         // Construct as the id-th worker of the controller.
         Worker(Controller& ctrl, size_t id);
 
-        ~Worker();
+        Worker(Worker&& _) noexcept :
+            ctrl(_.ctrl),
+            gid(_.gid),
+            cleanup(_.cleanup),
+            handle(std::move(_.handle)),
+            neighbor(std::move(_.neighbor)),
+            id(_.id),
+            state(_.state.load(std::memory_order_relaxed)),
+            reject(_.reject.load(std::memory_order_relaxed))
+        {
+        }
+
+        ~Worker()
+        {
+            if (handle)
+                handle->join();
+            pool.push(gid);
+        }
+
+        void go()
+        {
+            handle.reset(new std::thread([this](){ run(); }));
+        }
 
         // Get global thread ID;
         auto getGID() const
@@ -96,7 +116,14 @@ namespace tai
         bool closing();
 
         // Set worker state to "Sync", wait for all workers to sync and advance to next state.
-        State barrier(State post);
+        State barrier(State post)
+        {
+            barrier([post](){ return post; });
+            return post;
+        }
+
+        // Set worker state to "Sync", wait for all workers to sync and advance to next state.
+        // The next state is decided by evaluating f() at master worker after everyone reaches "Sync".
         State barrier(std::function<State()> f);
 
         // Work stealing.

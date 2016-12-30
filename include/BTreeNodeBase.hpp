@@ -40,7 +40,7 @@ namespace tai
 
         // Read/write [begin, end - 1] to/from ptr[0..end - begin].
         virtual void read(size_t begin, size_t end, char* ptr, IOCtrl* io) = 0;
-        virtual void write(size_t begin, size_t end, char* const ptr, IOCtrl* io) = 0;
+        virtual void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) = 0;
         // Flush subtree cache.
         virtual void flush(IOCtrl* io) = 0;
         // Flush node cache.
@@ -87,7 +87,7 @@ namespace tai
 
         // Read/write file.
         bool fread(char* buf, size_t pos, size_t len);
-        bool fwrite(char* const buf, size_t pos, size_t len);
+        bool fwrite(const char* buf, size_t pos, size_t len);
 
         // Check if the subtree is locked.
         // A subtree is locked if any read/write is in progress.

@@ -37,7 +37,7 @@ namespace tai
         return !file.read(buf, len).fail();
     }
 
-    bool BTreeNodeBase::fwrite(char* const buf, size_t pos, size_t len)
+    bool BTreeNodeBase::fwrite(const char* buf, size_t pos, size_t len)
     {
         auto& file = Worker::getTL(conf.files);
         if (!file.is_open())
