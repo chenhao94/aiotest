@@ -12,12 +12,9 @@ namespace tai
     {
         if (!pool.pop(gid))
             gid = poolSize.fetch_add(1, std::memory_order_relaxed);
-        neighbor[0] = id * neighbor.size();
-        if (neighbor.size() > 1)
+        neighbor[0] = id * neighbor.size() + 1;
             for (size_t i = 1; i < neighbor.size(); ++i)
                 neighbor[i] = neighbor[i - 1] + 1;
-        else
-            ++neighbor[0];
         for (auto& i : neighbor)
             if (i >= ctrl.concurrency)
                 i = -1;
