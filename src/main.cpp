@@ -23,16 +23,17 @@ int main()
     default_random_engine rand;
 
     Log::log("Creating B-tree...");
-    BTreeDefault bt("tmp");
+    // BTreeDefault bt("tmp");
+    BTreeTrivial bt("tmp");
 
     Log::log("Creating Controller...");
     Controller ctrl(1 << 28, 1 << 30);
 
     Log::log("Writing...");
 
-    const auto size = 1 << 30;
-    const auto bs = 1 << 12;
-    const auto n = 1000000;
+    const auto size = (size_t)1 << 30;
+    const auto bs = (size_t)1 << 12;
+    const auto n = (size_t)1 << 20;
 
     uniform_int_distribution<size_t> dist(0, size - bs);
 

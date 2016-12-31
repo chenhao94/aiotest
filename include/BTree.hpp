@@ -296,7 +296,7 @@ namespace tai
     public:
         using Self = BTreeNode<n>;
 
-        static constexpr auto N = (size_t)1 << n;
+        static constexpr auto N = n < sizeof(size_t) * 8 ? (size_t)1 << n : (size_t)0;
 
         BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : BTreeNodeBase(conf, offset, parent)
         {
@@ -489,4 +489,5 @@ namespace tai
 
     // Default hierarchy.
     using BTreeDefault = BTree<32, 2, 9, 9, 12>;
+    using BTreeTrivial = BTree<64>;
 }
