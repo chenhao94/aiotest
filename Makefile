@@ -16,7 +16,7 @@ export OBJS = $(patsubst $(SRCS_DIR)/%,$(OBJS_DIR)/%.o,$(SRCS))
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
 export CXX = clang
-export CXXFLAGS = -std=c++1z -m64 -Wall -O1 -g -I$(INCS_DIR) -I/usr/local/include -stdlib=libc++ -lc++ -lc++abi -lm -lpthread -fno-omit-frame-pointer# -fsanitize=address
+export CXXFLAGS = -std=c++1z -m64 -Wall -O1 -g -I$(INCS_DIR) -I/usr/local/include -stdlib=libc++ -lc++ -lc++abi -lm -lpthread -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
 
 export CP = cp -rf

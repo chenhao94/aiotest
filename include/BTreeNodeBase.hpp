@@ -3,7 +3,9 @@
 #include <string>
 #include <fstream>
 #include <algorithm>
+#include <memory>
 #include <vector>
+#include <atomic>
 #include <functional>
 
 #include "IOCtrl.hpp"
@@ -16,7 +18,8 @@ namespace tai
     {
     public:
         const std::string path = "";
-        std::vector<std::fstream> files;
+        std::vector<std::unique_ptr<std::fstream>> files;
+        std::atomic_flag mtxFiles = ATOMIC_FLAG_INIT;
         std::atomic<bool> failed = { false };
         size_t size = 0;
 

@@ -186,7 +186,7 @@ namespace tai
 
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
-            Log::log("{", offset, ", ", offset + NM, "} [", begin, ", ", end, "]");
+            Log::log("{", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
 
             if (!NM && end > conf.size)
                 if (fwrite("\0", end - 1, 1, io))

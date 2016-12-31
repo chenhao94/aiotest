@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <atomic>
 #include <thread>
 #include <array>
@@ -7,6 +8,7 @@
 
 #include <boost/lockfree/queue.hpp>
 
+#include "Log.hpp"
 #include "BTreeNodeBase.hpp"
 #include "TLQ.hpp"
 #include "State.hpp"
@@ -96,11 +98,17 @@ namespace tai
 
         // Get the thread-local object via global thread ID.
         template<typename T>
-        static auto& getTL(T&& table)
+        static auto& getTL(std::vector<std::unique_ptr<T>>& table, std::atomic_flag& mtx)
         {
-            if (sgid + 1 > table.size())
+            while (mtx.test_and_set(std::memory_order_acquire));
+            Log::log("Fetching TL item for thread with global ID ", sgid);
+            if (sgid >= table.size())
                 table.resize(sgid + 1);
-            return table[sgid];
+            auto& ptr = table[sgid];
+            if (!ptr)
+                ptr.reset(new T);
+            mtx.clear(std::memory_order_release);
+            return *ptr;
         }
 
         // Push task into the queue specified.

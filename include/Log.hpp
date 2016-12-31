@@ -17,7 +17,7 @@ namespace tai::Log
     };
 
     template<>
-    class to_string<const std::string const>
+    class to_string<const std::string>
     {
     public:
         static auto get(const char* const elem)

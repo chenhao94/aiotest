@@ -45,15 +45,13 @@ namespace tai
 
     std::fstream& BTreeNodeBase::getFile()
     {
-        auto& file = Worker::getTL(conf.files);
-        if (file.fail())
+        auto& file = Worker::getTL(conf.files, conf.mtxFiles);
+        if (file && file.is_open())
             file.close();
         if (!file.is_open())
             file.open(conf.path, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
         if (!file.is_open())
             file.open(conf.path, std::ios_base::in | std::ios_base::binary);
-        if (!file.is_open())
-            file.open(conf.path, std::ios_base::out | std::ios_base::binary);
         return file;
     }
 
