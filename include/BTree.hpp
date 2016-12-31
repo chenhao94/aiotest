@@ -259,13 +259,14 @@ namespace tai
                     unlock();
                 }
             }
-            else if (locked())
+            else if (!data && locked())
                 for (auto& i : child)
                     Worker::pushWait([=](){ i->flush(io); });
         }
 
         void evict() override
         {
+            std::cerr << "Evicting {" + std::to_string(offset) + ", " << std::to_string(offset + N) << "}\n" << std::flush;
             if (dirty)
             {
                 fwrite(data, offset, effective);

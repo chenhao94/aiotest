@@ -26,7 +26,7 @@ int main()
 
     cerr << "Writing...\n" << flush;
 
-    string data(1000000, '0');
+    string data(10000, '0');
     for (auto& i : data)
         i += rand() % 10;
 
