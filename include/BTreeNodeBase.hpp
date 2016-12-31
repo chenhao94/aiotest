@@ -155,7 +155,8 @@ namespace tai
             {
                 ret = prefetch(base);
                 memcpy(data + base, ptr, len);
-                effective = std::max(effective, end & N - 1);
+                if (end - 1 & N - 1 >= effective)
+                    effective = (end - 1 & N - 1) + 1;
 
                 if (dirty || len < effective >> 1 && fwrite(ptr, begin, len, io))
                     unlock();

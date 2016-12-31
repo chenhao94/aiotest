@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <vector>
 #include <atomic>
 #include <thread>
@@ -57,7 +58,7 @@ namespace tai
         // Cahce queue for GC.
         boost::lockfree::queue<BTreeNodeBase*> cache;
 
-        explicit Controller(size_t lower, size_t upper, size_t concurrency = std::thread::hardware_concurrency());
+        explicit Controller(size_t lower, size_t upper, size_t concurrency = std::max(std::thread::hardware_concurrency() * 4 / 5, 1u));
 
         ~Controller();
 

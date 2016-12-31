@@ -51,6 +51,10 @@ namespace tai
         // Touch a child node to make sure it exists.
         auto touch(size_t i)
         {
+            if (child.size() <= i)
+                Log::log("Cannot touch node ", i,
+                        " within ", child.size(),
+                        " node(s). Offset = ", offset ^ i << m);
             if (!child[i])
                 child[i] = new Child(conf, offset ^ i << m, this);
             return child[i];
@@ -60,6 +64,10 @@ namespace tai
         // Use offset hint to reduce redundant computation.
         auto touch(size_t i, size_t offset)
         {
+            if (child.size() <= i)
+                Log::log("Cannot touch node ", i,
+                        " within ", child.size(),
+                        " node(s). Offset hint = ", offset);
             if (!child[i])
                 child[i] = new Child(conf, offset, this);
             return child[i];
@@ -262,7 +270,8 @@ namespace tai
             }
             else if (!data && locked())
                 for (auto& i : child)
-                    Worker::pushWait([=](){ i->flush(io); });
+                    if (i)
+                        Worker::pushWait([=](){ i->flush(io); });
         }
 
         void evict() override
@@ -442,21 +451,21 @@ namespace tai
         }
 
         // Issue a read request ont this file to the given controller.
-        auto read(Controller& ctrl, size_t begin, size_t end, char* ptr)
+        auto read(Controller& ctrl, size_t pos, size_t len, char* ptr)
         {
             auto io = new IOCtrl();
             io->lock();
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(begin, end, ptr, io); }))
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(pos, pos + len, ptr, io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
 
         // Issue a write request ont this file to the given controller.
-        auto write(Controller& ctrl, size_t begin, size_t end, const char* ptr)
+        auto write(Controller& ctrl, size_t pos, size_t len, const char* ptr)
         {
             auto io = new IOCtrl();
             io->lock();
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(begin, end, ptr, io); }))
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(pos, pos + len, ptr, io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
