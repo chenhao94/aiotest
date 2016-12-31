@@ -152,8 +152,8 @@ namespace tai
                 const auto range = getRange(begin, end);
                 lock(range.second - range.first + 1);
                 io->lock(range.second - range.first);
-                if (child.size() < range.second)
-                    child.resize(range.second);
+                if (child.size() <= range.second)
+                    child.resize(range.second + 1);
 
                 auto node = touch(range.first, begin & -M);
                 if (range.first == range.second)
@@ -208,8 +208,8 @@ namespace tai
                 const auto range = getRange(begin, end);
                 lock(range.second - range.first + 1);
                 io->lock(range.second - range.first);
-                if (child.size() < range.second)
-                    child.resize(range.second);
+                if (child.size() <= range.second)
+                    child.resize(range.second + 1);
 
                 auto node = touch(range.first, begin & -M);
                 if (range.first == range.second)

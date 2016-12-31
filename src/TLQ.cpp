@@ -37,7 +37,8 @@ namespace tai
                     " task(s) have been added to queue <",
                     current == &wait,
                     current == &ready,
-                    current == &done);
+                    current == &done,
+                    ">");
     }
 
     void TLQ::clearCurrent(const char* reason)
@@ -51,7 +52,7 @@ namespace tai
                     current == &wait,
                     current == &ready,
                     current == &done,
-                    "> (Reason: ", reason);
+                    "> (Reason: ", reason, ")");
             current->clear();
             if (!(rand() & 255))
                 current->shrink_to_fit();
