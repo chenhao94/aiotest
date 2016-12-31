@@ -1,6 +1,6 @@
-#include <iostream>
 #include <atomic>
 
+#include "Log.hpp"
 #include "TLQ.hpp"
 #include "Controller.hpp"
 #include "Worker.hpp"
@@ -32,14 +32,12 @@ namespace tai
         Controller::ctrl->todo.fetch_add(ready.size(), std::memory_order_relaxed);
         setup(ready);
         if (current->size())
-            std::cerr << "[" + std::to_string(Worker::worker->id) + "] "
-                + std::to_string(current->size())
-                + " task(s) have been added to queue <"
-                + std::to_string(current == &wait)
-                + std::to_string(current == &ready)
-                + std::to_string(current == &done)
-                + ">\n"
-                << std::flush;
+            Log::log("[", Worker::worker->id, "] ",
+                    current->size(),
+                    " task(s) have been added to queue <",
+                    current == &wait,
+                    current == &ready,
+                    current == &done);
     }
 
     void TLQ::clearCurrent(const char* reason)
@@ -47,14 +45,13 @@ namespace tai
         if (current)
         {
             if (reason && current->size())
-                std::cerr << "[" + std::to_string(Worker::worker->id) + "] "
-                    + std::to_string(current->size())
-                    + " task(s) have been cleared from queue <"
-                    + std::to_string(current == &wait)
-                    + std::to_string(current == &ready)
-                    + std::to_string(current == &done)
-                    + "> (Reason: " + reason + ")\n"
-                    << std::flush;
+                Log::log("[", Worker::worker->id, "] ",
+                    current->size(),
+                    " task(s) have been cleared from queue <",
+                    current == &wait,
+                    current == &ready,
+                    current == &done,
+                    "> (Reason: ", reason);
             current->clear();
             if (!(rand() & 255))
                 current->shrink_to_fit();

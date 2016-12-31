@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <atomic>
 #include <memory>
 
@@ -68,4 +69,7 @@ namespace tai
             return Done;
         }
     };
+
+    const char* to_cstring(IOCtrl::State state);
+    std::string to_string(IOCtrl::State state);
 }

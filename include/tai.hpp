@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Log.hpp"
 #include "BTreeNodeBase.hpp"
 #include "BTreeBase.hpp"
 #include "State.hpp"

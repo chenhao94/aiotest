@@ -1,11 +1,11 @@
 #include <string>
 #include <memory>
-#include <iostream>
 #include <fstream>
 #include <functional>
 
 #include <boost/lockfree/queue.hpp>
 
+#include "Log.hpp"
 #include "BTreeNodeBase.hpp"
 #include "TLQ.hpp"
 #include "Controller.hpp"
@@ -16,7 +16,7 @@ namespace tai
 {
     void BTreeConfig::operator()(BTreeNodeBase* node, size_t size)
     {
-        std::cerr << (node->data ? "Release [" : "Allocate [") + std::to_string(node->effective) + "/" + std::to_string(size) + "]\n" << std::flush;
+        Log::log(node->data ? "Release [" : "Allocate [", node->effective, "/", size, "]");
 
         node->effective = 0;
         if (node->data)

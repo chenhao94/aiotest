@@ -2,7 +2,7 @@
 
 namespace tai
 {
-    std::string to_string(const WorkerState& state)
+    const char* to_cstring(WorkerState state)
     {
         switch (state)
         {
@@ -21,6 +21,11 @@ namespace tai
         case Sync:
             return "Sync";
         }
-        return "Unknown state";
+        return "Unknown";
+    }
+
+    std::string to_string(WorkerState state)
+    {
+        return to_cstring(state);
     }
 }

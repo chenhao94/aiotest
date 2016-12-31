@@ -1,8 +1,8 @@
-#include <iostream>
 #include <thread>
 #include <functional>
 #include <algorithm>
 
+#include "Log.hpp"
 #include "BTreeNodeBase.hpp"
 #include "Worker.hpp"
 
@@ -34,7 +34,7 @@ namespace tai
     {
         if (reject.load(std::memory_order_relaxed))
             return false;
-        std::cerr << "[" + std::to_string(id) + "] Push a pending task\n" << std::flush;
+        Log::log("[", id, "] Push a pending task");
         queue.pushPending(task);
         return true;
     }
@@ -71,12 +71,6 @@ namespace tai
             }
             state.store(post = f(), std::memory_order_acquire);
         }
-        /*
-        std::cerr << "[" + std::to_string(id) + "] "
-            + "Switch state to <" + to_string(post)
-            + ">\n"
-            << std::flush;
-        */
         broadcast(post, std::memory_order_acquire);
         return post;
     }
@@ -104,7 +98,7 @@ namespace tai
                 ++roundIdle;
             else
             {
-                std::cerr << "[" + std::to_string(id) +"] Steal\n" << std::flush;
+                Log::log("[", id, "] Steal");
                 roundIdle = 0;
                 steal();
                 barrier(GC);

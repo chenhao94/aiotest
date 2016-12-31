@@ -18,44 +18,28 @@ int main()
 
     default_random_engine rand;
 
-    cerr << "Creating B-tree...\n" << flush;
+    Log::log("Creating B-tree...");
     BTreeDefault bt("tmp");
 
-    cerr << "Creating Controller...\n" << flush;
+    Log::log("Creating Controller...");
     Controller ctrl(1 << 28, 1 << 30);
 
-    cerr << "Writing...\n" << flush;
+    Log::log("Writing...");
 
     string data(10000, '0');
     for (auto& i : data)
         i += rand() % 10;
 
-    for (auto i = 1; i--; bt.write(ctrl, 0, data.size(), data.data()));
+    // for (auto i = 1; i--; bt.write(ctrl, 0, data.size(), data.data()));
 
-    unique_ptr<IOCtrl> io(bt.sync(ctrl));
+    // unique_ptr<IOCtrl> io(bt.sync(ctrl));
+    unique_ptr<IOCtrl> io(bt.write(ctrl, 0, data.size(), data.data()));
 
     for (; (*io)() == IOCtrl::Running; sleep_for(seconds(1)))
-        cerr << "Still running...\n" << flush;
+        Log::log("Still running...");
 
-    switch ((*io)())
-    {
-    case IOCtrl::Running:
-        cerr << "\tRunning\n";
-        break;
-    case IOCtrl::Failed:
-        cerr << "\tFailed\n";
-        break;
-    case IOCtrl::Rejected:
-        cerr << "\tRejected\n";
-        break;
-    case IOCtrl::Done:
-        cerr << "\tDone\n";
-        break;
-    default:
-        cerr << "\tUnknown IOCtrl state\n";
-    }
-    cerr << flush;
+    Log::log(to_cstring((*io)()));
 
-    cerr << "Complete!\n" << flush;
+    Log::log("Complete!");
     return 0;
 }

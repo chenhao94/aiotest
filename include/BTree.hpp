@@ -13,6 +13,7 @@
 
 #include <boost/lockfree/queue.hpp>
 
+#include "Log.hpp"
 #include "IOCtrl.hpp"
 #include "BTreeNodeBase.hpp"
 #include "BTreeBase.hpp"
@@ -185,7 +186,7 @@ namespace tai
 
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
-            std::cerr << "{" + std::to_string(offset) + ", " + std::to_string(offset + NM) + "} [" + std::to_string(begin) + ", " + std::to_string(end) + "]\n" << std::flush;
+            Log::log("{", offset, ", ", offset + NM, "} [", begin, ", ", end, "]");
 
             if (!NM && end > conf.size)
                 if (fwrite("\0", end - 1, 1, io))
@@ -266,7 +267,7 @@ namespace tai
 
         void evict() override
         {
-            std::cerr << "Evicting {" + std::to_string(offset) + ", " << std::to_string(offset + N) << "}\n" << std::flush;
+            Log::log("Evicting {", offset, ", ", offset + N, "}");
             if (dirty)
             {
                 fwrite(data, offset, effective);
@@ -384,7 +385,7 @@ namespace tai
 
         void evict() override
         {
-            std::cerr << "Evicting {" + std::to_string(offset) + ", " << std::to_string(offset + N) << "}\n" << std::flush;
+            Log::log("Evicting {", offset, ", ", offset + N, "}");
             if (dirty)
             {
                 fwrite(data, offset, effective);
