@@ -32,7 +32,7 @@ namespace tai
         Controller::ctrl->todo.fetch_add(ready.size(), std::memory_order_relaxed);
         setup(ready);
         if (current->size())
-            Log::log("[", Worker::worker->id, "] ",
+            Log::debug("[", Worker::worker->id, "] ",
                     current->size(),
                     " task(s) have been added to queue <",
                     current == &wait,
@@ -46,7 +46,7 @@ namespace tai
         if (current)
         {
             if (reason && current->size())
-                Log::log("[", Worker::worker->id, "] ",
+                Log::debug("[", Worker::worker->id, "] ",
                     current->size(),
                     " task(s) have been cleared from queue <",
                     current == &wait,

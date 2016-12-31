@@ -52,7 +52,7 @@ namespace tai
         auto touch(size_t i)
         {
             if (child.size() <= i)
-                Log::log("Cannot touch node ", i,
+                Log::debug("Cannot touch node ", i,
                         " within ", child.size(),
                         " node(s). Offset = ", offset ^ i << m);
             if (!child[i])
@@ -65,7 +65,7 @@ namespace tai
         auto touch(size_t i, size_t offset)
         {
             if (child.size() <= i)
-                Log::log("Cannot touch node ", i,
+                Log::debug("Cannot touch node ", i,
                         " within ", child.size(),
                         " node(s). Offset hint = ", offset);
             if (!child[i])
@@ -194,7 +194,7 @@ namespace tai
 
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
-            Log::log("{", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
+            Log::debug("{", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
 
             if (!NM && end > conf.size)
                 if (fwrite("\0", end - 1, 1, io))
@@ -276,7 +276,7 @@ namespace tai
 
         void evict() override
         {
-            Log::log("Evicting {", offset, ", ", offset + N, "}");
+            Log::debug("Evicting {", offset, ", ", offset + N, "}");
             if (dirty)
             {
                 fwrite(data, offset, effective);
@@ -394,7 +394,7 @@ namespace tai
 
         void evict() override
         {
-            Log::log("Evicting {", offset, ", ", offset + N, "}");
+            Log::debug("Evicting {", offset, ", ", offset + N, "}");
             if (dirty)
             {
                 fwrite(data, offset, effective);

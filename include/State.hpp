@@ -12,6 +12,7 @@ namespace tai
         Running,
         Unlocking,
         GC,
+        Quit,
         Sync
     };
 

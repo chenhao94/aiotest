@@ -22,6 +22,7 @@ namespace tai
         for (auto& i : workers)
             i.reject.store(true, std::memory_order_relaxed);
         ready.store(false, std::memory_order_relaxed);
+        wait(Quit, std::memory_order_relaxed);
     }
 
     Controller::Usage Controller::usage(size_t alloc)

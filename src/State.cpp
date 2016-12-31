@@ -18,6 +18,8 @@ namespace tai
             return "Unlocking";
         case GC:
             return "GC";
+        case Quit:
+            return "Quit";
         case Sync:
             return "Sync";
         }

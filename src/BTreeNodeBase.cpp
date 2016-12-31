@@ -16,7 +16,7 @@ namespace tai
 {
     void BTreeConfig::operator()(BTreeNodeBase* node, size_t size)
     {
-        Log::log(node->data ? "Release [" : "Allocate [", node->effective, "/", size, "]");
+        Log::debug(node->data ? "Release [" : "Allocate [", node->effective, "/", size, "]");
 
         node->effective = 0;
         if (node->data)

@@ -34,7 +34,7 @@ namespace tai
     {
         if (reject.load(std::memory_order_relaxed))
             return false;
-        Log::log("[", id, "] Push a pending task");
+        Log::debug("[", id, "] Push a pending task");
         queue.pushPending(task);
         return true;
     }
@@ -98,7 +98,7 @@ namespace tai
                 ++roundIdle;
             else
             {
-                Log::log("[", id, "] Steal");
+                Log::debug("[", id, "] Steal");
                 roundIdle = 0;
                 steal();
                 barrier(GC);
@@ -118,7 +118,7 @@ namespace tai
             else
             {
                 // std::this_thread::yield();
-                if (barrier([this](){ return closing() ? GC : Pulling; }) == GC)
+                if (barrier([this](){ return closing() ? Quit : Pulling; }) == Quit)
                     break;
             }
         }

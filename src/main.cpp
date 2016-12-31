@@ -1,5 +1,9 @@
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
+#include <algorithm>
 #include <string>
 #include <thread>
 #include <memory>
@@ -26,18 +30,18 @@ int main()
 
     Log::log("Writing...");
 
-    string data(1000000, '0');
+    const auto size = 1 << 30;
+    const auto bs = 1 << 12;
+    const auto n = 1000000;
+
+    uniform_int_distribution<size_t> dist(0, size - bs);
+
+    const auto start = high_resolution_clock::now();
+    string data(bs, '0');
     for (auto& i : data)
-        i += rand() % 10;
+        i += rand();
 
-    for (auto i = 1000; i--; bt.write(ctrl, rand() % 100000000ll, data.size(), data.data()));
-
-    {
-        unique_ptr<IOCtrl> io(bt.write(ctrl, rand() % 100000000ll, data.size(), data.data()));
-        for (; (*io)() == IOCtrl::Running; sleep_for(seconds(1)))
-            Log::log("Still running...");
-        Log::log(to_cstring((*io)()));
-    }
+    for (auto i = n; i--; bt.write(ctrl, dist(rand) % size, data.size(), data.data()));
 
     {
         unique_ptr<IOCtrl> io(bt.sync(ctrl));
@@ -46,6 +50,7 @@ int main()
         Log::log(to_cstring((*io)()));
     }
 
+    Log::log("Performance: ", (size_t)round(n * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
     Log::log("Complete!");
     return 0;
 }

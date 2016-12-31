@@ -101,7 +101,7 @@ namespace tai
         static auto& getTL(std::vector<std::unique_ptr<T>>& table, std::atomic_flag& mtx)
         {
             while (mtx.test_and_set(std::memory_order_acquire));
-            // Log::log("Fetching TL item for thread with global ID ", sgid);
+            Log::debug("Fetching TL item for thread with global ID ", sgid);
             if (sgid >= table.size())
                 table.resize(sgid + 1);
             auto& ptr = table[sgid];
