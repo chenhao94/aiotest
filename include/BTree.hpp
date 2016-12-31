@@ -25,8 +25,8 @@ namespace tai
     template<size_t n, size_t... rest>
     class BTreeNode : public BTreeNodeBase
     {
-        static_assert(n <= sizeof(size_t) * 8 - 1, "B-tree node cannot be larger than the size of address space.");
-        static_assert((n + ... + rest) <= sizeof(size_t) * 8 - 1, "B-tree node cannot be larger than the size of address space.");
+        static_assert(n <= sizeof(size_t) * 8, "B-tree node cannot be larger than the size of address space.");
+        static_assert((n + ... + rest) <= sizeof(size_t) * 8, "B-tree node cannot be larger than the size of address space.");
 
     public:
         using Self = BTreeNode<n, rest...>;
@@ -74,28 +74,22 @@ namespace tai
             evict();
         }
 
-        void merge(char* ptr) override
+        void merge(BTreeNodeBase* node, IOCtrl* io = nullptr) override
         {
             if (data)
             {
-                memcpy(data, ptr, NM);
+                const auto shift = offset - node->offset;
+                node->prefetch(shift, io);
+                memcpy(node->data + shift, data, effective);
+                node->effective = shift + effective;
                 parent = nullptr;
             }
             else
             {
-                auto dst = ptr;
-                for (size_t i = 0; i < child.size(); ++i)
-                {
-                    if (child[i])
-                        child[i]->merge(dst);
-                    else if (!fread(dst, offset ^ i << m, M))
-                        fail();
-                    dst += M;
-                }
-                if (child.size() < N && !fread(dst, offset ^ child.size() << m, N - child.size() << m))
-                    fail();
-
-                delete this;
+                for (auto& i : child)
+                    if (i)
+                        i->merge(node, io);
+                suicide();
             }
         }
 
@@ -108,23 +102,23 @@ namespace tai
                 for (auto& i : child)
                     if (i)
                         i->drop();
-                delete this;
+                suicide();
             }
         }
 
     private:
         // Merge subtree cache into node cache.
-        void merge()
+        bool merge(IOCtrl* io = nullptr)
         {
+            if (Controller::ctrl->usage(NM) == Controller::Full)
+                return false;
+
             conf(this, NM);
-            for (size_t i = 0; i < child.size(); ++i)
-                if (child[i])
-                    child[i]->merge(data + (i << m));
-                else if (!fread(data + (i << m), offset ^ i << m, M))
-                    fail();
-            if (child.size() < N && !fread(data + (child.size() << m), offset ^ child.size() << m, N - child.size() << m))
-                fail();
+            for (auto& i : child)
+                if (i)
+                    i->merge(this, io);
             child.clear();
+            return true;
         }
 
         // Unlink all child subtrees.
@@ -139,13 +133,20 @@ namespace tai
     public:
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
-            if (data)
+            if (!NM && end > conf.size)
             {
-                memcpy(ptr, data + (begin & NM - 1), end - begin);
+                io->fail();
                 unlock();
                 io->unlock();
+                return;
             }
-            else if (locked() || end - begin < NM)
+
+            if (NM && data)
+            {
+                cachedRead<NM>(begin, end, ptr, io);
+                io->unlock();
+            }
+            else if (!NM || locked() || end - begin < NM)
             {
                 const auto range = getRange(begin, end);
                 lock(range.second - range.first + 1);
@@ -169,18 +170,15 @@ namespace tai
                     Worker::pushWait([=](){ node->read(end - 1 & -M, end, suffix, io); });
                 }
             }
-            else if (Controller::ctrl->usage(NM) != Controller::Full)
-            {
-                merge();
-                memcpy(ptr, data, NM);
-                unlock();
-                io->unlock();
-            }
             else
             {
-                if (!fread(ptr, begin, NM))
-                    io->fail();
-                unlock();
+                if (merge(io))
+                    cachedRead<NM>(begin, end, ptr, io);
+                else
+                {
+                    fread(ptr, begin, NM, io);
+                    unlock();
+                }
                 io->unlock();
             }
         }
@@ -188,25 +186,24 @@ namespace tai
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
             std::cerr << "{" + std::to_string(offset) + ", " + std::to_string(offset + NM) + "} [" + std::to_string(begin) + ", " + std::to_string(end) + "]\n" << std::flush;
-            if (data)
-            {
-                std::cerr << "{" + std::to_string(offset) + ", " + std::to_string(offset + NM) + "} [" + std::to_string(begin) + ", " + std::to_string(end) + "] data != nullptr\n" << std::flush;
-                memcpy(data + (begin & NM - 1), ptr, end - begin);
-                if (dirty)
-                    unlock();
-                else if (end - begin > NM >> 1)
-                    dirty = true;
+
+            if (!NM && end > conf.size)
+                if (fwrite("\0", end - 1, 1, io))
+                    conf.size = end;
                 else
                 {
-                    if (!fwrite(ptr, begin, end - begin))
-                        io->fail();
                     unlock();
+                    io->unlock();
+                    return;
                 }
+
+            if (NM && data)
+            {
+                cachedWrite<NM>(begin, end, ptr, io);
                 io->unlock();
             }
-            else if (locked() || end - begin < NM)
+            else if (!NM || locked() || end - begin < NM)
             {
-                std::cerr << "{" + std::to_string(offset) + ", " + std::to_string(offset + NM) + "} [" + std::to_string(begin) + ", " + std::to_string(end) + "] Locked or small\n" << std::flush;
                 const auto range = getRange(begin, end);
                 lock(range.second - range.first + 1);
                 io->lock(range.second - range.first);
@@ -231,19 +228,17 @@ namespace tai
             }
             else
             {
-                std::cerr << "{" + std::to_string(offset) + ", " + std::to_string(offset + NM) + "} [" + std::to_string(begin) + ", " + std::to_string(end) + "] Otherwise\n" << std::flush;
                 dropChild();
-                if (Controller::ctrl->usage(NM) != Controller::Full)
+                if (Controller::ctrl->usage(NM) == Controller::Full)
                 {
-                    conf(this, NM);
-                    memcpy(data, ptr, NM);
-                    dirty = true;
+                    fwrite(ptr, begin, end - begin, io);
+                    unlock();
                 }
                 else
                 {
-                    if (!fwrite(ptr, begin, end - begin))
-                        io->fail();
-                    unlock();
+                    conf(this, NM);
+                    memcpy(data, ptr, effective = NM);
+                    dirty = true;
                 }
                 io->unlock();
             }
@@ -258,33 +253,25 @@ namespace tai
         {
             if (dirty)
             {
-                if (!fwrite(data, offset, N))
-                    io->fail();
-                else
+                if (fwrite(data, offset, effective, io))
                 {
                     dirty = false;
                     unlock();
                 }
             }
-            else if (!data && locked())
+            else if (locked())
                 for (auto& i : child)
                     Worker::pushWait([=](){ i->flush(io); });
         }
 
-        void flush() override
+        void evict() override
         {
             if (dirty)
             {
-                if (!fwrite(data, offset, NM))
-                    fail();
+                fwrite(data, offset, effective);
                 dirty = false;
                 unlock();
             }
-        }
-
-        void evict() override
-        {
-            flush();
             if (data)
                 conf(this, NM);
         }
@@ -293,7 +280,7 @@ namespace tai
     template<size_t n>
     class BTreeNode<n> : public BTreeNodeBase
     {
-        static_assert(n <= sizeof(size_t) * 8 - 1, "B-tree node cannot be larger than the size of address space.");
+        static_assert(n <= sizeof(size_t) * 8, "B-tree node cannot be larger than the size of address space.");
 
     public:
         using Self = BTreeNode<n>;
@@ -309,15 +296,16 @@ namespace tai
             evict();
         }
 
-        void merge(char* ptr) override
+        void merge(BTreeNodeBase* node, IOCtrl* io = nullptr) override
         {
             if (data)
             {
-                memcpy(data, ptr, N);
+                const auto shift = offset - node->offset;
+                node->prefetch(shift, io);
+                memcpy(node->data + shift, data, effective);
+                node->effective = shift + effective;
                 parent = nullptr;
             }
-            else if (!fread(ptr, offset, N))
-                fail();
         }
 
         void drop() override
@@ -325,52 +313,55 @@ namespace tai
             if (data)
                 parent = nullptr;
             else
-                delete this;
+                suicide();
         }
 
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
-            if (!data && Controller::ctrl->usage(N) != Controller::Full)
+            if (!N && end > conf.size)
             {
-                conf(this, N);
-                if (!fread(data, offset, N))
-                    io->fail();
-            }
-            if (data)
-                memcpy(ptr, data + begin, end - begin);
-            else if (!fread(ptr, begin, end - begin))
                 io->fail();
-            unlock();
+                unlock();
+                io->unlock();
+                return;
+            }
+
+            if (!N || !data && Controller::ctrl->usage(N) == Controller::Full)
+            {
+                fread(ptr, begin, end - begin, io);
+                unlock();
+            }
+            else
+            {
+                if (!data)
+                    conf(this, N);
+                cachedRead<N>(begin, end, ptr, io);
+            }
             io->unlock();
         }
 
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
-            if (dirty)
+            if (!N && end > conf.size)
+                if (fwrite("0", end - 1, 1, io))
+                    conf.size = end;
+                else
+                {
+                    unlock();
+                    io->unlock();
+                    return;
+                }
+
+            if (!N || !data && Controller::ctrl->usage(N) == Controller::Full)
             {
-                memcpy(data + (begin & N - 1), ptr, end - begin);
+                fwrite(ptr, begin, end - begin, io);
                 unlock();
-            }
-            else if (data)
-            {
-                memcpy(data + (begin & N - 1), ptr, end - begin);
-                dirty = true;
-            }
-            else if (Controller::ctrl->usage(N) != Controller::Full)
-            {
-                conf(this, N);
-                memcpy(data + (begin & N - 1), ptr, end - begin);
-                if (begin & N && !fread(data, begin, begin & N - 1))
-                    io->fail();
-                if (end & N && !fread(data + (end & N - 1), end, -end & N - 1))
-                    io->fail();
-                dirty = true;
             }
             else
             {
-                if (!fwrite(ptr, begin, end - begin))
-                    io->fail();
-                unlock();
+                if (!data)
+                    conf(this, N);
+                cachedWrite<N>(begin, end, ptr, io);
             }
             io->unlock();
         }
@@ -392,21 +383,15 @@ namespace tai
                 }
         }
 
-        void flush() override
-        {
-            if (dirty)
-            {
-                if (!fwrite(data, offset, N))
-                    fail();
-                dirty = false;
-                unlock();
-            }
-        }
-
         void evict() override
         {
             std::cerr << "Evicting {" + std::to_string(offset) + ", " << std::to_string(offset + N) << "}\n" << std::flush;
-            flush();
+            if (dirty)
+            {
+                fwrite(data, offset, N);
+                dirty = false;
+                unlock();
+            }
             if (data)
                 conf(this, N);
         }
@@ -421,7 +406,7 @@ namespace tai
     template<size_t n, size_t... rest>
     class BTree<n, rest...> : public BTreeBase
     {
-        static_assert((n + ... + rest) == sizeof(size_t) * 8 - 1, "B-tree must cover the entire address space.");
+        static_assert((n + ... + rest) == sizeof(size_t) * 8, "B-tree must cover the entire address space.");
     
     public:
         using Root = BTreeNode<n, rest...>;
@@ -435,9 +420,19 @@ namespace tai
         // Bind to the file from given path.
         explicit BTree(const std::string &path) : BTreeBase(path), root(conf, 0)
         {
-            std::lock_guard<std::mutex> lck(mtxUsedID);
+            mtxUsedID.lock();
             while (usedID.count(id = rand()));
             usedID.insert(id);
+            mtxUsedID.unlock();
+
+            std::fstream file(path, std::ios_base::in | std::ios_base::binary);
+            if (file.is_open())
+                conf.size = file.seekg(0, std::ios_base::end).tellg();
+            else
+                file.open(path, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
+
+            if (!file.is_open())
+                root.fail();
         }
 
         ~BTree()
@@ -484,5 +479,5 @@ namespace tai
     };
 
     // Default hierarchy.
-    using BTreeDefault = BTree<31, 2, 9, 9, 12>;
+    using BTreeDefault = BTree<32, 2, 9, 9, 12>;
 }

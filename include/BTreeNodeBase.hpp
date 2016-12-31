@@ -17,6 +17,7 @@ namespace tai
         const std::string path = "";
         std::vector<std::fstream> files;
         std::atomic<bool> failed = { false };
+        size_t size = 0;
 
         BTreeConfig(const std::string& path) : path(path)
         {
@@ -33,7 +34,7 @@ namespace tai
         using Self = BTreeNodeBase;
 
         // Merge cache to ptr.
-        virtual void merge(char* ptr) = 0;
+        virtual void merge(BTreeNodeBase* ptr, IOCtrl* io = nullptr) = 0;
 
         // Unlink the subtree.
         virtual void drop() = 0;
@@ -43,8 +44,6 @@ namespace tai
         virtual void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) = 0;
         // Flush subtree cache.
         virtual void flush(IOCtrl* io) = 0;
-        // Flush node cache.
-        virtual void flush() = 0;
         // Evict (flush+drop) node cache.
         virtual void evict() = 0;
 
@@ -67,6 +66,9 @@ namespace tai
             delete this;
         }
 
+        // Prefetch no less than the given length into cache.
+        bool prefetch(size_t len, IOCtrl* io = nullptr);
+
         BTreeNodeBase(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : conf(conf), offset(offset), parent(parent)
         {
         }
@@ -79,15 +81,80 @@ namespace tai
         // Shared configuration.
         BTreeConfig& conf;
 
+        // Counter for the number of locked child.
+        // A node is locked if it has any locked child, any dirty cache, or any task running on it.
         std::atomic<size_t> lck = { 0 };
-        char* data = nullptr;
-        size_t offset = 0;
+
+        // Parent pointer.
+        // Set to nullptr while unlinking to ensure that different connected regions cannot access each other.
         BTreeNodeBase* parent = nullptr;
+
+    public:
+        // Cache.
+        char* data = nullptr;
+
+        // Absolute offset for this subtree.
+        const size_t offset = 0;
+
+        // Length of valid cache prefix.
+        // Set to 0 when there's no cahce.
+        size_t effective = 0;
+
+    protected:
+
+        // Dirty flag for cache.
+        // Set to false when there's no cache.
         bool dirty = false;
 
+        // Get an opened file.
+        std::fstream& getFile();
+
         // Read/write file.
-        bool fread(char* buf, size_t pos, size_t len);
-        bool fwrite(const char* buf, size_t pos, size_t len);
+        bool fread(char* buf, size_t pos, size_t len, IOCtrl* io = nullptr);
+        bool fwrite(const char* buf, size_t pos, size_t len, IOCtrl* io = nullptr);
+
+        // Read via cache.
+        // Bypass the cache if caching is too expensive.
+        template<size_t N>
+        bool cachedRead(size_t begin, size_t end, char* ptr, IOCtrl* io = nullptr)
+        {
+            const auto base = begin & N - 1;
+            const auto len = end - begin;
+
+            if (base > effective && len < base - effective)
+                fread(ptr, begin, len, io);
+            else if (prefetch(end & N - 1))
+                memcpy(ptr, data + base, len);
+            unlock();
+        }
+
+        // Write via cache.
+        // Bypass the cache if caching is too expensive.
+        template<size_t N>
+        bool cachedWrite(size_t begin, size_t end, const char* ptr, IOCtrl* io = nullptr)
+        {
+            const auto base = begin & N - 1;
+            const auto len = end - begin;
+
+            if (base > effective && len < base - effective)
+            {
+                fwrite(ptr, begin, len, io);
+                unlock();
+            }
+            else
+            {
+                prefetch(base);
+                memcpy(data + base, ptr, len);
+
+                if (dirty || len < effective && fwrite(ptr, begin, end - begin, io))
+                    unlock();
+                else
+                    dirty = true;
+
+                if (end & N - 1 > effective)
+                    effective = end & N - 1;
+            }
+        }
 
         // Check if the subtree is locked.
         // A subtree is locked if any read/write is in progress.

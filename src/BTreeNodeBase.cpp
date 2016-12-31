@@ -9,11 +9,13 @@
 #include "TLQ.hpp"
 #include "Controller.hpp"
 #include "Worker.hpp"
+#include "IOCtrl.hpp"
 
 namespace tai
 {
     void BTreeConfig::operator()(BTreeNodeBase* node, size_t size)
     {
+        node->effective = 0;
         if (node->data)
         {
             Controller::ctrl->used.fetch_sub(size, std::memory_order_relaxed);
@@ -28,25 +30,44 @@ namespace tai
         }
     }
 
-    bool BTreeNodeBase::fread(char* buf, size_t pos, size_t len)
+    bool BTreeNodeBase::prefetch(size_t len, IOCtrl* io)
     {
-        auto& file = Worker::getTL(conf.files);
-        if (!file.is_open())
-            file.open(conf.path, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-        file.seekg(pos);
-        return !file.read(buf, len).fail();
+        if (len > effective && data)
+            if (fread(data + effective, offset + effective, len - effective, io))
+                effective += len;
+            else
+                fail();
+        return effective >= len;
     }
 
-    bool BTreeNodeBase::fwrite(const char* buf, size_t pos, size_t len)
+    std::fstream& BTreeNodeBase::getFile()
     {
         auto& file = Worker::getTL(conf.files);
+        if (file.fail())
+            file.close();
         if (!file.is_open())
-        {
-            std::cerr << "Open with \"" + conf.path + "\"\n" << std::flush;
             file.open(conf.path, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-        }
-        file.seekp(pos);
-        return !file.write(buf, len).flush().fail();
+        if (!file.is_open())
+            file.open(conf.path, std::ios_base::in | std::ios_base::binary);
+        if (!file.is_open())
+            file.open(conf.path, std::ios_base::out | std::ios_base::binary);
+        return file;
+    }
+
+    bool BTreeNodeBase::fread(char* buf, size_t pos, size_t len, IOCtrl* io)
+    {
+        if (getFile().seekg(pos).read(buf, len))
+            return true;
+        io ? io->fail() : fail();
+        return false;
+    }
+
+    bool BTreeNodeBase::fwrite(const char* buf, size_t pos, size_t len, IOCtrl* io)
+    {
+        if (getFile().seekp(pos).write(buf, len).flush())
+            return true;
+        io ? io->fail() : fail();
+        return false;
     }
 
     void BTreeNodeBase::unlock()
