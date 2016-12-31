@@ -16,8 +16,6 @@ namespace tai
     {
         const auto ret = Controller::ctrl->todo.load(std::memory_order_relaxed);
         Controller::ctrl->todo.store(0, std::memory_order_relaxed);
-        if (ret)
-            std::cerr << "Pop " + std::to_string(ret) + "\n" << std::flush;
         return ret;
     }
 

@@ -374,9 +374,7 @@ namespace tai
         void flush(IOCtrl* io) override
         {
             if (dirty)
-                if (!fwrite(data, offset, N))
-                    io->fail();
-                else
+                if (fwrite(data, offset, effective, io))
                 {
                     dirty = false;
                     unlock();
@@ -388,7 +386,7 @@ namespace tai
             std::cerr << "Evicting {" + std::to_string(offset) + ", " << std::to_string(offset + N) << "}\n" << std::flush;
             if (dirty)
             {
-                fwrite(data, offset, N);
+                fwrite(data, offset, effective);
                 dirty = false;
                 unlock();
             }

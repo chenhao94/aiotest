@@ -1,5 +1,6 @@
 #include <string>
 #include <memory>
+#include <iostream>
 #include <fstream>
 #include <functional>
 
@@ -15,6 +16,8 @@ namespace tai
 {
     void BTreeConfig::operator()(BTreeNodeBase* node, size_t size)
     {
+        std::cerr << (node->data ? "Release [" : "Allocate [") + std::to_string(node->effective) + "/" + std::to_string(size) + "]\n" << std::flush;
+
         node->effective = 0;
         if (node->data)
         {
@@ -74,11 +77,5 @@ namespace tai
     {
         if (parent)
             Worker::pushDone([this](){ for (auto i = parent; i && i->lck.fetch_sub(1, std::memory_order_relaxed) == 1; i = i->parent); });
-    }
-
-    void BTreeNodeBase::unlock(size_t num)
-    {
-        if (parent)
-            Worker::pushDone([this, num](){ for (auto i = parent; i && i->lck.fetch_sub(num, std::memory_order_relaxed) == num; i = i->parent); });
     }
 }

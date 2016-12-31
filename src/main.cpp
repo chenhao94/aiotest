@@ -4,6 +4,7 @@
 #include <thread>
 #include <memory>
 #include <chrono>
+#include <random>
 
 #include "tai.hpp"
 
@@ -15,6 +16,8 @@ int main()
 
     using namespace tai;
 
+    default_random_engine rand;
+
     cerr << "Creating B-tree...\n" << flush;
     BTreeDefault bt("tmp");
 
@@ -22,7 +25,14 @@ int main()
     Controller ctrl(1 << 28, 1 << 30);
 
     cerr << "Writing...\n" << flush;
-    unique_ptr<IOCtrl> io(bt.write(ctrl, 0, 10, "1234567890"));
+
+    string data(1000000, '0');
+    for (auto& i : data)
+        i += rand() % 10;
+
+    for (auto i = 1; i--; bt.write(ctrl, 0, data.size(), data.data()));
+
+    unique_ptr<IOCtrl> io(bt.sync(ctrl));
 
     for (; (*io)() == IOCtrl::Running; sleep_for(seconds(1)))
         cerr << "Still running...\n" << flush;

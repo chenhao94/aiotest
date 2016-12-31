@@ -104,7 +104,7 @@ namespace tai
                 ++roundIdle;
             else
             {
-                std::cerr << "Steal\n" << std::flush;
+                std::cerr << "[" + std::to_string(id) +"] Steal\n" << std::flush;
                 roundIdle = 0;
                 steal();
                 barrier(GC);

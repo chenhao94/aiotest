@@ -1,7 +1,9 @@
 #pragma once
 
 #include <string>
+#include <iostream>
 #include <fstream>
+#include <algorithm>
 #include <vector>
 #include <functional>
 
@@ -73,6 +75,8 @@ namespace tai
         {
         }
 
+        BTreeNodeBase(const BTreeNodeBase &) = delete;
+
         virtual ~BTreeNodeBase()
         {
         }
@@ -120,12 +124,15 @@ namespace tai
         {
             const auto base = begin & N - 1;
             const auto len = end - begin;
+            bool ret = true;
 
             if (base > effective && len < base - effective)
-                fread(ptr, begin, len, io);
-            else if (prefetch(end & N - 1))
+                ret = fread(ptr, begin, len, io);
+            else if (ret = prefetch(end & N - 1))
                 memcpy(ptr, data + base, len);
             unlock();
+
+            return ret;
         }
 
         // Write via cache.
@@ -135,25 +142,26 @@ namespace tai
         {
             const auto base = begin & N - 1;
             const auto len = end - begin;
+            bool ret = true;
 
             if (base > effective && len < base - effective)
             {
-                fwrite(ptr, begin, len, io);
+                ret = fwrite(ptr, begin, len, io);
                 unlock();
             }
             else
             {
-                prefetch(base);
+                ret = prefetch(base);
                 memcpy(data + base, ptr, len);
+                effective = std::max(effective, end & N - 1);
 
-                if (dirty || len < effective && fwrite(ptr, begin, end - begin, io))
+                if (dirty || len < effective >> 1 && fwrite(ptr, begin, len, io))
                     unlock();
                 else
                     dirty = true;
-
-                if (end & N - 1 > effective)
-                    effective = end & N - 1;
             }
+
+            return ret;
         }
 
         // Check if the subtree is locked.
@@ -173,6 +181,5 @@ namespace tai
 
         // Unlock the subtree, including its parents if necessary.
         void unlock();
-        void unlock(size_t num);
     };
 }
