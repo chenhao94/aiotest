@@ -22,7 +22,7 @@ export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi -lm -lpthread
 # export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
 export MKDIR = @mkdir -p
-export CMP = CMP
+export CMP = cmp
 
 export CP = cp -rf
 export INSTALL = install
