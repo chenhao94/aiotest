@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
     default_random_engine rand;
     uniform_int_distribution<size_t> dist(0, size - bs);
 
-    string data(bs, '0');
+    string data(bs, 0);
     for (auto& i : data)
         i += rand();
 
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     {
         Log::log("Creating file for sync I/O...");
 
-        fstream file("tmp-sync", ios_base::in | ios_base::out | ios_base::binary);
+        fstream file("tmp/sync", ios_base::in | ios_base::out | ios_base::binary);
 
         if (!file.is_open())
             file.open("tmp-sync", ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary);
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     {
         Log::log("Creating B-tree...");
         // BTreeDefault bt("tmp");
-        BTreeTrivial bt("tmp-tai");
+        BTreeTrivial bt("tmp/tai");
 
         Log::log("Creating Controller...");
         // Controller ctrl(1 << 28, 1 << 30, 1);

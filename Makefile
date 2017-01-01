@@ -21,27 +21,43 @@ export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi -lm -lpthread
 # export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
+export MKDIR = @mkdir -p
+export CMP = CMP
 
 export CP = cp -rf
 export INSTALL = install
 export RM = rm -rf
 
 .PHONY: all
-all: $(LIBTAI)
+all: $(LIBTAI) tai
+
+tai: $(LIBTAI)
 	$(CXX) $(CXXFLAGS) -L$(LIBS_DIR) -ltai -o tai
 
 $(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/%
-	@mkdir -p $(OBJS_DIR)
+	$(MKDIR) $(OBJS_DIR)
 	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 $(DEPS): $(DEPS_DIR)/%.d: $(SRCS_DIR)/%
-	@mkdir -p $(DEPS_DIR)
+	$(MKDIR) $(DEPS_DIR)
 	$(CXX) $(CXXFLAGS) -MM $^ -o $@
 
 $(LIBTAI): $(OBJS)
-	@mkdir -p $(LIBS_DIR)
+	$(MKDIR) $(LIBS_DIR)
 	$(RM) $@
 	$(AR) -r $@ $(OBJS)
+
+.PHONY: test
+test: all
+	$(MKDIR) tmp
+	dd if=/dev/zero of=tmp/sync bs=1G count=1
+	dd if=/dev/zero of=tmp/tai bs=1G count=1
+	sync
+	time (./tai 1 131072 && sync tmp/sync)
+	sync
+	time (./tai 2 131072 && sync tmp/tai)
+	sync
+	$(CMP) tmp/sync tmp/tai
 
 ifneq ($(MAKECMDGOALS),clean)
 sinclude $(DEPS)
@@ -49,4 +65,4 @@ endif
 
 .PHONY: clean
 clean:
-	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) tai
+	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) tmp tai

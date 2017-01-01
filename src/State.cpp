@@ -2,9 +2,9 @@
 
 namespace tai
 {
-    const char* to_cstring(WorkerState state)
+    const char* to_cstring(WorkerState _)
     {
-        switch (state)
+        switch (_)
         {
         case Pending:
             return "Pending";
@@ -26,8 +26,8 @@ namespace tai
         return "Unknown";
     }
 
-    std::string to_string(WorkerState state)
+    std::string to_string(WorkerState _)
     {
-        return to_cstring(state);
+        return to_cstring(_);
     }
 }

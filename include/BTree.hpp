@@ -379,7 +379,7 @@ namespace tai
 
         static void sync(IOCtrl* io)
         {
-            io->unlock();
+            io->notify();
         }
 
         void flush(IOCtrl* io) override
@@ -453,9 +453,8 @@ namespace tai
         // Issue a read request ont this file to the given controller.
         auto read(Controller& ctrl, size_t pos, size_t len, char* ptr)
         {
-            auto io = new IOCtrl();
-            io->lock();
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(pos, pos + len, ptr, io); }))
+            auto io = new IOCtrl;
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
@@ -463,9 +462,8 @@ namespace tai
         // Issue a write request ont this file to the given controller.
         auto write(Controller& ctrl, size_t pos, size_t len, const char* ptr)
         {
-            auto io = new IOCtrl();
-            io->lock();
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(pos, pos + len, ptr, io); }))
+            auto io = new IOCtrl;
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
@@ -473,8 +471,7 @@ namespace tai
         // Issue a sync request ont this file to the given controller.
         auto sync(Controller& ctrl)
         {
-            auto io = new IOCtrl();
-            io->lock();
+            auto io = new IOCtrl;
             if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.flush(io); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;

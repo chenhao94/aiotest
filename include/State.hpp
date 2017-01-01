@@ -16,6 +16,6 @@ namespace tai
         Sync
     };
 
-    const char* to_cstring(WorkerState state);
-    std::string to_string(WorkerState state);
+    const char* to_cstring(WorkerState _);
+    std::string to_string(WorkerState _);
 }

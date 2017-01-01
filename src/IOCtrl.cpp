@@ -2,9 +2,9 @@
 
 namespace tai
 {
-    const char* to_cstring(IOCtrl::State state)
+    const char* to_cstring(IOCtrl::State _)
     {
-        switch (state)
+        switch (_)
         {
         case IOCtrl::Running:
             return "Running";
@@ -18,8 +18,25 @@ namespace tai
         return "Unknown";
     }
 
-    std::string to_string(IOCtrl::State state)
+    const char* to_cstring(IOCtrl::Method _)
     {
-        return to_cstring(state);
+        switch (_)
+        {
+        case IOCtrl::Lock:
+            return "Lock";
+        case IOCtrl::Timing:
+            return "Timing";
+        }
+        return "Unknown";
+    }
+
+    std::string to_string(IOCtrl::State _)
+    {
+        return to_cstring(_);
+    }
+
+    std::string to_string(IOCtrl::Method _)
+    {
+        return to_cstring(_);
     }
 }
