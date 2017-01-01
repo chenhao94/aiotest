@@ -1,4 +1,5 @@
 /tai
+/tmp*
 
 # Created by https://www.gitignore.io/api/c,windows,macos,osx,linux,latex,tex,vim,emacs,eclipse,sublimetext,svn,cvs,mercurial,microsoftoffice,visualstudio,visualstudiocode,cmake,maven,java,python,intellij,jetbrains,pycharm
 
