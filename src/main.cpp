@@ -23,7 +23,10 @@ int main(int argc, char* argv[])
 
     const auto size = (size_t)1 << 30;
     const auto bs = (size_t)1 << 12;
-    const auto n = (size_t)1 << 15;
+    auto n = (size_t)1 << 15;
+
+    if (argc > 2)
+        n = atoll(argv[2]);
 
     default_random_engine rand;
     uniform_int_distribution<size_t> dist(0, size - bs);
