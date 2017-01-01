@@ -23,8 +23,8 @@ int main()
     default_random_engine rand;
 
     Log::log("Creating B-tree...");
-    // BTreeDefault bt("tmp");
-    BTreeTrivial bt("tmp");
+    BTreeDefault bt("tmp");
+    // BTreeTrivial bt("tmp");
 
     Log::log("Creating Controller...");
     Controller ctrl(1 << 28, 1 << 30);
