@@ -20,17 +20,27 @@ namespace tai::Log
     class to_string<const std::string>
     {
     public:
-        static auto get(const char* const elem)
+        static auto get(const std::string& elem)
         {
             return elem;
         }
     };
 
     template<>
-    class to_string<const char* const>
+    class to_string<char const *>
     {
     public:
-        static auto get(const char* const elem)
+        static auto get(char const * elem)
+        {
+            return std::string(elem);
+        }
+    };
+
+    template<>
+    class to_string<char const * const>
+    {
+    public:
+        static auto get(char const * const elem)
         {
             return std::string(elem);
         }
@@ -39,13 +49,13 @@ namespace tai::Log
     template<typename First>
     auto concat(First first)
     {
-        return to_string<const First const>::get(first);
+        return to_string<const First>::get(first);
     }
 
     template<typename First, typename... Rest>
     auto concat(First first, Rest... rest)
     {
-        return to_string<const First const>::get(first) + concat(rest...);
+        return to_string<const First>::get(first) + concat(rest...);
     }
 
     template<typename... T>

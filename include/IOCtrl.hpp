@@ -2,7 +2,9 @@
 
 #include <string>
 #include <atomic>
+#include <thread>
 #include <memory>
+#include <chrono>
 
 namespace tai
 {
@@ -94,6 +96,20 @@ namespace tai
                 return snapshot;
 
             return notify();
+        }
+
+        // Wait for this request to complete by checking with the given interval.
+        template<typename Rep, typename Period>
+        auto wait(std::chrono::duration<Rep, Period> dur)
+        {
+            State state;
+            for (; (state = (*this)()) == IOCtrl::Running; std::this_thread::sleep_for(dur));
+            return state;
+        }
+
+        auto wait()
+        {
+            return wait(std::chrono::milliseconds(100));
         }
     };
 

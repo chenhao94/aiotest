@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <string>
 #include <fstream>
 #include <algorithm>
@@ -91,10 +92,6 @@ namespace tai
         // A node is locked if it has any locked child, any dirty cache, or any task running on it.
         std::atomic<size_t> lck = { 0 };
 
-        // Parent pointer.
-        // Set to nullptr while unlinking to ensure that different connected regions cannot access each other.
-        BTreeNodeBase* parent = nullptr;
-
     public:
         // Cache.
         char* data = nullptr;
@@ -107,6 +104,10 @@ namespace tai
         size_t effective = 0;
 
     protected:
+
+        // Parent pointer.
+        // Set to nullptr while unlinking to ensure that different connected regions cannot access each other.
+        BTreeNodeBase* parent = nullptr;
 
         // Dirty flag for cache.
         // Set to false when there's no cache.

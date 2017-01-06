@@ -15,14 +15,17 @@ export OBJS = $(patsubst $(SRCS_DIR)/%,$(OBJS_DIR)/%.o,$(SRCS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
-export CXX = clang
+export CXX = clang++
+# export CXX = g++-6
+# export CXX = g++
 export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
-export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi -lm -lpthread
+export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
+export CXXFLAGS += -lm -lpthread
 # export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
 export MKDIR = @mkdir -p
-export CMP = cmp
+export CMP = cmp -b
 
 export CP = cp -rf
 export INSTALL = install
@@ -32,7 +35,7 @@ export RM = rm -rf
 all: $(LIBTAI) tai
 
 tai: $(LIBTAI)
-	$(CXX) $(CXXFLAGS) -L$(LIBS_DIR) -ltai -o tai
+	$(CXX) $(CXXFLAGS) -L$(LIBS_DIR) -ltai -flto -o tai
 
 $(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/%
 	$(MKDIR) $(OBJS_DIR)
@@ -53,11 +56,13 @@ test: all
 	dd if=/dev/zero of=tmp/sync bs=1G count=1
 	dd if=/dev/zero of=tmp/tai bs=1G count=1
 	sync
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo echo 1 > /proc/sys/vm/drop_caches; fi
 	time (./tai 1 131072 && sync tmp/sync)
-	sync
+	time sync
 	time (./tai 2 131072 && sync tmp/tai)
-	sync
-	$(CMP) tmp/sync tmp/tai
+	time sync
+	$(CMP) tmp/sync tmp/tai || $(CMP) -l tmp/sync tmp/tai | wc -l
 
 ifneq ($(MAKECMDGOALS),clean)
 sinclude $(DEPS)

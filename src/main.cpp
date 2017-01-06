@@ -10,6 +10,7 @@
 #include <memory>
 #include <chrono>
 #include <random>
+#include <vector>
 
 #include "tai.hpp"
 
@@ -37,49 +38,61 @@ int main(int argc, char* argv[])
 
     if (argc <= 1 || atoll(argv[1]) & 1)
     {
-        Log::log("Creating file for sync I/O...");
+        decltype(high_resolution_clock::now()) start;
 
-        fstream file("tmp/sync", ios_base::in | ios_base::out | ios_base::binary);
+        {
+            Log::log("Creating file for sync I/O...");
 
-        if (!file.is_open())
-            file.open("tmp-sync", ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary);
+            fstream file("tmp/sync", ios_base::in | ios_base::out | ios_base::binary);
 
-        Log::log("Writing...");
+            if (!file.is_open())
+                file.open("tmp/sync", ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary);
 
-        const auto start = high_resolution_clock::now();
+            Log::log("Writing...");
 
-        for (auto i = n; i--; file.seekp(dist(rand) % size).write(data.data(), data.size()))
-            if (i % (n / 100) == 0)
-                Log::log("\t", (n - i - 1) * 100 / n, "% Performance: ", (size_t)round((n - i - 1) * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
+            start = high_resolution_clock::now();
 
-        file.flush();
+            for (auto i = n; i--; file.seekp(dist(rand) % size).write(data.data(), data.size()))
+                if (i % (n / 100) == 0)
+                    Log::log("\t", (n - i - 1) * 100 / n, "% Performance: ", (size_t)round((n - i - 1) * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
+        }
 
         Log::log("Performance: ", (size_t)round(n * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
     }
 
     if (argc <= 1 || atoll(argv[1]) & 2)
     {
-        Log::log("Creating B-tree...");
-        BTreeDefault bt("tmp/tai");
-        // BTreeTrivial bt("tmp/tai");
+        vector<unique_ptr<IOCtrl>> ios;
+        ios.reserve(n + 1);
 
-        Log::log("Creating Controller...");
-        // Controller ctrl(1 << 28, 1 << 30, 1);
-        Controller ctrl(1 << 28, 1 << 30);
-
-        Log::log("Writing...");
-
-        const auto start = high_resolution_clock::now();
-
-        for (auto i = n; i--; bt.write(ctrl, dist(rand) % size, data.size(), data.data()))
-            if (i % (n / 100) == 0)
-                Log::log("\t", (n - i - 1) * 100 / n, "% Performance: ", (size_t)round((n - i - 1) * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
+        decltype(high_resolution_clock::now()) start;
 
         {
-            unique_ptr<IOCtrl> io(bt.sync(ctrl));
-            for (; (*io)() == IOCtrl::Running; sleep_for(seconds(1)))
-                Log::log("Still running...");
-            Log::log(to_cstring((*io)()));
+            Log::log("Creating B-tree...");
+            BTreeDefault bt("tmp/tai");
+            // BTreeTrivial bt("tmp/tai");
+
+            {
+                Log::log("Creating Controller...");
+                // Controller ctrl(1 << 28, 1 << 30, 1);
+                Controller ctrl(1 << 28, 1 << 30);
+
+                Log::log("Writing...");
+
+                start = high_resolution_clock::now();
+
+                for (auto i = n; i--; ios.emplace_back(bt.write(ctrl, dist(rand) % size, data.size(), data.data())));
+                ios.emplace_back(bt.sync(ctrl));
+
+                for (size_t i = 0; i < ios.size(); ++i)
+                {
+                    auto& io = *ios[i];
+                    if (io.wait() != IOCtrl::Done)
+                        Log::log(to_cstring(io()));
+                    if (i % (ios.size() / 100) == 0)
+                        Log::log("\t", i * 100 / ios.size(), "% Performance: ", (size_t)round(i * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
+                }
+            }
         }
 
         Log::log("Performance: ", (size_t)round(n * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
