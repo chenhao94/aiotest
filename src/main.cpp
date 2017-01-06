@@ -60,8 +60,8 @@ int main(int argc, char* argv[])
     if (argc <= 1 || atoll(argv[1]) & 2)
     {
         Log::log("Creating B-tree...");
-        // BTreeDefault bt("tmp");
-        BTreeTrivial bt("tmp/tai");
+        BTreeDefault bt("tmp/tai");
+        // BTreeTrivial bt("tmp/tai");
 
         Log::log("Creating Controller...");
         // Controller ctrl(1 << 28, 1 << 30, 1);
