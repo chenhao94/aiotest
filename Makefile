@@ -15,9 +15,9 @@ export OBJS = $(patsubst $(SRCS_DIR)/%,$(OBJS_DIR)/%.o,$(SRCS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
-export CXX = clang++
+# export CXX = clang++
 # export CXX = g++-6
-# export CXX = g++
+export CXX = g++
 export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
@@ -35,7 +35,7 @@ export RM = rm -rf
 all: $(LIBTAI) tai
 
 tai: $(LIBTAI)
-	$(CXX) $(CXXFLAGS) -L$(LIBS_DIR) -ltai -flto -o tai
+	$(CXX) $(CXXFLAGS) -L$(LIBS_DIR) -ltai -o tai
 
 $(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/%
 	$(MKDIR) $(OBJS_DIR)
@@ -57,7 +57,7 @@ test: all
 	dd if=/dev/zero of=tmp/tai bs=1G count=1
 	sync
 	if [ `uname` == Darwin ]; then sudo purge; fi
-	if [ `uname` == Linux ]; then sudo echo 1 > /proc/sys/vm/drop_caches; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	time (./tai 1 131072 && sync tmp/sync)
 	time sync
 	time (./tai 2 131072 && sync tmp/tai)
