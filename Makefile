@@ -52,6 +52,7 @@ $(LIBTAI): $(OBJS)
 
 .PHONY: test
 test: all
+	sudo sync
 	if [ `uname` == Darwin ]; then sudo purge; fi
 	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
