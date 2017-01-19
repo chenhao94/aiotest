@@ -33,8 +33,8 @@ int main(int argc, char* argv[])
     uniform_int_distribution<size_t> dist(0, size - bs);
 
     string data(bs, 0);
-    for (auto& i : data)
-        i += rand();
+    //for (auto& i : data)
+    //    i += rand();
 
     if (argc <= 1 || atoll(argv[1]) & 1)
     {
@@ -53,11 +53,15 @@ int main(int argc, char* argv[])
             start = high_resolution_clock::now();
 
             for (auto i = n; i--; file.seekp(dist(rand) % size).write(data.data(), data.size()))
-                if (i % (n / 100) == 0)
-                    Log::log("\t", (n - i - 1) * 100 / n, "% Performance: ", (size_t)round((n - i - 1) * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
+            {
+                if (n < 100 || i % (n / 100) == 0)
+                    Log::log("\t", (n - i - 1) * 100 / n, "% Performance: ", (size_t)round((n - i - 1) * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
+                for (size_t j = 0; j < data.size(); ++j)
+                    data[j] = n - i >> ((j & 7) << 3) & 255;
+            }
         }
 
-        Log::log("Performance: ", (size_t)round(n * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
+        Log::log("Performance: ", (size_t)round(n * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
     }
 
     if (argc <= 1 || atoll(argv[1]) & 2)
@@ -81,7 +85,9 @@ int main(int argc, char* argv[])
 
                 start = high_resolution_clock::now();
 
-                for (auto i = n; i--; ios.emplace_back(bt.write(ctrl, dist(rand) % size, data.size(), data.data())));
+                for (auto i = n; i--; ios.emplace_back(bt.write(ctrl, dist(rand) % size, data.size(), (new string(data))->data())))
+                    for (size_t j = 0; j < data.size(); ++j)
+                        data[j] = n - i >> ((j & 7) << 3) & 255;
                 ios.emplace_back(bt.sync(ctrl));
 
                 for (size_t i = 0; i < ios.size(); ++i)
@@ -89,13 +95,13 @@ int main(int argc, char* argv[])
                     auto& io = *ios[i];
                     if (io.wait() != IOCtrl::Done)
                         Log::log(to_cstring(io()));
-                    if (i % (ios.size() / 100) == 0)
-                        Log::log("\t", i * 100 / ios.size(), "% Performance: ", (size_t)round(i * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
+                    if (ios.size() < 100 || i % (ios.size() / 100) == 0)
+                        Log::log("\t", i * 100 / ios.size(), "% Performance: ", (size_t)round(i * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
                 }
             }
         }
 
-        Log::log("Performance: ", (size_t)round(n * 1e9 / duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()), " iops.");
+        Log::log("Performance: ", (size_t)round(n * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
     }
 
     Log::log("Complete!");

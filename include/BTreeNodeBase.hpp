@@ -9,6 +9,7 @@
 #include <atomic>
 #include <functional>
 
+#include "Log.hpp"
 #include "IOCtrl.hpp"
 
 namespace tai
@@ -149,6 +150,7 @@ namespace tai
 
             if (base > effective && len < base - effective)
             {
+                Log::debug("Redirect cached write [", begin, ",", end, "] to disk due to large gap.");
                 ret = fwrite(ptr, begin, len, io);
                 unlock();
             }
@@ -156,13 +158,19 @@ namespace tai
             {
                 ret = prefetch(base);
                 memcpy(data + base, ptr, len);
-                if (end - 1 & N - 1 >= effective)
+                if ((end - 1 & N - 1) >= effective)
                     effective = (end - 1 & N - 1) + 1;
 
                 if (dirty || len < effective >> 1 && fwrite(ptr, begin, len, io))
+                {
+                    Log::debug("Flush small cached write [", begin, ",", end, "] immediately to keep cache clean.");
                     unlock();
+                }
                 else
+                {
+                    Log::debug("Cached write [", begin, ",", end, "] contaminates cache with effective = ", effective, ".");
                     dirty = true;
+                }
             }
 
             return ret;

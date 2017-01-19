@@ -165,17 +165,23 @@ namespace tai
 
                 auto node = touch(range.first, begin & -M);
                 if (range.first == range.second)
+                {
+                    Log::debug("Push read task for children [", range.first, ", ", range.second, "] with data at ", (size_t)ptr, " for (", begin, ", " , end, ")");
                     Worker::pushWait([=](){ node->read(begin, end, ptr, io); });
+                }
                 else
                 {
+                    Log::debug("Push read task for children [", range.first, ", ", range.second, "] with data at ", (size_t)ptr, " for (", begin, ", " , (begin & -M) + M, ")");
                     Worker::pushWait([=](){ node->read(begin, (begin & -M) + M, ptr, io); });
                     auto suffix = ptr + (begin & M - 1 ? -begin & M - 1 : M);
                     for (auto i = range.first; ++i != range.second; suffix += M)
                     {
                         node = touch(i);
+                        Log::debug("Push read task for children [", range.first, ", ", range.second, "] with data at ", (size_t)suffix, " for (", offset ^ i << m, ", " , offset ^ i + 1 << m, ")");
                         Worker::pushWait([=](){ node->read(offset ^ i << m, offset ^ i + 1 << m, suffix, io); });
                     }
                     node = touch(range.second, end - 1 & -M);
+                    Log::debug("Push read task for children [", range.first, ", ", range.second, "] with data at ", (size_t)suffix, " for (", end - 1 & -M, ", " , end, ")");
                     Worker::pushWait([=](){ node->read(end - 1 & -M, end, suffix, io); });
                 }
             }
@@ -197,17 +203,19 @@ namespace tai
             Log::debug("{", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
 
             if (!NM && end > conf.size)
-                if (fwrite("\0", end - 1, 1, io))
-                    conf.size = end;
-                else
+            {
+                if (!fwrite("\0", end - 1, 1, io))
                 {
                     unlock();
                     io->unlock();
                     return;
                 }
+                conf.size = end;
+            }
 
             if (NM && data)
             {
+                Log::debug("Write data at ", (size_t)ptr, " for (", begin, ", ", end, ") to cache.");
                 cachedWrite<NM>(begin, end, ptr, io);
                 io->unlock();
             }
@@ -221,17 +229,23 @@ namespace tai
 
                 auto node = touch(range.first, begin & -M);
                 if (range.first == range.second)
+                {
+                    Log::debug("Push write task for children [", range.first, ", ", range.second, "] with data at ", (size_t)ptr, " for (", begin, ", " , end, ")");
                     Worker::pushWait([=](){ node->write(begin, end, ptr, io); });
+                }
                 else
                 {
+                    Log::debug("Push write task for children [", range.first, ", ", range.second, "] with data at ", (size_t)ptr, " for (", begin, ", " , (begin & -M) + M, ")");
                     Worker::pushWait([=](){ node->write(begin, (begin & -M) + M, ptr, io); });
-                    auto suffix = ptr + (-begin & M - 1);
+                    auto suffix = ptr + (begin & M - 1 ? -begin & M - 1 : M);
                     for (auto i = range.first; ++i != range.second; suffix += M)
                     {
                         node = touch(i);
-                        Worker::pushWait([=](){ node->write(begin & -NM ^ i << m, begin & -NM ^ i + 1 << m, suffix, io); });
+                        Log::debug("Push write task for children [", range.first, ", ", range.second, "] with data at ", (size_t)suffix, " for (", offset ^ i << m, ", " , offset ^ i + 1 << m, ")");
+                        Worker::pushWait([=](){ node->write(offset ^ i << m, offset ^ i + 1 << m, suffix, io); });
                     }
                     node = touch(range.second, end - 1 & -M);
+                    Log::debug("Push write task for children [", range.first, ", ", range.second, "] with data at ", (size_t)suffix, " for (", end - 1 & -M, ", " , end, ")");
                     Worker::pushWait([=](){ node->write(end - 1 & -M, end, suffix, io); });
                 }
             }
@@ -240,11 +254,13 @@ namespace tai
                 dropChild();
                 if (Controller::ctrl->usage(NM) == Controller::Full)
                 {
+                    Log::debug("Write data at ", (size_t)ptr, " for (", begin, ", ", end, ") out. (Reason: No enough space to create cache page)");
                     fwrite(ptr, begin, end - begin, io);
                     unlock();
                 }
                 else
                 {
+                    Log::debug("Write data at ", (size_t)ptr, " for (", begin, ", ", end, ") to new cache.");
                     conf(this, NM);
                     memcpy(data, ptr, effective = NM);
                     dirty = true;
@@ -354,22 +370,25 @@ namespace tai
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
             if (!N && end > conf.size)
-                if (fwrite("0", end - 1, 1, io))
-                    conf.size = end;
-                else
+            {
+                if (!fwrite("0", end - 1, 1, io))
                 {
                     unlock();
                     io->unlock();
                     return;
                 }
+                conf.size = end;
+            }
 
             if (!N || !data && Controller::ctrl->usage(N) == Controller::Full)
             {
+                Log::debug("Write data at ", (size_t)ptr, " for (", begin, ", ", end, ") out. (Reason: No enough space to create cache page)");
                 fwrite(ptr, begin, end - begin, io);
                 unlock();
             }
             else
             {
+                Log::debug("Write data at ", (size_t)ptr, " for (", begin, ", ", end, ") to new cache.");
                 if (!data)
                     conf(this, N);
                 cachedWrite<N>(begin, end, ptr, io);
