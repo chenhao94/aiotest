@@ -22,7 +22,7 @@ export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
 export CXXFLAGS += -lm -lpthread
-# export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
+export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
 export MKDIR = @mkdir -p
 export CMP = cmp -b
@@ -57,16 +57,16 @@ test: all
 	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
-	dd if=/dev/zero of=tmp/sync bs=1G count=1
-	dd if=/dev/zero of=tmp/tai bs=1G count=1
+	dd if=/dev/zero of=tmp/sync bs=16M count=1
+	dd if=/dev/zero of=tmp/tai bs=16M count=1
 	sync
 	if [ `uname` == Darwin ]; then sudo purge; fi
 	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	time (./tai 1 2048 && sync tmp/sync)
+	time (./tai 1 512 && sync tmp/sync)
 	time sync
 	if [ `uname` == Darwin ]; then sudo purge; fi
 	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	time (./tai 2 2048 && sync tmp/tai)
+	time (./tai 2 512 && sync tmp/tai)
 	time sync
 	$(CMP) tmp/sync tmp/tai || $(CMP) -l tmp/sync tmp/tai | wc -l
 

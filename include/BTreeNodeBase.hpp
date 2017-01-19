@@ -3,6 +3,8 @@
 #include <cstring>
 #include <string>
 #include <fstream>
+#include <sstream>
+#include <iomanip>
 #include <algorithm>
 #include <memory>
 #include <vector>
@@ -148,9 +150,13 @@ namespace tai
             const auto len = end - begin;
             bool ret = true;
 
+            std::ostringstream hex;
+            hex << std::hex;
+            for (size_t i = 0; i < 8 && begin + i < end; hex << std::setw(2) << std::setfill('0') << (int)ptr[i++]);
+
             if (base > effective && len < base - effective)
             {
-                Log::debug("Redirect cached write [", begin, ",", end, "] to disk due to large gap.");
+                Log::debug("Redirect cached write [", begin, ",", end, "] begin with \"", hex.str(), "\" to disk due to large gap.");
                 ret = fwrite(ptr, begin, len, io);
                 unlock();
             }
@@ -163,12 +169,12 @@ namespace tai
 
                 if (dirty || len < effective >> 1 && fwrite(ptr, begin, len, io))
                 {
-                    Log::debug("Flush small cached write [", begin, ",", end, "] immediately to keep cache clean.");
+                    Log::debug("Flush small cached write [", begin, ",", end, "] begin with \"", hex.str(), "\" immediately to keep cache clean.");
                     unlock();
                 }
                 else
                 {
-                    Log::debug("Cached write [", begin, ",", end, "] contaminates cache with effective = ", effective, ".");
+                    Log::debug("Cached write [", begin, ",", end, "] begin with \"", hex.str(), "\" contaminates cache with effective = ", effective, ".");
                     dirty = true;
                 }
             }
