@@ -57,16 +57,16 @@ test: all
 	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
-	dd if=/dev/zero of=tmp/sync bs=16M count=1
-	dd if=/dev/zero of=tmp/tai bs=16M count=1
+	dd if=/dev/zero of=tmp/sync bs=1G count=1
+	dd if=/dev/zero of=tmp/tai bs=1G count=1
 	sync
 	if [ `uname` == Darwin ]; then sudo purge; fi
 	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	time (./tai 1 512 && sync tmp/sync)
+	time (./tai 1 8192 && sync tmp/sync)
 	time sync
 	if [ `uname` == Darwin ]; then sudo purge; fi
 	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	time (./tai 2 512 && sync tmp/tai)
+	time (./tai 2 8192 && sync tmp/tai)
 	time sync
 	$(CMP) tmp/sync tmp/tai || $(CMP) -l tmp/sync tmp/tai | wc -l
 

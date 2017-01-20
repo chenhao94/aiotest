@@ -404,11 +404,14 @@ namespace tai
         void flush(IOCtrl* io) override
         {
             if (dirty)
+            {
+                Log::debug("Flush data at ", (size_t)data, " with file offset ", offset, " (effective = ", effective, ").");
                 if (fwrite(data, offset, effective, io))
                 {
                     dirty = false;
                     unlock();
                 }
+            }
         }
 
         void evict() override

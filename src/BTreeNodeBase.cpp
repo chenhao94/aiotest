@@ -37,7 +37,7 @@ namespace tai
     {
         if (len > effective && data)
             if (fread(data + effective, offset + effective, len - effective, io))
-                effective += len;
+                effective = len;
             else
                 fail();
         return effective >= len;
@@ -65,6 +65,7 @@ namespace tai
 
     bool BTreeNodeBase::fwrite(const char* buf, size_t pos, size_t len, IOCtrl* io)
     {
+        Log::debug("Write ", len, " byte(s) of data at ", (size_t)buf, " to position ", pos, ".");
         if (getFile().seekp(pos).write(buf, len).flush())
             return true;
         io ? io->fail() : fail();

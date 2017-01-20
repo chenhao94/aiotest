@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
 
     using namespace tai;
 
-    const auto size = (size_t)1 << 24;
+    const auto size = (size_t)1 << 30;
     const auto bs = (size_t)1 << 12;
     auto n = (size_t)1 << 15;
 
