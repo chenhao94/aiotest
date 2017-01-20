@@ -85,7 +85,9 @@ int main(int argc, char* argv[])
 
                 start = high_resolution_clock::now();
 
-                for (auto i = n; i--; ios.emplace_back(bt.write(ctrl, dist(rand) % size, data.size(), (new string(data))->data())))
+                string* ss[1<<15];
+
+                for (auto i = n; i--; ios.emplace_back(bt.write(ctrl, dist(rand) % size, data.size(), (ss[i]=(new string(data)))->data())))
                     for (size_t j = 0; j < data.size(); ++j)
                         data[j] = n - i >> ((j & 7) << 3) & 255;
                 ios.emplace_back(bt.sync(ctrl));
@@ -98,6 +100,8 @@ int main(int argc, char* argv[])
                     if (ios.size() < 100 || i % (ios.size() / 100) == 0)
                         Log::log("\t", i * 100 / ios.size(), "% Performance: ", (size_t)round(i * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
                 }
+
+                for (auto i = n ; i--; delete ss[i]);
             }
         }
 

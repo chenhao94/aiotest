@@ -15,9 +15,9 @@ export OBJS = $(patsubst $(SRCS_DIR)/%,$(OBJS_DIR)/%.o,$(SRCS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
-# export CXX = clang++
+export CXX = clang++
 # export CXX = g++-6
-export CXX = g++
+# export CXX = g++
 export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi

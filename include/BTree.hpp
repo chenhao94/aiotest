@@ -130,6 +130,7 @@ namespace tai
             return true;
         }
 
+    public:
         // Unlink all child subtrees.
         void dropChild()
         {
@@ -139,7 +140,6 @@ namespace tai
             child.clear();
         }
 
-    public:
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             if (!NM && end > conf.size)
@@ -468,6 +468,7 @@ namespace tai
 
         ~BTree()
         {
+            root.dropChild();
             std::lock_guard<std::mutex> lck(mtxUsedID);
             usedID.erase(id);
         }
