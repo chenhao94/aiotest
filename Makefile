@@ -62,11 +62,22 @@ test: all
 	sync
 	if [ `uname` == Darwin ]; then sudo purge; fi
 	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	time (./tai 1 8192 && sync tmp/sync)
+	time (./tai 1 1024 && sync tmp/sync)
 	time sync
 	if [ `uname` == Darwin ]; then sudo purge; fi
 	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	time (./tai 2 8192 && sync tmp/tai)
+	time (./tai 2 1024 && sync tmp/tai)
+	time sync
+	$(CMP) tmp/sync tmp/tai || $(CMP) -l tmp/sync tmp/tai | wc -l
+	$(RM) tmp/*
+	sync
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (./tai 1 128 && sync tmp/sync)
+	time sync
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (./tai 2 128 && sync tmp/tai)
 	time sync
 	$(CMP) tmp/sync tmp/tai || $(CMP) -l tmp/sync tmp/tai | wc -l
 
