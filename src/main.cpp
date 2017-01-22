@@ -85,23 +85,26 @@ int main(int argc, char* argv[])
 
                 start = high_resolution_clock::now();
 
-                string* ss[1<<15];
+                vector<unique_ptr<string>> scratch;
 
-                for (auto i = n; i--; ios.emplace_back(bt.write(ctrl, dist(rand) % size, data.size(), (ss[i]=(new string(data)))->data())))
+                for (auto i = n; i--; ios.emplace_back(bt.write(ctrl, dist(rand) % size, data.size(), scratch.back()->data())))
+                {
                     for (size_t j = 0; j < data.size(); ++j)
                         data[j] = n - i >> ((j & 7) << 3) & 255;
+                    scratch.emplace_back(new string(data));
+                }
                 ios.emplace_back(bt.sync(ctrl));
+                scratch.emplace_back(nullptr);
 
                 for (size_t i = 0; i < ios.size(); ++i)
                 {
                     auto& io = *ios[i];
                     if (io.wait() != IOCtrl::Done)
                         Log::log(to_cstring(io()));
+                    scratch[i] = nullptr;
                     if (ios.size() < 100 || i % (ios.size() / 100) == 0)
                         Log::log("\t", i * 100 / ios.size(), "% Performance: ", (size_t)round(i * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
                 }
-
-                for (auto i = n ; i--; delete ss[i]);
             }
         }
 

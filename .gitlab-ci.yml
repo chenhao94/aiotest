@@ -1,0 +1,16 @@
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  script:
+    - make -j`nproc`
+  artifacts:
+    untracked: true
+    expire_in: 1 day
+
+testaio:
+  stage: test
+  script:
+    - make test
