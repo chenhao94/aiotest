@@ -146,10 +146,14 @@ namespace tai
             Log::debug("conf.size: ", conf.size);
             if (!NM && end > conf.size)
             {
-                io->fail();
-                unlock();
-                io->unlock();
-                return;
+                if (!io->partial || begin >= conf.size())
+                {
+                    io->fail();
+                    unlock();
+                    io->unlock();
+                    return;
+                }
+                end = conf.size();
             }
 
             if (NM && data)
@@ -351,10 +355,14 @@ namespace tai
             Log::debug("read(leaf) {", offset, ", ", offset + N, " : ", begin, ", ", end, "}");
             if (!N && end > conf.size)
             {
-                io->fail();
-                unlock();
-                io->unlock();
-                return;
+                if (!io->partial || begin >= conf.size())
+                {
+                    io->fail();
+                    unlock();
+                    io->unlock();
+                    return;
+                }
+                end = conf.size();
             }
 
             if (!N || !data && Controller::ctrl->usage(N) == Controller::Full)
@@ -492,11 +500,10 @@ namespace tai
         // Allow partial read.
         auto readsome(Controller& ctrl, size_t pos, size_t len, char* ptr)
         {
-            if (pos >= conf.size)
-                len = 0;
-            else if (pos + len > conf.size)
-                len = conf.size - pos;
-            return read(ctrl, pos, len, ptr);
+            auto io = new IOCtrl(true);
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            return io;
         }
 
         // Issue a write request to this file to the given controller.

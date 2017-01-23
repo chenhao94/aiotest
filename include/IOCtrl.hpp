@@ -36,6 +36,8 @@ namespace tai
 
         const Method method = Timing;
 
+        const bool partial = false;
+
         // Lock for certain times.
         size_t lock(size_t num = 1)
         {
@@ -69,7 +71,13 @@ namespace tai
             failed.store(true, std::memory_order_relaxed);
         }
 
-        explicit IOCtrl(Method method = Timing) : method(method)
+        IOCtrl(Method method = Timing, bool partial = false) : method(method), partial(partial)
+        {
+            if (method == Lock)
+                lock();
+        }
+
+        explicit IOCtrl(bool partial) : method(Timing), partial(partial)
         {
             if (method == Lock)
                 lock();
