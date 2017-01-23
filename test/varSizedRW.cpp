@@ -29,8 +29,8 @@ int main(int argc, char* argv[])
 
     using namespace tai;
 
-    const auto size = (size_t)100;//1 << 30;
-    const auto maxbs = (size_t)5;//1 << 16;
+    const auto size = (size_t)1 << 30;
+    const auto maxbs = (size_t)1 << 16;
     auto n = (size_t)1 << 7;
 
     if (argc > 1)
@@ -69,10 +69,10 @@ int main(int argc, char* argv[])
                     data[j] = n - i >> ((j & 7) << 3) & 255;
                 auto bs = rand() % (maxbs + 1);
                 if (rand() & 1)
-                    file.seekp(/*dist(rand) % size*/0).write(data.data(), bs), cout << "write" << endl;
+                    file.seekp(dist(rand) % size).write(data.data(), bs), cout << "write" << endl;
                 else
                 {
-                    file.seekg(/*dist(rand) % size*/0).read(data.data(), bs), cout << "read" << endl;
+                    file.seekg(dist(rand) % size).read(data.data(), bs), cout << "read" << endl;
                     file.clear();
                     for (;bs--;)
                         hashSync = hashAdd(hashSync, data[bs]);
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
 
                 start = high_resolution_clock::now();
 
-                string* ss[1<<15];
+                string* ss[1<<16];
 
                 for (auto i = n; i--; )
                 {
@@ -122,12 +122,12 @@ int main(int argc, char* argv[])
                         data[j] = n - i >> ((j & 7) << 3) & 255;
                     auto bs = rand() % (maxbs + 1);
                     if (rand() & 1)
-                        ws.emplace_back(bt.write(ctrl, /*dist(rand) % size*/0, bs, (ss[i]=(new string(data)))->data()));
+                        ws.emplace_back(bt.write(ctrl, dist(rand) % size, bs, (ss[i]=(new string(data)))->data()));
                     else
                     {
                         ss[i]=new string(maxbs, 0);
                         cout << "TAI read: " << bs << endl;
-                        rs.emplace_back(bt.readsome(ctrl, /*dist(rand) % size*/0, bs, ss[i]->data()));
+                        rs.emplace_back(bt.readsome(ctrl, dist(rand) % size, bs, ss[i]->data()));
                         bss.push_back(bs);
                         pos.push_back(i);
                     }
