@@ -142,12 +142,18 @@ namespace tai
 
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
+            Log::debug("read {", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
+            Log::debug("conf.size: ", conf.size);
             if (!NM && end > conf.size)
             {
-                io->fail();
-                unlock();
-                io->unlock();
-                return;
+                if (begin >= conf.size)
+                {
+                    io->fail();
+                    unlock();
+                    io->unlock();
+                    return;
+                }
+                end = conf.size;
             }
 
             if (NM && data)
@@ -200,8 +206,9 @@ namespace tai
 
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
-            Log::debug("{", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
+            Log::debug("write {", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
 
+            Log::debug("conf.size: ", conf.size);
             if (!NM && end > conf.size)
             {
                 if (!fwrite("\0", end - 1, 1, io))
@@ -345,6 +352,7 @@ namespace tai
 
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
+            Log::debug("read(leaf) {", offset, ", ", offset + N, " : ", begin, ", ", end, "}");
             if (!N && end > conf.size)
             {
                 io->fail();
@@ -369,6 +377,7 @@ namespace tai
 
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
+            Log::debug("write(leaf) {", offset, ", ", offset + N, " : ", begin, ", ", end, "}");
             if (!N && end > conf.size)
             {
                 if (!fwrite("0", end - 1, 1, io))

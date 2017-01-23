@@ -10,8 +10,10 @@ export TESTS_DIR = $(DIR)/test
 
 export INCS = $(wildcard $(INCS_DIR)/*.hpp)
 export SRCS = $(wildcard $(SRCS_DIR)/*.cpp)
+export TESTS = $(wildcard $(TESTS_DIR)/*.cpp)
 export DEPS = $(patsubst $(INCS_DIR)/%,$(DEPS_DIR)/%.d,$(INCS)) $(patsubst $(SRCS_DIR)/%,$(DEPS_DIR)/%.d,$(SRCS))
 export OBJS = $(patsubst $(SRCS_DIR)/%,$(OBJS_DIR)/%.o,$(SRCS))
+export TESTEXES = $(patsubst $(TESTS_DIR)/%.cpp,$(TARGETS_DIR)/%,$(TESTS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
@@ -32,10 +34,11 @@ export INSTALL = install
 export RM = rm -rf
 
 .PHONY: all
-all: $(LIBTAI) tai
+all: $(LIBTAI) $(TESTEXES)
 
-tai: $(LIBTAI)
-	$(CXX) $(CXXFLAGS) -L$(LIBS_DIR) -ltai -o tai
+$(TESTEXES): $(TARGETS_DIR)/%: $(TESTS_DIR)/%.cpp $(LIBTAI)
+	$(MKDIR) $(TARGETS_DIR)
+	$(CXX) $(CXXFLAGS) $< -L$(LIBS_DIR) -ltai -o $@
 
 $(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/%
 	$(MKDIR) $(OBJS_DIR)
