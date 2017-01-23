@@ -146,14 +146,10 @@ namespace tai
             Log::debug("conf.size: ", conf.size);
             if (!NM && end > conf.size)
             {
-                if (begin >= conf.size)
-                {
-                    io->fail();
-                    unlock();
-                    io->unlock();
-                    return;
-                }
-                end = conf.size;
+                io->fail();
+                unlock();
+                io->unlock();
+                return;
             }
 
             if (NM && data)
@@ -482,7 +478,8 @@ namespace tai
             usedID.erase(id);
         }
 
-        // Issue a read request ont this file to the given controller.
+        // Issue a read request to this file to the given controller.
+        // Do not allow partial read.
         auto read(Controller& ctrl, size_t pos, size_t len, char* ptr)
         {
             auto io = new IOCtrl;
@@ -491,7 +488,18 @@ namespace tai
             return io;
         }
 
-        // Issue a write request ont this file to the given controller.
+        // Issue a read request to this file to the given controller.
+        // Allow partial read.
+        auto readsome(Controller& ctrl, size_t pos, size_t len, char* ptr)
+        {
+            if (pos >= conf.size)
+                len = 0;
+            else if (pos + len > conf.size)
+                len = conf.size - pos;
+            return read(ctrl, pos, len, ptr);
+        }
+
+        // Issue a write request to this file to the given controller.
         auto write(Controller& ctrl, size_t pos, size_t len, const char* ptr)
         {
             auto io = new IOCtrl;
@@ -500,7 +508,7 @@ namespace tai
             return io;
         }
 
-        // Issue a sync request ont this file to the given controller.
+        // Issue a sync request to this file to the given controller.
         auto sync(Controller& ctrl)
         {
             auto io = new IOCtrl;
