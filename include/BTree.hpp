@@ -160,10 +160,14 @@ namespace tai
             else if (!NM || locked() || end - begin < NM)
             {
                 const auto range = getRange(begin, end);
+                Log::debug("range: ", range.first, ", ", range.second);
                 lock(range.second - range.first + 1);
                 io->lock(range.second - range.first);
                 if (child.size() <= range.second)
+                {
+                    Log::debug("resizing: ", range.second + 1);
                     child.resize(range.second + 1);
+                }
 
                 auto node = touch(range.first, begin & -M);
                 if (range.first == range.second)
@@ -482,8 +486,11 @@ namespace tai
         // Do not allow partial read.
         auto read(Controller& ctrl, size_t pos, size_t len, char* ptr)
         {
+            Log::debug("issued read: ", pos, ", " , len);
             auto io = new IOCtrl;
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            if (len < 1)
+                io->state.store(IOCtrl::Done, std::memory_order_relaxed);
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
@@ -502,8 +509,11 @@ namespace tai
         // Issue a write request to this file to the given controller.
         auto write(Controller& ctrl, size_t pos, size_t len, const char* ptr)
         {
+            Log::debug("issued write: ", pos, ", " , len);
             auto io = new IOCtrl;
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            if (len < 1)
+                io->state.store(IOCtrl::Done, std::memory_order_relaxed);
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
