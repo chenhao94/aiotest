@@ -10,7 +10,7 @@ build:
     untracked: true
     expire_in: 1 day
 
-testaio:
-  stage: test
-  script:
-    - make test
+# testaio:
+#   stage: test
+#   script:
+#     - make test
