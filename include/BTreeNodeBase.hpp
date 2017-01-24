@@ -134,7 +134,7 @@ namespace tai
 
             if (base > effective && len < base - effective)
                 ret = fread(ptr, begin, len, io);
-            else if (ret = prefetch(end & N - 1))
+            else if (ret = prefetch(end - offset))
                 memcpy(ptr, data + base, len);
             unlock();
 
