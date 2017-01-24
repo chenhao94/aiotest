@@ -135,8 +135,13 @@ namespace tai
             if (base > effective && len < base - effective)
                 ret = fread(ptr, begin, len, io);
             else if (ret = prefetch(end & N - 1))
+            {
                 memcpy(ptr, data + base, len);
-            unlock();
+                // for debugging, no to be removed
+                Log::debug("[DEBUG]cached read data: ");
+                for (auto i = 0; i < len; ++i)
+                    Log::debug("" + (int)data[base + i]);
+            }unlock();
 
             return ret;
         }

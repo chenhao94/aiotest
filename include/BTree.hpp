@@ -371,11 +371,13 @@ namespace tai
 
             if (!N || !data && Controller::ctrl->usage(N) == Controller::Full)
             {
+                Log::debug("Read from file.");
                 fread(ptr, begin, end - begin, io);
                 unlock();
             }
             else
             {
+                Log::debug("Read from BTree cache.");
                 if (!data)
                     conf(this, N);
                 cachedRead<N>(begin, end, ptr, io);
@@ -507,6 +509,7 @@ namespace tai
         // Allow partial read.
         auto readsome(Controller& ctrl, size_t pos, size_t len, char* ptr)
         {
+            Log::debug("issued readsome: ", pos, ", " , len);
             auto io = new IOCtrl(true);
             if (len < 1)
                 io->state.store(IOCtrl::Done, std::memory_order_relaxed);

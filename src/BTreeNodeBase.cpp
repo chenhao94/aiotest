@@ -35,6 +35,7 @@ namespace tai
 
     bool BTreeNodeBase::prefetch(size_t len, IOCtrl* io)
     {
+        Log::debug("prefetch from file: ", offset + effective, ", ", len - effective, ", len: ", len);
         if (len > effective && data)
             if (fread(data + effective, offset + effective, len - effective, io))
                 effective = len;
