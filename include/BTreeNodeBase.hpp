@@ -137,10 +137,13 @@ namespace tai
             else if (ret = prefetch(end - offset))
             {
                 memcpy(ptr, data + base, len);
-                // for debugging, no to be removed
-                Log::debug("[DEBUG]cached read data: ");
+                // for debugging, to be removed
+                Log::debug("[DEBUG]cached read data: base: ", base, ", len: ", len, " dataptr: ", (long long)data);
                 for (auto i = 0; i < len; ++i)
+                {
+                    Log::debug("index: ", base + i);
                     Log::debug("" + (int)data[base + i]);
+                }
             }unlock();
 
             return ret;

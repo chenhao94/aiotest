@@ -30,17 +30,22 @@ namespace tai
             Controller::ctrl->used.fetch_add(size, std::memory_order_relaxed);
             Controller::ctrl->cache.push(node);
             node->data = new char[size];
+            Log::debug("[DEBUG] dataptr: ", (long long)node->data, ", size: ", size);
         }
     }
 
     bool BTreeNodeBase::prefetch(size_t len, IOCtrl* io)
     {
-        Log::debug("prefetch from file: ", offset + effective, ", ", len - effective, ", len: ", len);
         if (len > effective && data)
+        {
+            Log::debug("prefetch from file: ", offset + effective, ", ", len - effective, ", len: ", len);
             if (fread(data + effective, offset + effective, len - effective, io))
                 effective = len;
             else
                 fail();
+        }
+        else
+            Log::debug("prefetch: len <= effective");
         return effective >= len;
     }
 
