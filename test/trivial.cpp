@@ -32,8 +32,7 @@ int main(int argc, char* argv[])
     Controller ctrl(1 << 28, 1 << 30);
 
     vector<string> ss;
-    for (int i = 0; i < 2; ++i)
-        ss.emplace_back(string(10, 0));
+    for (int i = 0; i++ < 2; ss.emplace_back(10, 0));
     ss[0][0] = ss[0][8] = 'a';
     ios.emplace_back(bt.write(ctrl, 0, 9, ss[0].data()));
     ios.emplace_back(bt.readsome(ctrl, 0, 1, ss[1].data()));
