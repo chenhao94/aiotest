@@ -30,7 +30,6 @@ namespace tai
             Controller::ctrl->used.fetch_add(size, std::memory_order_relaxed);
             Controller::ctrl->cache.push(node);
             node->data = new char[size];
-            Log::debug("[DEBUG] dataptr: ", (long long)node->data, ", size: ", size);
         }
     }
 
@@ -74,6 +73,7 @@ namespace tai
         Log::debug("Write ", len, " byte(s) of data at ", (size_t)buf, " to position ", pos, ".");
         if (getFile().seekp(pos).write(buf, len).flush())
             return true;
+        Log::debug("Fwrite failed! EOF: ", getFile().eof());
         io ? io->fail() : fail();
         return false;
     }

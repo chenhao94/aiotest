@@ -29,8 +29,8 @@ int main(int argc, char* argv[])
 
     using namespace tai;
 
-    const auto size = (size_t)1<<18;//1 << 30;
-    const auto maxbs = (size_t)1<<4;//1 << 16;
+    const auto size = (size_t)1 << 28;
+    const auto maxbs = (size_t)1 << 16;
     auto n = (size_t)1 << 7;
 
     if (argc > 1)
@@ -69,20 +69,15 @@ int main(int argc, char* argv[])
                     data[j] = n - i >> ((j & 7) << 3) & 255;
                 auto bs = rand() % (maxbs + 1);
                 if (rand() & 1)
-                    file.seekp(/*dist(rand) % size*/0).write(data.data(), bs), cout << "write" << endl;
+                    file.seekp(dist(rand) % size).write(data.data(), bs);
                 else
                 {
                     memset(data.data(), 0, data.size());
-                    file.seekg(/*dist(rand) % size*/0).read(data.data(), bs), cout << "read" << endl;
+                    file.seekg(dist(rand) % size).read(data.data(), bs);
                     file.clear();
-                    cout << "read:" ;
-                    for (auto j = 0; j < bs; ++j)
-                        cout << " " << (int)data[j];
-                    cout << endl;
                     for (;bs--;)
                         hashSync = hashAdd(hashSync, data[bs]);
                 }
-                cout << "hashSync: " << hashSync << endl;
                 if (n < 100 || i % (n / 100) == 0)
                     Log::log("\t", (n - i - 1) * 100 / n, "% Performance: ", (size_t)round((n - i - 1) * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
             }
@@ -107,8 +102,8 @@ int main(int argc, char* argv[])
 
         {
             Log::log("Creating B-tree...");
-            //BTreeDefault bt("tmp/tai");
-            BTree<32,12,9,9,2> bt("tmp/tai");
+            BTreeDefault bt("tmp/tai");
+            //BTree<32,12,9,9,2> bt("tmp/tai");
             // BTreeTrivial bt("tmp/tai");
 
             {
@@ -128,12 +123,11 @@ int main(int argc, char* argv[])
                         data[j] = n - i >> ((j & 7) << 3) & 255;
                     auto bs = rand() % (maxbs + 1);
                     if (rand() & 1)
-                        ws.emplace_back(bt.write(ctrl, /*dist(rand) % size*/0, bs, (ss[i]=(new string(data)))->data()));
+                        ws.emplace_back(bt.write(ctrl, dist(rand) % size, bs, (ss[i]=(new string(data)))->data()));
                     else
                     {
                         ss[i]=new string(maxbs, 0);
-                        cout << "TAI read: " << bs << endl;
-                        rs.emplace_back(bt.readsome(ctrl, /*dist(rand) % size*/0, bs, ss[i]->data()));
+                        rs.emplace_back(bt.readsome(ctrl, dist(rand) % size, bs, ss[i]->data()));
                         bss.push_back(bs);
                         pos.push_back(i);
                     }
@@ -158,13 +152,8 @@ int main(int argc, char* argv[])
                     auto p = pos[i];
                     if (io.wait() != IOCtrl::Done)
                         Log::log(to_cstring(io()));
-                    cout << "read:" ;
-                    for (auto j = 0; j < bs; ++j)
-                        cout << " " << (int)ss[p]->at(j);
-                    cout << endl;
                     for (;bs--;)
                         hashTAI = hashAdd(hashTAI, (int)ss[p]->at(bs));
-                    cout << "hashTAI: " << hashTAI << endl;
                     if (rs.size() < 100 || i % (rs.size() / 100) == 0)
                         Log::log("\t", i * 100 / rs.size(), "% Performance: ", (size_t)round(i * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
                 }
