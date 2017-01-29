@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
     int bs[5] = {4, 6, 3, 9, 1};
     int hashSync = 0, hashTAI = 0;
 
+    aio_init();
     vector<aiocb> cbs;
 
     auto file = fopen("tmp/tai", "w+");
