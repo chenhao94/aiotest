@@ -2,12 +2,19 @@
  * POSIX AIO interface wrapper
  */
 
-#include <errno.h>
 #include "aio.hpp"
+
+#include <array>
+#include <memory>
+#include <atomic>
+
+#include <errno.h>
+
+#include "tai.hpp"
 
 namespace tai
 {
-    std::atomic<BTreeDefault*> aiocb::bts[65536];
+    std::array<std::atomic<BTreeDefault*>, 65536> aiocb::bts;
     std::unique_ptr<Controller> aiocb::ctrl;
 
     int aiocb::status()
@@ -23,42 +30,51 @@ namespace tai
             return 0;
     }
 
-    bool register_fd(int fd) { aiocb::bts[fd].store(new BTreeDefault("/proc/self/fd/" + std::to_string(fd)), std::memory_order_release); }
-
-    void deregister_fd(int fd)
-    {
-        delete aiocb::bts[fd].load(std::memory_order_consume);
-        aiocb::bts[fd].store(nullptr, std::memory_order_release); 
-    }
-
     void aio_init()
     {
         aiocb::ctrl.reset(new Controller(1 << 28, 1 << 30));
     }
 
-    int aio_read(aiocb *aiocbp)
+    int aio_read(aiocb* aiocbp)
     {
         aiocbp->read();
         auto status = aiocbp->status();
-        return (status != EINPROGRESS) && status;
+        return status != EINPROGRESS && status;
     }
 
-    int aio_write(aiocb *aiocbp)
+    int aio_write(aiocb* aiocbp)
     {
         aiocbp->write();
         auto status = aiocbp->status();
-        return (status != EINPROGRESS) && status;
+        return status != EINPROGRESS && status;
     }
 
-    int aio_fsync(int op, aiocb *aiocbp)
+    int aio_fsync(int op, aiocb* aiocbp)
     {
         // ignore op
         aiocbp->fsync();
         auto status = aiocbp->status();
-        return (status != EINPROGRESS) && status;
+        return status != EINPROGRESS && status;
     }
 
-    int aio_error(aiocb *aiocbp) { return aiocbp->status(); }
+    int aio_error(aiocb* aiocbp)
+    {
+        return aiocbp->status();
+    }
 
-    int aio_return(aiocb *aiocbp) { return aio_error(aiocbp); }
+    int aio_return(aiocb* aiocbp)
+    {
+        return aio_error(aiocbp);
+    }
+
+    bool register_fd(int fd)
+    {
+        aiocb::bts[fd].store(new BTreeDefault("/proc/self/fd/" + std::to_string(fd)), std::memory_order_release);
+    }
+
+    void deregister_fd(int fd)
+    {
+        delete aiocb::bts[fd].load(std::memory_order_consume);
+        aiocb::bts[fd].store(nullptr, std::memory_order_release);
+    }
 }

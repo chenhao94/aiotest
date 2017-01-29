@@ -13,7 +13,8 @@ namespace tai
         Unlocking,
         GC,
         Quit,
-        Sync
+        Sync,
+        Idle
     };
 
     const char* to_cstring(WorkerState _);
