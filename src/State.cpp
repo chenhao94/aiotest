@@ -22,6 +22,8 @@ namespace tai
             return "Quit";
         case Sync:
             return "Sync";
+        case Idle:
+            return "Sync";
         }
         return "Unknown";
     }

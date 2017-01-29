@@ -123,6 +123,9 @@ namespace tai
         // Decide whether this worker should close.
         bool closing();
 
+        // Switch to idle state.
+        void idle();
+
         // Set worker state to "Sync", wait for all workers to sync and advance to next state.
         State barrier(State post)
         {

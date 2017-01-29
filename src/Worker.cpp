@@ -43,12 +43,26 @@ namespace tai
     {
         for (auto& i : neighbor)
             if (~i)
-                ctrl.workers[i].state.store(_, sync);
+            {
+                auto& dst = ctrl.workers[i];
+                if (dst.state.load(std::memory_order_relaxed) == Idle)
+                    dst.broadcast(_, sync);
+                else
+                    dst.state.store(_, sync);
+            }
     }
 
     bool Worker::closing()
     {
         return !ctrl.ready.load(std::memory_order_relaxed);
+    }
+
+    void Worker::idle()
+    {
+        auto prev = state.load(std::memory_order_relaxed);
+        state.store(Idle, std::memory_order_release);
+        std::this_thread::yield();
+        state.store(prev, std::memory_order_acquire);
     }
 
     Worker::State Worker::barrier(std::function<State()> f)
@@ -65,9 +79,12 @@ namespace tai
         {
             for (size_t i = 1; i < ctrl.concurrency; ++i)
             {
-                for (auto j = Controller::spin; j-- && (post = ctrl.workers[i].state.load(std::memory_order_relaxed)) != Sync;);
+                auto& dst = ctrl.workers[i].state;
+                if (dst.load(std::memory_order_relaxed) == Idle)
+                    continue;
+                for (auto j = Controller::spin; j-- && (post = dst.load(std::memory_order_relaxed)) != Sync;);
                 if (post != Sync)
-                    for (; ctrl.workers[i].state.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
+                    for (; dst.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
             }
             state.store(post = f(), std::memory_order_acquire);
         }
@@ -117,7 +134,10 @@ namespace tai
             }
             else
             {
-                // std::this_thread::yield();
+                // if (id)
+                //     idle();
+                // else
+                //     std::this_thread::yield();
                 if (barrier([this](){ return closing() ? Quit : Pulling; }) == Quit)
                     break;
             }
