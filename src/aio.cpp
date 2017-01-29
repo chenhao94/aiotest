@@ -8,7 +8,7 @@
 namespace tai
 {
     std::atomic<BTreeDefault*> aiocb::bts[65536];
-    std::unique_ptr<Controller> ctrl;
+    std::unique_ptr<Controller> aiocb::ctrl;
 
     int aiocb::status()
     {
@@ -25,7 +25,11 @@ namespace tai
 
     bool register_fd(int fd) { aiocb::bts[fd].store(new BTreeDefault("/proc/self/fd/" + std::to_string(fd)), std::memory_order_release); }
 
-    void deregister_fd(int fd) { aiocb::bts[fd].store(nullptr, std::memory_order_release); }
+    void deregister_fd(int fd)
+    {
+        delete aiocb::bts[fd].load(std::memory_order_consume);
+        aiocb::bts[fd].store(nullptr, std::memory_order_release); 
+    }
 
     void aio_init()
     {
