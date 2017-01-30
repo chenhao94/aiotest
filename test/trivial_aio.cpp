@@ -30,7 +30,11 @@ int main(int argc, char* argv[])
 
     auto file = fopen("tmp/tai", "w+");
     auto fd = fileno(file);
-    register_fd(fd);
+    if (!register_fd(fd))
+    {
+        cerr << "Registeri fd Error!" << endl;
+        exit(-1);
+    }
 
     vector<string> ss;
     for (int i = 0; i++ < 2; ss.emplace_back(10, 0));

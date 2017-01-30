@@ -69,7 +69,16 @@ namespace tai
 
     bool register_fd(int fd)
     {
-        aiocb::bts[fd].store(new BTreeDefault("/proc/self/fd/" + std::to_string(fd)), std::memory_order_release);
+        if (aiocb::bts[fd].load(std::memory_order_consume))
+            return false;
+        auto tree = new BTreeDefault("/proc/self/fd/" + std::to_string(fd)) ;
+        if (tree->conf.failed.load(std::memory_order_relaxed))
+        {
+            delete tree;
+            return false;
+        }
+        aiocb::bts[fd].store(tree, std::memory_order_release);
+        return true;
     }
 
     void deregister_fd(int fd)
