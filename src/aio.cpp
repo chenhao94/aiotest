@@ -10,29 +10,35 @@
 
 #include <errno.h>
 
+#include "BTree.hpp"
+#include "IOCtrl.hpp"
+#include "Controller.hpp"
 #include "tai.hpp"
 
 namespace tai
 {
-    std::array<std::atomic<BTreeDefault*>, 65536> aiocb::bts;
+    std::array<std::atomic<BTreeBase*>, 65536> aiocb::bts;
     std::unique_ptr<Controller> aiocb::ctrl;
 
     int aiocb::status()
     {
-        auto status =  io->state.load(std::memory_order_relaxed);
-        if (status == IOCtrl::Rejected)
-            return errno = EAGAIN;
-        else if (status == IOCtrl::Failed)
-            return errno = EBADF;
-        else if (status == IOCtrl::Running)
+        switch ((*io)())
+        {
+        case IOCtrl::Running:
             return EINPROGRESS;
-        else
+        case IOCtrl::Rejected:
+            return errno = EAGAIN;
+        case IOCtrl::Failed:
+            return errno = EBADF;
+        case IOCtrl::Done:
             return 0;
+        }
+        return 0;
     }
 
     void aio_init()
     {
-        aiocb::ctrl.reset(new Controller(1 << 28, 1 << 30));
+        aiocb::init();
     }
 
     int aio_read(aiocb* aiocbp)
