@@ -5,6 +5,8 @@
 #include <random>
 
 #include "BTreeNodeBase.hpp"
+#include "Controller.hpp"
+#include "IOCtrl.hpp"
 
 namespace tai
 {
@@ -25,5 +27,11 @@ namespace tai
         BTreeBase(const std::string& path) : conf(path)
         {
         }
+
+        virtual IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
+        virtual IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
+        virtual IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr) = 0;
+        virtual IOCtrl* sync(Controller& ctrl) = 0;
+        virtual void close() = 0;
     };
 }

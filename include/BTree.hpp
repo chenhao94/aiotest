@@ -494,7 +494,7 @@ namespace tai
 
         // Issue a read request to this file to the given controller.
         // Do not allow partial read.
-        auto read(Controller& ctrl, size_t pos, size_t len, char* ptr)
+        IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr) override
         {
             Log::debug("issued read: ", pos, ", " , len);
             auto io = new IOCtrl;
@@ -507,7 +507,7 @@ namespace tai
 
         // Issue a read request to this file to the given controller.
         // Allow partial read.
-        auto readsome(Controller& ctrl, size_t pos, size_t len, char* ptr)
+        IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) override
         {
             Log::debug("issued readsome: ", pos, ", " , len);
             auto io = new IOCtrl(true);
@@ -519,7 +519,7 @@ namespace tai
         }
 
         // Issue a write request to this file to the given controller.
-        auto write(Controller& ctrl, size_t pos, size_t len, const char* ptr)
+        IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr) override
         {
             Log::debug("issued write: ", pos, ", " , len);
             auto io = new IOCtrl;
@@ -531,7 +531,7 @@ namespace tai
         }
 
         // Issue a sync request to this file to the given controller.
-        auto sync(Controller& ctrl)
+        IOCtrl* sync(Controller& ctrl) override
         {
             auto io = new IOCtrl;
             if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.flush(io); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
@@ -540,7 +540,7 @@ namespace tai
         }
 
         // Close the file.
-        void close()
+        void close() override
         {
             conf.files.clear();
         }

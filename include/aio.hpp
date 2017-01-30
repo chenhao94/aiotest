@@ -10,6 +10,8 @@
 
 #include <signal.h>
 
+#include "BTreeBase.hpp"
+#include "Controller.hpp"
 #include "tai.hpp"
 
 namespace tai
@@ -47,6 +49,11 @@ namespace tai
 
             explicit aiocb(int fildes = 0, off_t offset = 0, volatile void* buf = nullptr, size_t nbytes = 0) : aio_fildes(fildes), aio_offset(offset), aio_buf(buf), aio_nbytes(nbytes) {}
 
+            static void init()
+            {
+                ctrl.reset(new Controller(1 << 28, 1 << 30));
+            }
+
             void read()
             {
                 io.reset(bts[aio_fildes].load(std::memory_order_consume)->readsome(*ctrl, aio_offset, aio_nbytes, (char *)aio_buf));
@@ -67,7 +74,7 @@ namespace tai
         private:
             std::unique_ptr<IOCtrl> io;
 
-            static std::array<std::atomic<BTreeDefault*>, 65536> bts;
+            static std::array<std::atomic<BTreeBase*>, 65536> bts;
             static std::unique_ptr<Controller> ctrl;
     };
 }
