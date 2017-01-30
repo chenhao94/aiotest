@@ -65,7 +65,7 @@ namespace tai
         // Used when no IOCtrl is responsible for the failure.
         void fail()
         {
-            conf.failed.store(std::memory_order_relaxed);
+            conf.failed.store(true, std::memory_order_relaxed);
         }
 
         // Delete this node.

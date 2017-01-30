@@ -28,6 +28,11 @@ namespace tai
         {
         }
 
+        auto failed() const
+        {
+            return conf.failed.load(std::memory_order_relaxed);
+        }
+
         virtual IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
         virtual IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
         virtual IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr) = 0;
