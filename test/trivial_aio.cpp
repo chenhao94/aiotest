@@ -78,6 +78,7 @@ int main(int argc, char* argv[])
             cout << "    <" << i.aio_reqprio << "> aio_return: " + to_string(aio_return(&i)) << endl;
 
     deregister_fd(fileno(file));
+    aio_end();
 
     return 0;
 }

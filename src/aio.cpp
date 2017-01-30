@@ -41,6 +41,11 @@ namespace tai
         aiocb::init();
     }
 
+    void aio_end()
+    {
+        aiocb::end();
+    }
+
     int aio_read(aiocb* aiocbp)
     {
         aiocbp->read();

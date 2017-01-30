@@ -19,6 +19,7 @@ namespace tai
     class aiocb;
 
     void aio_init();
+    void aio_end();
     int aio_read(aiocb* aiocbp);
     int aio_write(aiocb* aiocbp);
     int aio_fsync(int op, aiocb* aiocbp);
@@ -30,6 +31,7 @@ namespace tai
     class aiocb
     {
         friend void aio_init();
+        friend void aio_end();
         friend int aio_read(aiocb*);
         friend int aio_write(aiocb*);
         friend int aio_fsync(int, aiocb*);
@@ -52,6 +54,11 @@ namespace tai
             static void init()
             {
                 ctrl.reset(new Controller(1 << 28, 1 << 30));
+            }
+
+            static void end()
+            {
+                ctrl.reset(nullptr);
             }
 
             void read()
