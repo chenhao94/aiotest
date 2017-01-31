@@ -50,7 +50,7 @@ $(DEPS): $(DEPS_DIR)/%.d: $(SRCS_DIR)/%
 	$(CXX) $(CXXFLAGS) -MM $^ -o $@
 
 $(PCHS): %.gch: %
-	$(CXX) $(CXXFLAGS) -c $^
+	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 $(LIBTAI): $(OBJS)
 	$(MKDIR) $(LIBS_DIR)
@@ -94,4 +94,4 @@ endif
 
 .PHONY: clean
 clean:
-	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(PCHS) tmp tai
+	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(PCHS) tmp tai tai.dSYM
