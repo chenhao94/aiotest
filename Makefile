@@ -9,6 +9,7 @@ export TARGETS_DIR = $(DIR)/bin
 export TESTS_DIR = $(DIR)/test
 
 export INCS = $(wildcard $(INCS_DIR)/*.hpp)
+export PCHS = $(patsubst %,%.gch,$(INCS))
 export SRCS = $(wildcard $(SRCS_DIR)/*.cpp)
 export TESTS = $(wildcard $(TESTS_DIR)/*.cpp)
 export DEPS = $(patsubst $(INCS_DIR)/%,$(DEPS_DIR)/%.d,$(INCS)) $(patsubst $(SRCS_DIR)/%,$(DEPS_DIR)/%.d,$(SRCS))
@@ -24,7 +25,7 @@ export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
 export CXXFLAGS += -lm -lpthread
-#export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
+export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
 export MKDIR = @mkdir -p
 export CMP = cmp -b
@@ -40,13 +41,16 @@ $(TESTEXES): $(TARGETS_DIR)/%: $(TESTS_DIR)/%.cpp $(LIBTAI)
 	$(MKDIR) $(TARGETS_DIR)
 	$(CXX) $(CXXFLAGS) $< -L$(LIBS_DIR) -ltai -o $@
 
-$(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/%
+$(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/% $(PCHS)
 	$(MKDIR) $(OBJS_DIR)
-	$(CXX) $(CXXFLAGS) -c $^ -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(DEPS): $(DEPS_DIR)/%.d: $(SRCS_DIR)/%
 	$(MKDIR) $(DEPS_DIR)
 	$(CXX) $(CXXFLAGS) -MM $^ -o $@
+
+$(PCHS): %.gch: %
+	$(CXX) $(CXXFLAGS) -c $^
 
 $(LIBTAI): $(OBJS)
 	$(MKDIR) $(LIBS_DIR)
@@ -90,4 +94,4 @@ endif
 
 .PHONY: clean
 clean:
-	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) tmp tai
+	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(PCHS) tmp tai

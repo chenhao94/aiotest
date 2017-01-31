@@ -82,7 +82,7 @@ namespace tai
     {
         if (aiocb::bts[fd].load(std::memory_order_consume))
             return false;
-        auto tree = new BTreeDefault("/proc/self/fd/" + std::to_string(fd)) ;
+        auto tree = new BTreeDefault("/dev/fd/" + std::to_string(fd)) ;
         if (tree->failed())
         {
             delete tree;
