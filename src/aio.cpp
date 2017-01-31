@@ -45,7 +45,7 @@ namespace tai
 
     void aio_end()
     {
-        aiocb::end();
+        //aiocb::end();
         _AIO_INIT_.store(false, std::memory_order_release);
     }
 
@@ -85,7 +85,7 @@ namespace tai
     {
         if (!_AIO_INIT_.load(std::memory_order_consume) || aiocb::bts[fd].load(std::memory_order_consume))
             return false;
-        auto tree = new BTreeDefault("/proc/self/fd/" + std::to_string(fd)) ;
+        auto tree = new BTreeDefault("/dev/fd/" + std::to_string(fd)) ;
         if (tree->failed())
         {
             delete tree;
