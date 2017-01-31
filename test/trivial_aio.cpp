@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     auto fd = fileno(file);
     if (!register_fd(fd))
     {
-        cerr << "Registeri fd Error!" << endl;
+        cerr << "Register fd Error!" << endl;
         exit(-1);
     }
 

@@ -19,6 +19,7 @@ namespace tai
 {
     std::array<std::atomic<BTreeBase*>, 65536> aiocb::bts;
     std::unique_ptr<Controller> aiocb::ctrl;
+    std::atomic<bool> _AIO_INIT_(false);
 
     int aiocb::status()
     {
@@ -39,11 +40,13 @@ namespace tai
     void aio_init()
     {
         aiocb::init();
+        _AIO_INIT_.store(true, std::memory_order_release);
     }
 
     void aio_end()
     {
         aiocb::end();
+        _AIO_INIT_.store(false, std::memory_order_release);
     }
 
     int aio_read(aiocb* aiocbp)
@@ -80,7 +83,7 @@ namespace tai
 
     bool register_fd(int fd)
     {
-        if (aiocb::bts[fd].load(std::memory_order_consume))
+        if (!_AIO_INIT_.load(std::memory_order_consume) || aiocb::bts[fd].load(std::memory_order_consume))
             return false;
         auto tree = new BTreeDefault("/proc/self/fd/" + std::to_string(fd)) ;
         if (tree->failed())
@@ -94,6 +97,8 @@ namespace tai
 
     void deregister_fd(int fd)
     {
+        if (!_AIO_INIT_.load(std::memory_order_consume))
+            return;
         delete aiocb::bts[fd].load(std::memory_order_consume);
         aiocb::bts[fd].store(nullptr, std::memory_order_release);
     }
