@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 
     auto file = fopen("tmp/tai", "w+");
     auto fd = fileno(file);
-    if (!register_fd(fd))
+    if (!register_fd(fd, "tmp/tai"))
     {
         cerr << "Register fd Error!" << endl;
         exit(-1);

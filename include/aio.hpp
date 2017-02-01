@@ -25,7 +25,7 @@ namespace tai
     int aio_fsync(int op, aiocb* aiocbp);
     int aio_error(aiocb* aiocbp);
     int aio_return(aiocb* aiocbp);
-    bool register_fd(int fd);
+    bool register_fd(int fd, const std::string path);
     void deregister_fd(int fd);
 
     class aiocb
@@ -37,7 +37,7 @@ namespace tai
         friend int aio_fsync(int, aiocb*);
         friend int aio_error(aiocb*);
         friend int aio_return(aiocb*);
-        friend bool register_fd(int);
+        friend bool register_fd(int, const std::string);
         friend void deregister_fd(int);
 
         public:

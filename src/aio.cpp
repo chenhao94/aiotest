@@ -45,13 +45,13 @@ namespace tai
 
     void aio_end()
     {
+        aiocb::end();
         for (auto &bt : aiocb::bts)
             if (auto btp = bt.load(std::memory_order_consume))
             {
                 delete btp;
                 bt.store(nullptr, std::memory_order_release);
             }
-        aiocb::end();
         _AIO_INIT_.store(false, std::memory_order_release);
     }
 
@@ -87,16 +87,21 @@ namespace tai
         return aio_error(aiocbp);
     }
 
-    bool register_fd(int fd)
+    bool register_fd(int fd, const std::string path)
     {
         Log::debug("Registering fd = ", fd, ".");
-        if (!_AIO_INIT_.load(std::memory_order_consume) || auto current = aiocb::bts[fd].load(std::memory_order_consume))
+        if (!_AIO_INIT_.load(std::memory_order_consume))
+        {
+            Log::debug("Not initialized aio wrapper.");
+            return false;
+        }
+        if (auto current = aiocb::bts[fd].load(std::memory_order_consume))
         {
             Log::debug("Failed to register fd = ", fd, " due to the conflict with ", (size_t)current, ".");
             return false;
         }
 
-        auto tree = new BTreeDefault("/dev/fd/" + std::to_string(fd)) ;
+        auto tree = new BTreeDefault(path) ;
         if (tree->failed())
         {
             Log::debug("Failed to register fd = ", fd, " due to B-tree construction failure.");
