@@ -76,10 +76,12 @@ namespace tai
     public:
         BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : BTreeNodeBase(conf, offset, parent), child(1)
         {
+            Log::debug("Construct B-tree node [", offset, ", ", offset + NM, "].");
         }
 
         ~BTreeNode() override
         {
+            Log::debug("Destruct B-tree node [", offset, ", ", offset + NM, "].");
             evict();
         }
 
@@ -327,10 +329,12 @@ namespace tai
 
         BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : BTreeNodeBase(conf, offset, parent)
         {
+            Log::debug("Construct B-tree node [", offset, ", ", offset + N, "].");
         }
 
         ~BTreeNode() override
         {
+            Log::debug("Destruct B-tree node [", offset, ", ", offset + N, "].");
             evict();
         }
 
@@ -470,6 +474,7 @@ namespace tai
         // Bind to the file from given path.
         explicit BTree(const std::string &path) : BTreeBase(path), root(conf, 0)
         {
+            Log::debug("Construct B-tree for \"", path, "\".");
             mtxUsedID.lock();
             while (usedID.count(id = rand()));
             usedID.insert(id);
@@ -485,8 +490,9 @@ namespace tai
                 root.fail();
         }
 
-        ~BTree()
+        ~BTree() override
         {
+            Log::debug("Destruct B-tree for \"", conf.path, "\".");
             root.dropChild();
             std::lock_guard<std::mutex> lck(mtxUsedID);
             usedID.erase(id);

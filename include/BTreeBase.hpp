@@ -28,6 +28,10 @@ namespace tai
         {
         }
 
+        virtual ~BTreeBase()
+        {
+        }
+
         auto failed() const
         {
             return conf.failed.load(std::memory_order_relaxed);
