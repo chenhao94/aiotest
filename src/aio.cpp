@@ -45,7 +45,13 @@ namespace tai
 
     void aio_end()
     {
-        //aiocb::end();
+        for (auto &bt : aiocb::bts)
+            if (auto btp = bt.load(std::memory_order_consume))
+            {
+                delete btp;
+                bt.store(nullptr, std::memory_order_release);
+            }
+        aiocb::end();
         _AIO_INIT_.store(false, std::memory_order_release);
     }
 
