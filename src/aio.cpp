@@ -89,15 +89,23 @@ namespace tai
 
     bool register_fd(int fd)
     {
-        if (!_AIO_INIT_.load(std::memory_order_consume) || aiocb::bts[fd].load(std::memory_order_consume))
+        Log::debug("Registering fd = ", fd, ".");
+        if (!_AIO_INIT_.load(std::memory_order_consume) || auto current = aiocb::bts[fd].load(std::memory_order_consume))
+        {
+            Log::debug("Failed to register fd = ", fd, " due to the conflict with ", (size_t)current, ".");
             return false;
+        }
+
         auto tree = new BTreeDefault("/dev/fd/" + std::to_string(fd)) ;
         if (tree->failed())
         {
+            Log::debug("Failed to register fd = ", fd, " due to B-tree construction failure.");
             delete tree;
             return false;
         }
         aiocb::bts[fd].store(tree, std::memory_order_release);
+
+        Log::debug("Registered fd = ", fd, " with B-tree at ", (size_t)tree, ".");
         return true;
     }
 
@@ -105,7 +113,12 @@ namespace tai
     {
         if (!_AIO_INIT_.load(std::memory_order_consume))
             return;
-        delete aiocb::bts[fd].load(std::memory_order_consume);
+        Log::debug("Deregistering fd = ", fd, ".");
+
+        auto victim = aiocb::bts[fd].load(std::memory_order_consume);
+        delete victim;
         aiocb::bts[fd].store(nullptr, std::memory_order_release);
+
+        Log::debug("Deregistered fd = ", fd, " with victim ", (size_t)victim, ".");
     }
 }
