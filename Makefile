@@ -24,7 +24,7 @@ export CXX = clang++
 export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
-export CXXFLAGS += -lm -lpthread -lrt
+export CXXFLAGS += -lm -lpthread #-lrt
 # export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
 export MKDIR = @mkdir -p

@@ -45,7 +45,10 @@ namespace tai
         virtual void merge(BTreeNodeBase* ptr, IOCtrl* io = nullptr) = 0;
 
         // Unlink the subtree.
-        virtual void drop() = 0;
+        virtual void drop(bool force) = 0;
+
+        // Unlink all the child subtree.
+        virtual void dropChild(bool force) = 0;
 
         // Read/write [begin, end - 1] to/from ptr[0..end - begin].
         virtual void read(size_t begin, size_t end, char* ptr, IOCtrl* io) = 0;
@@ -59,6 +62,19 @@ namespace tai
         bool valid()
         {
             return parent;
+        }
+
+        // Recycle the cache.
+        void gc()
+        {
+            if (valid())
+            {
+                evict();
+                if (parent == this)
+                    suicide();
+            }
+            else
+                suicide();
         }
 
         // Set failed flag for this btree.
@@ -199,5 +215,9 @@ namespace tai
 
         // Unlock the subtree, including its parents if necessary.
         void unlock();
+
+        // Unlock the subtree, including its parents if necessary.
+        // Also unlock the given IOCtrl.
+        void unlock(IOCtrl* const io);
     };
 }

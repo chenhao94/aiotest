@@ -104,17 +104,25 @@ namespace tai
             }
         }
 
-        void drop() override
+        void drop(bool force) override
         {
             if (data)
-                parent = nullptr;
+                parent = force ? nullptr : this;
             else
             {
                 for (auto& i : child)
                     if (i)
-                        i->drop();
+                        i->drop(force);
                 suicide();
             }
+        }
+
+        void dropChild(bool force) override
+        {
+            for (auto& i : child)
+                if (i)
+                    i->drop(force);
+            child.clear();
         }
 
     private:
@@ -133,15 +141,6 @@ namespace tai
         }
 
     public:
-        // Unlink all child subtrees.
-        void dropChild()
-        {
-            for (auto& i : child)
-                if (i)
-                    i->drop();
-            child.clear();
-        }
-
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             Log::debug("read {", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
@@ -151,8 +150,7 @@ namespace tai
                 if (!io->partial || begin >= conf.size)
                 {
                     io->fail();
-                    unlock();
-                    io->unlock();
+                    unlock(io);
                     return;
                 }
                 end = conf.size;
@@ -197,16 +195,15 @@ namespace tai
                     Worker::pushWait([=](){ node->read(end - 1 & -M, end, suffix, io); });
                 }
             }
+            else if (merge(io))
+            {
+                cachedRead<NM>(begin, end, ptr, io);
+                io->unlock();
+            }
             else
             {
-                if (merge(io))
-                    cachedRead<NM>(begin, end, ptr, io);
-                else
-                {
-                    fread(ptr, begin, NM, io);
-                    unlock();
-                }
-                io->unlock();
+                fread(ptr, begin, NM, io);
+                unlock(io);
             }
         }
 
@@ -219,8 +216,7 @@ namespace tai
             {
                 if (!fwrite("\0", end - 1, 1, io))
                 {
-                    unlock();
-                    io->unlock();
+                    unlock(io);
                     return;
                 }
                 conf.size = end;
@@ -264,12 +260,12 @@ namespace tai
             }
             else
             {
-                dropChild();
+                dropChild(true);
                 if (Controller::ctrl->usage(NM) == Controller::Full)
                 {
                     Log::debug("Write data at ", (size_t)ptr, " for (", begin, ", ", end, ") out. (Reason: No enough space to create cache page)");
                     fwrite(ptr, begin, end - begin, io);
-                    unlock();
+                    unlock(io);
                 }
                 else
                 {
@@ -277,8 +273,8 @@ namespace tai
                     conf(this, NM);
                     memcpy(data, ptr, effective = NM);
                     dirty = true;
+                    io->unlock();
                 }
-                io->unlock();
             }
         }
 
@@ -350,12 +346,16 @@ namespace tai
             }
         }
 
-        void drop() override
+        void drop(bool force) override
         {
             if (data)
-                parent = nullptr;
+                parent = force ? nullptr : this;
             else
                 suicide();
+        }
+
+        void dropChild(bool force) override
+        {
         }
 
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
@@ -366,8 +366,7 @@ namespace tai
                 if (!io->partial || begin >= conf.size)
                 {
                     io->fail();
-                    unlock();
-                    io->unlock();
+                    unlock(io);
                     return;
                 }
                 end = conf.size;
@@ -377,7 +376,7 @@ namespace tai
             {
                 Log::debug("Read from file.");
                 fread(ptr, begin, end - begin, io);
-                unlock();
+                unlock(io);
             }
             else
             {
@@ -385,8 +384,8 @@ namespace tai
                 if (!data)
                     conf(this, N);
                 cachedRead<N>(begin, end, ptr, io);
+                io->unlock();
             }
-            io->unlock();
         }
 
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
@@ -396,8 +395,7 @@ namespace tai
             {
                 if (!fwrite("0", end - 1, 1, io))
                 {
-                    unlock();
-                    io->unlock();
+                    unlock(io);
                     return;
                 }
                 conf.size = end;
@@ -407,7 +405,7 @@ namespace tai
             {
                 Log::debug("Write data at ", (size_t)ptr, " for (", begin, ", ", end, ") out. (Reason: No enough space to create cache page)");
                 fwrite(ptr, begin, end - begin, io);
-                unlock();
+                unlock(io);
             }
             else
             {
@@ -415,8 +413,8 @@ namespace tai
                 if (!data)
                     conf(this, N);
                 cachedWrite<N>(begin, end, ptr, io);
+                io->unlock();
             }
-            io->unlock();
         }
 
         static void sync(IOCtrl* io)
@@ -493,7 +491,7 @@ namespace tai
         ~BTree() override
         {
             Log::debug("Destruct B-tree for \"", conf.path, "\".");
-            root.dropChild();
+            root.dropChild(false);
             std::lock_guard<std::mutex> lck(mtxUsedID);
             usedID.erase(id);
         }

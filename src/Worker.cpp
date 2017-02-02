@@ -125,7 +125,7 @@ namespace tai
             if (!roundIdle || ctrl.lower >> std::max(exceed - 1, (ssize_t)0))
             {
                 const auto lower = cleanup ? 0 : ctrl.lower >> std::max(exceed, (ssize_t)0);
-                while (ctrl.used.load(std::memory_order_relaxed) > lower && ctrl.cache.consume_one([](auto i){ i->valid() ? i->evict() : i->suicide(); }));
+                while (ctrl.used.load(std::memory_order_relaxed) > lower && ctrl.cache.consume_one([](auto i){ i->gc(); }));
                 queue.setupDone();
                 barrier(Unlocking);
                 steal();

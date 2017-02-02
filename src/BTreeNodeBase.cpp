@@ -83,4 +83,10 @@ namespace tai
         if (parent)
             Worker::pushDone([this](){ for (auto i = parent; i && i->lck.fetch_sub(1, std::memory_order_relaxed) == 1; i = i->parent); });
     }
+
+    void BTreeNodeBase::unlock(IOCtrl* const io)
+    {
+        unlock();
+        io->unlock();
+    }
 }
