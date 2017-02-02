@@ -27,10 +27,30 @@ namespace tai::Log
     };
 
     template<>
+    class to_string<char*>
+    {
+    public:
+        static auto get(char* elem)
+        {
+            return std::string(elem);
+        }
+    };
+
+    template<>
     class to_string<char const *>
     {
     public:
         static auto get(char const * elem)
+        {
+            return std::string(elem);
+        }
+    };
+
+    template<>
+    class to_string<char* const>
+    {
+    public:
+        static auto get(char* const elem)
         {
             return std::string(elem);
         }

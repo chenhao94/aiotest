@@ -41,41 +41,41 @@ int main(int argc, char* argv[])
     ss[0][0] = ss[0][8] = 'a';
     
     cbs.emplace_back(aiocb(fd, 0, ss[0].data(), 9));
-    if ([&](){for (; auto err = aio_write(&cbs[0]); cout << "Busy" << endl) if (errno == EAGAIN) this_thread::sleep_for(seconds(1)); else return err; return 0;}())
+    if ([&](){for (; auto err = aio_write(&cbs[0]); Log::log("Busy")) if (errno == EAGAIN) this_thread::sleep_for(seconds(1)); else return err; return 0;}())
     {
-        cout << "Error[" << errno << "/" << strerror(errno) << "] at aio_write!" << endl;
+        Log::log("Error[", errno, "/", strerror(errno), "] at aio_write!");
         exit(-1);
     }
     else
-        cout << "aio_write issued." << endl;
+        Log::log("aio_write issued.");
 
     cbs.emplace_back(aiocb(fd, 0, ss[1].data(), 1));
-    if ([&](){for (; auto err = aio_read(&cbs[1]); cout << "Busy" << endl) if (errno == EAGAIN) this_thread::sleep_for(seconds(1)); else return err; return 0;}())
+    if ([&](){for (; auto err = aio_read(&cbs[1]); Log::log("Busy")) if (errno == EAGAIN) this_thread::sleep_for(seconds(1)); else return err; return 0;}())
     {
-        cout << "Error[" << errno << "/" << strerror(errno) << "] at aio_read!" << endl;
+        Log::log("Error[", errno, "/", strerror(errno), "] at aio_read!");
         exit(-1);
     }
     else
-        cout << "aio_read issued." << endl;
+        Log::log("aio_read issued.");
 
     cbs.emplace_back(aiocb(fd));
     if ([&](){for (; auto err = aio_fsync(O_SYNC, &cbs[2]); cout << "Busy" << endl) if (errno == EAGAIN) this_thread::sleep_for(seconds(1)); else return err; return 0;}())
     {
-        cout << "Error[" << errno << "/" << strerror(errno) << "] at aio_fsync!" << endl;
+        Log::log("Error[", errno, "/", strerror(errno), "] at aio_fsync!");
         exit(-1);
     }
     else
-        cout << "aio_fsync issued." << endl;
+        Log::log("aio_fsync issued.");
 
     for (auto &i : cbs)
         while (aio_error(&i) == EINPROGRESS);
 
-    cout << "Return:" << endl;
+    Log::log("Return:");
     for (auto &i : cbs)
         if (aio_error(&i))
-            cout << "    <" << i.aio_reqprio << "> aio_error: " << aio_error(&i) << "/" << strerror(aio_error(&i)) << endl;
+            Log::log("    <", i.aio_reqprio, "> aio_error: ", aio_error(&i), "/", strerror(aio_error(&i)));
         else
-            cout << "    <" << i.aio_reqprio << "> aio_return: " + to_string(aio_return(&i)) << endl;
+            Log::log("    <", i.aio_reqprio, "> aio_return: ", aio_return(&i));
 
     deregister_fd(fileno(file));
     aio_end();
