@@ -46,11 +46,12 @@ namespace tai
     void aio_end()
     {
         aiocb::end();
-        for (auto &bt : aiocb::bts)
-            if (auto btp = bt.load(std::memory_order_consume))
+        for (auto &i: aiocb::bts)
+            if (auto bt = i.load(std::memory_order_consume))
             {
-                delete btp;
-                bt.store(nullptr, std::memory_order_release);
+                auto io = bt->detach(*aiocb::ctrl);
+                delete bt;
+                i.store(nullptr, std::memory_order_release);
             }
         _AIO_INIT_.store(false, std::memory_order_release);
     }
@@ -101,7 +102,7 @@ namespace tai
             return false;
         }
 
-        auto tree = new BTreeDefault(path) ;
+        auto tree = new BTreeDefault(path);
         if (tree->failed())
         {
             Log::debug("Failed to register fd = ", fd, " due to B-tree construction failure.");

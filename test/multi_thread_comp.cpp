@@ -23,13 +23,15 @@
 
 using namespace std;
 using namespace chrono;
+using namespace this_thread;
 
-constexpr int WRITE_SIZE = 1 << 16;
-constexpr int IO_ROUND = 1 << 8;
-constexpr int IO_SUBROUND_SIZE = 1 << 4;
-constexpr int IO_SUBROUND = IO_ROUND / IO_SUBROUND_SIZE;
-int sleep_time; // milliseconds
-int thread_num;
+constexpr size_t    WRITE_SIZE = 1 << 16;
+constexpr size_t    IO_ROUND = 1 << 8;
+constexpr size_t    IO_SUBROUND_SIZE = 1 << 4;
+constexpr auto      IO_SUBROUND = IO_ROUND / IO_SUBROUND_SIZE;
+
+size_t sleep_time; // milliseconds
+size_t thread_num;
 
 auto randgen()
 {
@@ -45,8 +47,7 @@ class TAIWrite;
 
 class RandomWrite
 {
-    public:
-
+public:
     int fd;
 
     RandomWrite() 
@@ -61,31 +62,32 @@ class RandomWrite
     auto run_sub()
     {
         vector<char> data(WRITE_SIZE, 'a');
-        unsigned long long count = 0;
+        auto count = 0ull;
 
-        for (int i = 0; i < IO_SUBROUND_SIZE; ++i)
+        for (size_t i = 0; i < IO_SUBROUND_SIZE; ++i)
         {
             auto offset = randgen();
             auto begin = high_resolution_clock::now();
             writeop(offset, data.data());
             count += duration_cast<nanoseconds>(high_resolution_clock::now() - begin).count(); 
-            this_thread::sleep_for(milliseconds(sleep_time));
+            if (sleep_time > 0)
+                sleep_for(milliseconds(sleep_time));
         }
         return count;
     }
 
-    auto run(int thread_id)
+    auto run(size_t thread_id)
     {
-        unsigned long long time = 0;
-        for (int i = 0; i < IO_SUBROUND; ++i)
+        auto time = 0ull;
+        for (size_t i = 0; i < IO_SUBROUND; ++i)
         {
-            if (!i || i * 10 / IO_SUBROUND > (i - 1) * 10 / IO_SUBROUND)
-                tai::Log::log("[Thread ", thread_id, "]", "Progess ", (i * 100 / IO_SUBROUND), "\% finished.");
-            auto file = fopen(("mnt/file" + to_string(thread_id)).data(), "w+");
+            if (!i || i * 30 / IO_SUBROUND > (i - 1) * 30 / IO_SUBROUND)
+                tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_SUBROUND, "\% finished.");
+            auto file = fopen(("tmp/file" + to_string(thread_id)).data(), "w+");
             fd = fileno(file);
-            tai::register_fd(fd, "mnt/file" + to_string(thread_id));
+            tai::register_fd(fd, "tmp/file" + to_string(thread_id));
             time += run_sub();
-            this_thread::sleep_for(1s);
+            // sleep_for(1s);
             tai::deregister_fd(fd);
             fclose(file);
         }
@@ -97,7 +99,7 @@ class RandomWrite
 
 class BlockingWrite : public RandomWrite
 {
-    public: 
+public: 
 
     BlockingWrite() : RandomWrite() {}
 
@@ -115,7 +117,7 @@ class BlockingWrite : public RandomWrite
         }
     }
 
-    static void startEntry(int thread_id, unsigned long long &ret)
+    static void startEntry(size_t thread_id, unsigned long long &ret)
     {
         BlockingWrite bw;
         ret = bw.run(thread_id);
@@ -124,7 +126,7 @@ class BlockingWrite : public RandomWrite
 
 class AIOWrite : public RandomWrite
 {
-    public:
+public:
 
     AIOWrite() : RandomWrite() {}
 
@@ -151,7 +153,7 @@ class AIOWrite : public RandomWrite
         aio_return(&cb);
     }
 
-    static void startEntry(int thread_id, unsigned long long &ret)
+    static void startEntry(size_t thread_id, unsigned long long &ret)
     {
         AIOWrite aw;
         ret = aw.run(thread_id);
@@ -160,7 +162,7 @@ class AIOWrite : public RandomWrite
 
 class TAIWrite : public RandomWrite
 {
-    public: 
+public: 
 
     TAIWrite() : RandomWrite() {}
 
@@ -182,7 +184,7 @@ class TAIWrite : public RandomWrite
         tai::aio_return(&cb);
     }
 
-    static void startEntry(int thread_id, unsigned long long &ret)
+    static void startEntry(size_t thread_id, unsigned long long &ret)
     {
         TAIWrite tw;
         ret = tw.run(thread_id);
@@ -196,46 +198,46 @@ int main(int argc, char* argv[])
         cerr << "need argument for sleep time (ms) and thread number" << endl;
         exit(-1);
     }
-    sleep_time = stoi(argv[1]);
-    thread_num = stoi(argv[2]);
+    sleep_time = stoll(argv[1]);
+    thread_num = stoll(argv[2]);
     tai::Log::log("sleep time: ", sleep_time, "ms");
     tai::Log::log("thread number: ", thread_num);
-    srand(time(NULL));
+    srand(time(nullptr));
 
     vector<unsigned long long> rvs(thread_num);
 
     {
         vector<thread> bthreads;
-        for (auto i = 0; i < thread_num; ++i)
+        for (size_t i = 0; i < thread_num; ++i)
             bthreads.emplace_back(thread(BlockingWrite::startEntry, i, ref(rvs[i])));
         for (auto &t : bthreads)
             t.join();
-        auto btime = accumulate(rvs.begin(), rvs.end(), 0ULL, plus<unsigned long long>());
+        auto btime = accumulate(rvs.begin(), rvs.end(), 0ull);
         tai::Log::log("Blocking random write: ", btime, " ns in total, ", IO_ROUND, " ops/thread, ",
-            thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / btime, " iops");
+                thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / btime, " iops");
     }
-    
+
     {
         vector<thread> athreads;
-        for (auto i = 0; i < thread_num; ++i)
+        for (size_t i = 0; i < thread_num; ++i)
             athreads.emplace_back(thread(AIOWrite::startEntry, i, ref(rvs[i])));
         for (auto &t : athreads)
             t.join();
-        auto atime = accumulate(rvs.begin(), rvs.end(), 0ULL, plus<unsigned long long>());
+        auto atime = accumulate(rvs.begin(), rvs.end(), 0ull);
         tai::Log::log("Asynchronous random write: ", atime, " ns in total, ", IO_ROUND, " ops/thread, ",
-            thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / atime, " iops");
+                thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / atime, " iops");
     }
 
     {
         tai::aio_init();
         vector<thread> tthreads;
-        for (auto i = 0; i < thread_num; ++i)
+        for (size_t i = 0; i < thread_num; ++i)
             tthreads.emplace_back(thread(TAIWrite::startEntry, i, ref(rvs[i])));
         for (auto &t : tthreads)
             t.join();
-        auto ttime = accumulate(rvs.begin(), rvs.end(), 0ULL, plus<unsigned long long>());
+        auto ttime = accumulate(rvs.begin(), rvs.end(), 0ull);
         tai::Log::log("TAI random write: ", ttime, " ns in total, ", IO_ROUND, " ops/thread, ",
-            thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / ttime, " iops");
+                thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / ttime, " iops");
         tai::aio_end();
     }
 
