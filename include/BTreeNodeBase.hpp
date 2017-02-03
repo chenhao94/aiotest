@@ -50,6 +50,9 @@ namespace tai
         // Unlink all the child subtree.
         virtual void dropChild(bool force) = 0;
 
+        // Detach all the child nodes and delete this node.
+        virtual void detach(bool force) = 0;
+
         // Read/write [begin, end - 1] to/from ptr[0..end - begin].
         virtual void read(size_t begin, size_t end, char* ptr, IOCtrl* io) = 0;
         virtual void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) = 0;
@@ -122,12 +125,11 @@ namespace tai
         // Set to 0 when there's no cahce.
         size_t effective = 0;
 
-    protected:
-
         // Parent pointer.
         // Set to nullptr while unlinking to ensure that different connected regions cannot access each other.
         BTreeNodeBase* parent = nullptr;
 
+    protected:
         // Dirty flag for cache.
         // Set to false when there's no cache.
         bool dirty = false;

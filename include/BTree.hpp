@@ -125,6 +125,20 @@ namespace tai
             child.clear();
         }
 
+        void detach(bool force) override
+        {
+            if (data)
+                return;
+
+            for (auto& i : child)
+                if (i)
+                {
+                    i->parent = force ? nullptr : i;
+                    Worker::pushWait([=](){ i->detach(force); });
+                }
+            suicide();
+        }
+
     private:
         // Merge subtree cache into node cache.
         bool merge(IOCtrl* io = nullptr)
@@ -358,6 +372,12 @@ namespace tai
         {
         }
 
+        void detach(bool force) override
+        {
+            if (!data)
+                suicide();
+        }
+
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             Log::debug("read(leaf) {", offset, ", ", offset + N, " : ", begin, ", ", end, "}");
@@ -462,15 +482,13 @@ namespace tai
     
     public:
         using Root = BTreeNode<n, rest...>;
+        Root* root;
 
-        Root root;
-
-    public:
         static constexpr auto level = sizeof...(rest) + 1;
         static constexpr std::array<size_t, level> bits = {n, rest...};
 
         // Bind to the file from given path.
-        explicit BTree(const std::string &path) : BTreeBase(path), root(conf, 0)
+        explicit BTree(const std::string &path) : BTreeBase(path), root(new Root(conf, 0))
         {
             Log::debug("Construct B-tree for \"", path, "\".");
             mtxUsedID.lock();
@@ -485,13 +503,14 @@ namespace tai
                 file.open(path, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
 
             if (!file.is_open())
-                root.fail();
+                root->fail();
         }
 
         ~BTree() override
         {
             Log::debug("Destruct B-tree for \"", conf.path, "\".");
-            root.dropChild(false);
+            if (root)
+                Log::debug("Memory leak for at ", (size_t)root, ". Please detach before destruction.");
             std::lock_guard<std::mutex> lck(mtxUsedID);
             usedID.erase(id);
         }
@@ -500,11 +519,11 @@ namespace tai
         // Do not allow partial read.
         IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr) override
         {
-            Log::debug("issued read: ", pos, ", " , len);
+            Log::debug("Issued read: ", pos, ", " , len);
             auto io = new IOCtrl;
             if (len < 1)
                 io->state.store(IOCtrl::Done, std::memory_order_relaxed);
-            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
@@ -513,11 +532,11 @@ namespace tai
         // Allow partial read.
         IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) override
         {
-            Log::debug("issued readsome: ", pos, ", " , len);
+            Log::debug("Issued readsome: ", pos, ", " , len);
             auto io = new IOCtrl(true);
             if (len < 1)
                 io->state.store(IOCtrl::Done, std::memory_order_relaxed);
-            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
@@ -525,11 +544,11 @@ namespace tai
         // Issue a write request to this file to the given controller.
         IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr) override
         {
-            Log::debug("issued write: ", pos, ", " , len);
+            Log::debug("Issued write: ", pos, ", " , len);
             auto io = new IOCtrl;
             if (len < 1)
                 io->state.store(IOCtrl::Done, std::memory_order_relaxed);
-            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.write(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->write(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
@@ -537,9 +556,21 @@ namespace tai
         // Issue a sync request to this file to the given controller.
         IOCtrl* sync(Controller& ctrl) override
         {
+            Log::debug("Issued sync");
             auto io = new IOCtrl;
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root.flush(io); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->flush(io); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            return io;
+        }
+
+        IOCtrl* detach(Controller& ctrl) override
+        {
+            Log::debug("Issued detach");
+            auto io = new IOCtrl;
+            if (!root || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->detach(false); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            else
+                root = nullptr;
             return io;
         }
 
