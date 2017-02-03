@@ -5,6 +5,7 @@
 #include "aio.hpp"
 
 #include <array>
+#include <vector>
 #include <memory>
 #include <atomic>
 
@@ -45,14 +46,17 @@ namespace tai
 
     void aio_end()
     {
+        std::vector<std::unique_ptr<IOCtrl>> ios; 
         aiocb::end();
         for (auto &i: aiocb::bts)
             if (auto bt = i.load(std::memory_order_consume))
             {
-                auto io = bt->detach(*aiocb::ctrl);
+                ios.emplace_back(bt->detach(*aiocb::ctrl));
                 delete bt;
                 i.store(nullptr, std::memory_order_release);
             }
+        for (auto& i: ios)
+            i->wait();
         _AIO_INIT_.store(false, std::memory_order_release);
     }
 
