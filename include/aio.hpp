@@ -5,12 +5,14 @@
  */
 
 #include <array>
+#include <vector>
 #include <memory>
 #include <atomic>
 
 #include <signal.h>
 
 #include "BTreeBase.hpp"
+#include "IOCtrl.hpp"
 #include "Controller.hpp"
 #include "tai.hpp"
 
@@ -58,6 +60,16 @@ namespace tai
 
             static void end()
             {
+                std::vector<std::unique_ptr<IOCtrl>> ios; 
+                for (auto &i: bts)
+                    if (auto bt = i.load(std::memory_order_consume))
+                    {
+                        ios.emplace_back(bt->detach(*ctrl));
+                        delete bt;
+                        i.store(nullptr, std::memory_order_release);
+                    }
+                for (auto& i: ios)
+                    i->wait();
                 ctrl = nullptr;
             }
 
