@@ -207,6 +207,7 @@ int main(int argc, char* argv[])
 
     if (argc < 4 || stoll(argv[3]) & 1)
     {
+        system("sync");
         vector<thread> bthreads;
         for (size_t i = 0; i < thread_num; ++i)
             bthreads.emplace_back(thread(BlockingWrite::startEntry, i, ref(rvs[i])));
@@ -219,6 +220,7 @@ int main(int argc, char* argv[])
 
     if (argc < 4 || stoll(argv[3]) & 2)
     {
+        system("sync");
         vector<thread> athreads;
         for (size_t i = 0; i < thread_num; ++i)
             athreads.emplace_back(thread(AIOWrite::startEntry, i, ref(rvs[i])));
@@ -231,6 +233,7 @@ int main(int argc, char* argv[])
 
     if (argc < 4 || stoll(argv[3]) & 4)
     {
+        system("sync");
         tai::aio_init();
         vector<thread> tthreads;
         for (size_t i = 0; i < thread_num; ++i)
@@ -242,6 +245,8 @@ int main(int argc, char* argv[])
                 thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / ttime, " iops");
         tai::aio_end();
     }
+
+    system("sync");
 
     return 0;
 }
