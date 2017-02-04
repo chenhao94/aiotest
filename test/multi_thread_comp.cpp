@@ -25,7 +25,7 @@ using namespace std;
 using namespace chrono;
 using namespace this_thread;
 
-constexpr size_t    WRITE_SIZE = 1 << 16;
+constexpr size_t    WRITE_SIZE = 1 << 13;
 constexpr size_t    IO_ROUND = 1 << 8;
 constexpr size_t    IO_SUBROUND_SIZE = 1 << 4;
 constexpr auto      IO_SUBROUND = IO_ROUND / IO_SUBROUND_SIZE;

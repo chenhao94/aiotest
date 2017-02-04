@@ -26,7 +26,7 @@ export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
 export CXXFLAGS += -lm -lpthread
 export CXXFLAGS += $(shell if [ `uname` = Linux ]; then echo '-lrt'; fi)
-export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
+# export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
 export MKDIR = @mkdir -p
 export CMP = cmp -b

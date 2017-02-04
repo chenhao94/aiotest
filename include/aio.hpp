@@ -58,7 +58,7 @@ namespace tai
 
             static void end()
             {
-                ctrl.reset(nullptr);
+                ctrl = nullptr;
             }
 
             void read()
