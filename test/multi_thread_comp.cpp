@@ -26,6 +26,7 @@ using namespace chrono;
 using namespace this_thread;
 
 constexpr size_t    WRITE_SIZE = 1 << 16;
+constexpr size_t    FILE_SIZE = 1 << 30;
 constexpr size_t    IO_ROUND = 1 << 8;
 constexpr size_t    IO_SUBROUND_SIZE = 1 << 4;
 constexpr auto      IO_SUBROUND = IO_ROUND / IO_SUBROUND_SIZE;
@@ -35,9 +36,7 @@ size_t thread_num;
 
 auto randgen()
 {
-    // the RAND_MAX on my machine seems 2147483647,
-    // and the fseek can only reach 2GB
-    return rand() % (RAND_MAX - WRITE_SIZE);
+    return rand() % (FILE_SIZE - WRITE_SIZE);
 }
 
 class RandomWrite;
@@ -87,7 +86,7 @@ public:
             fd = fileno(file);
             tai::register_fd(fd, "tmp/file" + to_string(thread_id));
             time += run_sub();
-            // sleep_for(1s);
+            sleep_for(1s);
             tai::deregister_fd(fd);
             fclose(file);
         }
@@ -193,7 +192,7 @@ public:
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3)
+    if (argc < 3)
     {
         cerr << "need argument for sleep time (ms) and thread number" << endl;
         exit(-1);
@@ -206,6 +205,7 @@ int main(int argc, char* argv[])
 
     vector<unsigned long long> rvs(thread_num);
 
+    if (argc < 4 || stoll(argv[3]) & 1)
     {
         vector<thread> bthreads;
         for (size_t i = 0; i < thread_num; ++i)
@@ -217,6 +217,7 @@ int main(int argc, char* argv[])
                 thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / btime, " iops");
     }
 
+    if (argc < 4 || stoll(argv[3]) & 2)
     {
         vector<thread> athreads;
         for (size_t i = 0; i < thread_num; ++i)
@@ -228,6 +229,7 @@ int main(int argc, char* argv[])
                 thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / atime, " iops");
     }
 
+    if (argc < 4 || stoll(argv[3]) & 4)
     {
         tai::aio_init();
         vector<thread> tthreads;

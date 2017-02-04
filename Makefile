@@ -26,7 +26,7 @@ export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
 export CXXFLAGS += -lm -lpthread
 export CXXFLAGS += $(shell if [ `uname` = Linux ]; then echo '-lrt'; fi)
-export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
+# export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
 export MKDIR = @mkdir -p
 export CMP = cmp -b
@@ -88,6 +88,68 @@ test: all
 	time (./tai 2 128 && sync tmp/tai)
 	time sync
 	$(CMP) tmp/sync tmp/tai || $(CMP) -l tmp/sync tmp/tai | wc -l
+
+.PHONY: test_multithread
+test_multithread: all
+	sudo sync
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	$(MKDIR) tmp
+	$(RM) tmp/*
+	dd if=/dev/zero of=tmp/file0 bs=1G count=1
+	dd if=/dev/zero of=tmp/file1 bs=1G count=1
+	dd if=/dev/zero of=tmp/file2 bs=1G count=1
+	dd if=/dev/zero of=tmp/file3 bs=1G count=1
+	sync
+	echo 'thread num = 1'
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (bin/multi_thread_comp 0 1 1)
+	time (sync tmp/*)
+	time sync
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (bin/multi_thread_comp 0 1 2)
+	time (sync tmp/*)
+	time sync
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (bin/multi_thread_comp 0 1 4)
+	time (sync tmp/*)
+	time sync
+	echo 'thread num = 2'
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (bin/multi_thread_comp 0 2 1)
+	time (sync tmp/*)
+	time sync
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (bin/multi_thread_comp 0 2 2)
+	time (sync tmp/*)
+	time sync
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (bin/multi_thread_comp 0 2 4)
+	time (sync tmp/*)
+	time sync
+	echo 'thread num = 4'
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (bin/multi_thread_comp 0 4 1)
+	time (sync tmp/*)
+	time sync
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (bin/multi_thread_comp 0 4 2)
+	time (sync tmp/*)
+	time sync
+	if [ `uname` == Darwin ]; then sudo purge; fi
+	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	time (bin/multi_thread_comp 0 4 4)
+	time (sync tmp/*)
+	time sync
+
 
 ifneq ($(MAKECMDGOALS),clean)
 sinclude $(DEPS)
