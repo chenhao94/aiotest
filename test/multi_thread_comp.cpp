@@ -25,7 +25,7 @@ using namespace std;
 using namespace chrono;
 using namespace this_thread;
 
-constexpr size_t    WRITE_SIZE = 1 << 13;
+constexpr size_t    WRITE_SIZE = 1 << 16;
 constexpr size_t    IO_ROUND = 1 << 8;
 constexpr size_t    IO_SUBROUND_SIZE = 1 << 4;
 constexpr auto      IO_SUBROUND = IO_ROUND / IO_SUBROUND_SIZE;
@@ -206,6 +206,8 @@ int main(int argc, char* argv[])
 
     vector<unsigned long long> rvs(thread_num);
 
+    system("sync");
+
     {
         vector<thread> bthreads;
         for (size_t i = 0; i < thread_num; ++i)
@@ -217,6 +219,8 @@ int main(int argc, char* argv[])
                 thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / btime, " iops");
     }
 
+    system("sync");
+
     {
         vector<thread> athreads;
         for (size_t i = 0; i < thread_num; ++i)
@@ -227,6 +231,8 @@ int main(int argc, char* argv[])
         tai::Log::log("Asynchronous random write: ", atime, " ns in total, ", IO_ROUND, " ops/thread, ",
                 thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / atime, " iops");
     }
+
+    system("sync");
 
     {
         tai::aio_init();
@@ -240,6 +246,8 @@ int main(int argc, char* argv[])
                 thread_num, " threads, ", 1e9 * IO_ROUND * thread_num / ttime, " iops");
         tai::aio_end();
     }
+
+    system("sync");
 
     return 0;
 }
