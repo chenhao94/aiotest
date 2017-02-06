@@ -500,7 +500,11 @@ namespace tai
             if (file.is_open())
                 conf.size = file.seekg(0, std::ios_base::end).tellg();
             else
+            {
+                Log::log("error!!1");
+                exit(0);
                 file.open(path, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
+            }
 
             if (!file.is_open())
                 root->fail();

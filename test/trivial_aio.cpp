@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     aio_init();
     vector<aiocb> cbs;
 
-    auto file = fopen("tmp/tai", "w+");
+    auto file = fopen("tmp/tai", "a+");
     auto fd = fileno(file);
     if (!register_fd(fd, "tmp/tai"))
     {

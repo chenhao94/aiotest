@@ -82,7 +82,7 @@ public:
         {
             if (!i || i * 30 / IO_SUBROUND > (i - 1) * 30 / IO_SUBROUND)
                 tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_SUBROUND, "\% finished.");
-            auto file = fopen(("tmp/file" + to_string(thread_id)).data(), "w+");
+            auto file = fopen(("tmp/file" + to_string(thread_id)).data(), "a+");
             fd = fileno(file);
             tai::register_fd(fd, "tmp/file" + to_string(thread_id));
             time += run_sub();
