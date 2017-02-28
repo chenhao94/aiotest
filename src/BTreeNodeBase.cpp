@@ -2,6 +2,7 @@
 #include <memory>
 #include <fstream>
 #include <functional>
+#include <cstdlib>
 
 #include <boost/lockfree/queue.hpp>
 
@@ -23,12 +24,14 @@ namespace tai
         {
             Controller::ctrl->used.fetch_sub(size, std::memory_order_relaxed);
             delete[] node->data;
+            //std::free(node->data);
             node->data = nullptr;
         }
         else
         {
             Controller::ctrl->used.fetch_add(size, std::memory_order_relaxed);
             Controller::ctrl->cache.push(node);
+            //node->data = (char *)std::aligned_alloc(512, size * sizeof(char)); 
             node->data = new char[size];
         }
     }

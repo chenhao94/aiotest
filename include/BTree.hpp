@@ -492,7 +492,8 @@ namespace tai
         {
             Log::debug("Construct B-tree for \"", path, "\".");
             mtxUsedID.lock();
-            while (usedID.count(id = rand()));
+            id = (IDCount++); //*3;
+            for (; usedID.count(id); id = rand());
             usedID.insert(id);
             mtxUsedID.unlock();
 

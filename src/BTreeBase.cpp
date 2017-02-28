@@ -13,4 +13,5 @@ namespace tai
     std::mutex BTreeBase::mtxUsedID;
     boost::lockfree::queue<BTreeConfig*> BTreeBase::confPool(1);
     std::default_random_engine BTreeBase::rand(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    volatile size_t BTreeBase::IDCount = 0;
 }

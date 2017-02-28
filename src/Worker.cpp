@@ -1,4 +1,5 @@
 #include <thread>
+#include <chrono>
 #include <functional>
 #include <algorithm>
 
@@ -8,6 +9,8 @@
 
 namespace tai
 {
+    std::atomic_llong Log::barrier_time, Log::steal_time, Log::run_time;
+
     Worker::Worker(Controller& ctrl, size_t id) : ctrl(ctrl), id(id)
     {
         if (!pool.pop(gid))
@@ -67,6 +70,8 @@ namespace tai
 
     Worker::State Worker::barrier(std::function<State()> f)
     {
+        using namespace std::chrono;
+        auto start = high_resolution_clock::now();
         auto post = Sync;
         state.store(Sync, std::memory_order_release);
         if (id)
@@ -89,20 +94,26 @@ namespace tai
             state.store(post = f(), std::memory_order_acquire);
         }
         broadcast(post, std::memory_order_acquire);
+        Log::debug_counter_add(Log::barrier_time, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
         return post;
     }
 
     void Worker::steal()
     {
-        while (queue());
+        using namespace std::chrono;
+        auto start = high_resolution_clock::now();
+        for (; queue(); /*Log::log("[", id, "] DIY")*/);
         for (auto i = id; ++i != ctrl.workers.size();)
-            while(ctrl.workers[i].queue());
+            for (; ctrl.workers[i].queue(); /*Log::log("[", id, "] Steal from ", i)*/);
         for (size_t i = 0; i != id; ++i)
-            while(ctrl.workers[i].queue());
+            for (; ctrl.workers[i].queue(); /*Log::log("[", id, "] Steal from ", i)*/);
+        Log::debug_counter_add(Log::steal_time, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
     }
 
     void Worker::run()
     {
+        using namespace std::chrono;
+        auto start = high_resolution_clock::now();
         Controller::ctrl = &ctrl;
         worker = this;
         sgid = gid;
@@ -142,6 +153,14 @@ namespace tai
                     break;
             }
         }
+        Log::debug_counter_add(Log::run_time, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
+    }
+
+    void Log::debug_counter_add(std::atomic_llong &counter, long long num)
+    {
+#ifdef _DEBUG
+        counter.fetch_add(num, std::memory_order_relaxed);
+#endif
     }
 
     std::atomic<size_t> Worker::poolSize;

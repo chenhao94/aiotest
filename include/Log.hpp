@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <iomanip>
+#include <atomic>
 
 namespace tai::Log
 {
@@ -89,4 +90,8 @@ namespace tai::Log
     {
         std::cerr << concat(elem...) + "\n" << std::flush;
     }
+
+    void debug_counter_add(std::atomic_llong &counter, long long num);
+
+    extern std::atomic_llong barrier_time, steal_time, run_time;
 }

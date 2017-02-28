@@ -17,6 +17,7 @@ namespace tai
     public:
         // Reuseable global ID for worker association.
         static std::unordered_set<size_t> usedID;
+        static volatile size_t IDCount;
         static std::mutex mtxUsedID;
         static boost::lockfree::queue<BTreeConfig*> confPool;
         size_t id = 0;
