@@ -17,7 +17,7 @@ test_mt:
     - mkdir -p log
     - make test_mt 2>&1 | tee log/test_mt.log
   artifacts:
-    path:
+    paths:
       - log/
     expire_in: 1 day
 
