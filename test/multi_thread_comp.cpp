@@ -29,13 +29,13 @@ using namespace std;
 using namespace chrono;
 using namespace this_thread;
 
-constexpr size_t    ALIGN = 1 << 24;
-constexpr size_t    WRITE_SIZE = 1 << 24;
-constexpr size_t    READ_SIZE = 1 << 24;
-constexpr size_t    FILE_SIZE = 1 << 29;
-constexpr size_t    IO_ROUND = 1 << 10;
-constexpr size_t    SYNC_RATE_BIT = 4; // sync per 2^x rounds
-constexpr size_t    WAIT_RATE_BIT = 6; // wait per 2^x rounds
+constexpr size_t    ALIGN = 1ll << 24;
+constexpr size_t    WRITE_SIZE = 1ll << 24;
+constexpr size_t    READ_SIZE = 1ll << 24;
+constexpr size_t    FILE_SIZE = 1ll << 31;
+constexpr size_t    IO_ROUND = 1ll << 10;
+constexpr size_t    SYNC_RATE = 1ll << 4;
+constexpr size_t    WAIT_RATE = 1ll << 6;
 
 size_t thread_num;
 int workload;
@@ -77,10 +77,10 @@ public:
         reset_cb();
         for (size_t i = 0; i < IO_ROUND; ++i)
         {
-            if (i && !(i & (1 << SYNC_RATE_BIT) - 1))
+            if (i && !(i & ~-SYNC_RATE))
             {
                 syncop();
-                if (!(i & (1 << WAIT_RATE_BIT) - 1))
+                if (!(i & ~-WAIT_RATE))
                     wait_cb();
             }
             auto offset = randgen() & -ALIGN;
@@ -101,16 +101,16 @@ public:
     {
         fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); 
         tai::register_fd(fd, "tmp/file" + to_string(thread_id));
-        auto buf = new(align_val_t(512)) char[WRITE_SIZE << WAIT_RATE_BIT];
+        auto buf = new(align_val_t(512)) char[WRITE_SIZE * WAIT_RATE];
         reset_cb();
         for (size_t i = 0; i < IO_ROUND; ++i)
         {
-            if (i && !(i & (1 << WAIT_RATE_BIT) - 1))
+            if (i && !(i & ~-WAIT_RATE))
             {
                 wait_cb();
             }
             auto offset = randgen() & -ALIGN;
-            readop(offset, buf + (i & (1 << WAIT_RATE_BIT) - 1) * WRITE_SIZE);
+            readop(offset, buf + (i & ~-WAIT_RATE) * WRITE_SIZE);
             if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
                 tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
@@ -127,20 +127,20 @@ public:
         fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); 
         tai::register_fd(fd, "tmp/file" + to_string(thread_id));
         auto data = new(align_val_t(512)) char[WRITE_SIZE];
-        auto buf = new(align_val_t(512)) char[WRITE_SIZE << WAIT_RATE_BIT];
+        auto buf = new(align_val_t(512)) char[WRITE_SIZE * WAIT_RATE];
         vector<size_t> offs;
         offs.reserve(IO_ROUND);
         memset(data, 'a', sizeof(WRITE_SIZE));
         reset_cb();
         for (size_t i = 0; i < IO_ROUND; ++i)
         {
-            if (i && !(i & (1 << SYNC_RATE_BIT) - 1))
+            if (i && !(i & ~-SYNC_RATE))
             {
                 syncop();
-                if (!(i & (1 << WAIT_RATE_BIT) - 1))
+                if (!(i & ~-WAIT_RATE))
                 {
-                    for (auto j = i - (1 << WAIT_RATE_BIT); j < i; ++j)
-                        readop(offs[j], buf + (j & (1 << WAIT_RATE_BIT) - 1) * WRITE_SIZE);
+                    for (auto j = i - WAIT_RATE; j < i; ++j)
+                        readop(offs[j], buf + (j & ~-WAIT_RATE) * WRITE_SIZE);
                     wait_cb();
                 }
             }
@@ -150,8 +150,8 @@ public:
             if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
                 tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
-        for (auto j = IO_ROUND - (1 << WAIT_RATE_BIT); j < IO_ROUND; ++j)
-            readop(offs[j], buf + (j & (1 << WAIT_RATE_BIT) - 1) * WRITE_SIZE);
+        for (auto j = IO_ROUND - WAIT_RATE; j < IO_ROUND; ++j)
+            readop(offs[j], buf + (j & ~-WAIT_RATE) * WRITE_SIZE);
         syncop();
         wait_cb();
         cleanup();
@@ -233,7 +233,7 @@ class AIOWrite : public RandomWrite
 {
 public:
 
-    AIOWrite() : RandomWrite() { cbs.reserve(2 * IO_ROUND + (IO_ROUND >> SYNC_RATE_BIT) + 1); }
+    AIOWrite() : RandomWrite() { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); }
 
     vector<aiocb> cbs;
 
@@ -315,7 +315,7 @@ class LibAIOWrite : public RandomWrite
 {
 public:
 
-    LibAIOWrite() : RandomWrite(), cnt(0) { cbs.reserve(2 * IO_ROUND + (IO_ROUND >> SYNC_RATE_BIT) + 1); openflags |= O_DIRECT; }
+    LibAIOWrite() : RandomWrite(), cnt(0) { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); openflags |= O_DIRECT; }
 
     vector<iocb*> cbs;
 
@@ -384,7 +384,7 @@ class TAIWrite : public RandomWrite
 {
 public: 
 
-    TAIWrite() : RandomWrite() { cbs.reserve(2 * IO_ROUND + (IO_ROUND >> SYNC_RATE_BIT) + 1); }
+    TAIWrite() : RandomWrite() { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); }
 
     vector<tai::aiocb> cbs;
 
