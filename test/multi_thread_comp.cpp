@@ -11,6 +11,7 @@
 #include <limits>
 #include <numeric>
 #include <functional>
+#include <new>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -28,21 +29,21 @@ using namespace std;
 using namespace chrono;
 using namespace this_thread;
 
-constexpr size_t    ALIGN_BIT = 12;
-constexpr size_t    ALIGN = 1 << ALIGN_BIT;
-constexpr size_t    WRITE_SIZE = (1 << 12);
-constexpr size_t    READ_SIZE = (1 << 12);
-constexpr size_t    FILE_SIZE = 1 << 30;
-constexpr size_t    IO_ROUND = 1 << 16;
+constexpr size_t    ALIGN = 1 << 24;
+constexpr size_t    WRITE_SIZE = 1 << 24;
+constexpr size_t    READ_SIZE = 1 << 24;
+constexpr size_t    FILE_SIZE = 1 << 29;
+constexpr size_t    IO_ROUND = 1 << 10;
 constexpr size_t    SYNC_RATE_BIT = 4; // sync per 2^x rounds
-constexpr size_t    WAIT_RATE_BIT = 10; // wait per 2^x rounds
+constexpr size_t    WAIT_RATE_BIT = 6; // wait per 2^x rounds
 
 size_t thread_num;
 int workload;
 
 auto randgen()
 {
-    return rand() % (FILE_SIZE - WRITE_SIZE);
+    constexpr auto size = FILE_SIZE - (READ_SIZE > WRITE_SIZE ? READ_SIZE : WRITE_SIZE) + 1;
+    return rand() % size;
 }
 
 class RandomWrite;
@@ -71,18 +72,18 @@ public:
         fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); //fileno(file);
         tai::register_fd(fd, "tmp/file" + to_string(thread_id));
         //vector<char> data(WRITE_SIZE, 'a');
-        alignas(ALIGN) char data[WRITE_SIZE]; 
-        memset(data, 'a', sizeof(data));
+        auto data = new(align_val_t(512)) char[WRITE_SIZE];
+        memset(data, 'a', sizeof(WRITE_SIZE));
         reset_cb();
         for (size_t i = 0; i < IO_ROUND; ++i)
         {
-            if (!(i & ((1 << SYNC_RATE_BIT) - 1)) && i)
+            if (i && !(i & (1 << SYNC_RATE_BIT) - 1))
             {
                 syncop();
-                if (!(i & ((1 << WAIT_RATE_BIT) - 1)))
+                if (!(i & (1 << WAIT_RATE_BIT) - 1))
                     wait_cb();
             }
-            auto offset = (randgen() >> ALIGN_BIT << ALIGN_BIT);
+            auto offset = randgen() & -ALIGN;
             writeop(offset, data);
             if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
                 tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
@@ -93,22 +94,23 @@ public:
         tai::deregister_fd(fd);
         //fclose(file);
         close(fd);
+        delete[] data;
     }
 
     void run_readonly(size_t thread_id)
     {
         fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); 
         tai::register_fd(fd, "tmp/file" + to_string(thread_id));
-        alignas(ALIGN) char buf[1 << WAIT_RATE_BIT][WRITE_SIZE]; 
+        auto buf = new(align_val_t(512)) char[WRITE_SIZE << WAIT_RATE_BIT];
         reset_cb();
         for (size_t i = 0; i < IO_ROUND; ++i)
         {
-            if (!(i & ((1 << WAIT_RATE_BIT) - 1)) && i)
+            if (i && !(i & (1 << WAIT_RATE_BIT) - 1))
             {
                 wait_cb();
             }
-            auto offset = (randgen() >> ALIGN_BIT << ALIGN_BIT);
-            readop(offset, buf[i & ((1 << WAIT_RATE_BIT) - 1)]);
+            auto offset = randgen() & -ALIGN;
+            readop(offset, buf + (i & (1 << WAIT_RATE_BIT) - 1) * WRITE_SIZE);
             if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
                 tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
@@ -117,53 +119,55 @@ public:
         cleanup();
         tai::deregister_fd(fd);
         close(fd);
+        delete[] buf;
     }
 
     void run_readwrite(size_t thread_id)
     {
         fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); 
         tai::register_fd(fd, "tmp/file" + to_string(thread_id));
-        alignas(ALIGN) char data[WRITE_SIZE]; 
-        alignas(ALIGN) char buf[1 << WAIT_RATE_BIT][WRITE_SIZE];
+        auto data = new(align_val_t(512)) char[WRITE_SIZE];
+        auto buf = new(align_val_t(512)) char[WRITE_SIZE << WAIT_RATE_BIT];
         vector<size_t> offs;
         offs.reserve(IO_ROUND);
-        memset(data, 'a', sizeof(data));
+        memset(data, 'a', sizeof(WRITE_SIZE));
         reset_cb();
         for (size_t i = 0; i < IO_ROUND; ++i)
         {
-            if (!(i & ((1 << SYNC_RATE_BIT) - 1)) && i)
+            if (i && !(i & (1 << SYNC_RATE_BIT) - 1))
             {
                 syncop();
-                if (!(i & ((1 << WAIT_RATE_BIT) - 1)))
+                if (!(i & (1 << WAIT_RATE_BIT) - 1))
                 {
                     for (auto j = i - (1 << WAIT_RATE_BIT); j < i; ++j)
-                        readop(offs[j], buf[j & ((1 << WAIT_RATE_BIT) - 1)]);
+                        readop(offs[j], buf + (j & (1 << WAIT_RATE_BIT) - 1) * WRITE_SIZE);
                     wait_cb();
                 }
             }
-            auto offset = (randgen() >> ALIGN_BIT << ALIGN_BIT);
+            auto offset = randgen() & -ALIGN;
             offs.push_back(offset);
             writeop(offset, data);
             if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
                 tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
         for (auto j = IO_ROUND - (1 << WAIT_RATE_BIT); j < IO_ROUND; ++j)
-            readop(offs[j], buf[j & ((1 << WAIT_RATE_BIT) - 1)]);
+            readop(offs[j], buf + (j & (1 << WAIT_RATE_BIT) - 1) * WRITE_SIZE);
         syncop();
         wait_cb();
         cleanup();
         tai::deregister_fd(fd);
         close(fd);
+        delete[] data;
+        delete[] buf;
     }
 
     void run(size_t thread_id)
     {
-        if (workload == 0)
-            run_readonly(thread_id);
-        else if (workload == 1)
-            run_writeonly(thread_id);
-        else if (workload == 2)
-            run_readwrite(thread_id);
+        array<function<void(size_t)>, 3>{
+		[this](auto _){ run_readonly(_); },
+		[this](auto _){ run_writeonly(_); },
+		[this](auto _){ run_readwrite(_); }
+	}[workload](thread_id);
     }
 
     virtual void writeop(off_t offset, char* data) = 0;
@@ -376,6 +380,75 @@ public:
     static io_context_t io_cxt;
 };
 
+class LibAIOWrite : public RandomWrite
+{
+public:
+
+    LibAIOWrite() : RandomWrite(), cnt(0) { cbs.reserve(2 * IO_ROUND + (IO_ROUND >> SYNC_RATE_BIT) + 1); openflags |= O_DIRECT; }
+
+    vector<iocb*> cbs;
+
+    void reset_cb() override { cbs.clear(); }
+
+    void wait_cb() override
+    {
+        io_getevents(io_cxt, cnt, cnt, events, NULL);
+        cnt = 0;
+    }
+
+    void writeop(off_t offset, char* data) override
+    {
+        cbs.emplace_back(new iocb);
+        auto& cb = cbs.back();
+        io_prep_pwrite(cb, fd, data, WRITE_SIZE, offset);
+        if (io_submit(io_cxt, 1, &cb) < 1)
+        {
+            cerr << "Error " << errno << ": " << strerror(errno) << " at libaio: write." << endl;
+            exit(-1);
+        }
+        ++cnt;
+    }
+
+    void readop(off_t offset, char* data) override
+    {
+        cbs.emplace_back(new iocb);
+        auto& cb = cbs.back();
+        io_prep_pread(cb, fd, data, READ_SIZE, offset);
+        if (io_submit(io_cxt, 1, &cb) < 1)
+        {
+            cerr << "Error " << errno << ": " << strerror(errno) << " at libaio: read." << endl;
+            exit(-1);
+        }
+        ++cnt;
+    }
+
+    void syncop() override
+    {
+       //    cbs.emplace_back(new iocb);
+       //    auto& cb = cbs.back();
+       //    int err;
+       //    //io_prep_fsync(cb, fd);
+       //    //if ((err = io_submit(io_cxt, 1, &cb)) < 0)
+       //    if ((err = io_fsync(io_cxt, cb, nullptr, fd)) < 0)
+       //    {
+       //        cerr << "Error " << errno << ": " << strerror(errno) << " at libaio: fsync." << endl;
+       //        cerr << "return: " << err << endl;
+       //        exit(-1);
+       //    }
+       //    ++cnt;
+    }
+
+    static void startEntry(size_t thread_id)
+    {
+        LibAIOWrite lw;
+        lw.run(thread_id);
+    }
+
+    int cnt;
+    io_event events[65536];
+    static io_context_t io_cxt;
+};
+
 class TAIWrite : public RandomWrite
 {
 public: 
@@ -453,7 +526,7 @@ int main(int argc, char* argv[])
 {
     if (argc != 4)
     {
-        cerr << "need argument for thread number, type of IO to test and workload type" << endl;
+        cerr << "Need arguments for thread number, type of IO to test and workload type" << endl;
         exit(-1);
     }
     thread_num = stoll(argv[1]);
@@ -467,64 +540,43 @@ int main(int argc, char* argv[])
     workload = stoi(argv[3]);
     auto begin = high_resolution_clock::now();
 
-    if (testtype == 0)
+    tai::Log::log(testname[testtype]);
+    vector<thread> threads;
+    switch (testtype)
     {
-        tai::Log::log(testname[testtype]);
-        vector<thread> bthreads;
+    case 0:
+    case 1:
         for (size_t i = 0; i < thread_num; ++i)
-            bthreads.emplace_back(thread(BlockingWrite::startEntry, i, 0));
-        for (auto &t : bthreads)
-            t.join();
-    }
-    else if (testtype == 1)
-    {
-        tai::Log::log(testname[testtype]);
-        vector<thread> bthreads;
+            threads.emplace_back(thread(BlockingWrite::startEntry, i, testtype & (O_DIRECT | O_SYNC)));
+        break;
+    case 2:
         for (size_t i = 0; i < thread_num; ++i)
-            bthreads.emplace_back(thread(BlockingWrite::startEntry, i, O_DIRECT | O_SYNC));
-        for (auto &t : bthreads)
-            t.join();
-    }
-    else if (testtype == 2)
-    {
-        tai::Log::log(testname[testtype]);
-        vector<thread> athreads;
-        for (size_t i = 0; i < thread_num; ++i)
-            athreads.emplace_back(thread(AIOWrite::startEntry, i));
-        for (auto &t : athreads)
-            t.join();
-    }
-    else if (testtype == 3)
-    {
-        tai::Log::log(testname[testtype]);
+            threads.emplace_back(thread(AIOWrite::startEntry, i));
+        break;
+    case 3:
         io_setup(1048576, &LibAIOWrite::io_cxt);
-        vector<thread> lthreads;
         for (size_t i = 0; i < thread_num; ++i)
-            lthreads.emplace_back(thread(LibAIOWrite::startEntry, i));
-        for (auto &t : lthreads)
-            t.join();
-    }
-    else if (testtype == 4)
-    {
-        tai::Log::log(testname[testtype]);
+            threads.emplace_back(thread(LibAIOWrite::startEntry, i));
+        break;
+    case 4:
         tai::aio_init();
-        vector<thread> tthreads;
         for (size_t i = 0; i < thread_num; ++i)
-            tthreads.emplace_back(thread(TAIWrite::startEntry, i));
-        for (auto &t : tthreads)
-            t.join();
+            threads.emplace_back(thread(TAIWrite::startEntry, i));
+        break;
     }
+    for (auto& t : threads)
+	t.join();
 
     auto time = duration_cast<nanoseconds>(high_resolution_clock::now() - begin).count();
     if (testtype == 4)
         tai::aio_end();
-    tai::Log::log(testname[testtype], " random ", wlname[workload], ": ", 1e-9 * time, " s in total, ", IO_ROUND * ((workload==2)?2:1), " ops/thread, ",
-            thread_num, " threads, ", 1e9 * IO_ROUND * ((workload==2)?2:1) * thread_num / time, " iops");
+    tai::Log::log(testname[testtype], " random ", wlname[workload], ": ", time / 1e9, " s in total, ", IO_ROUND * (int(workload == 2) + 1), " ops/thread, ",
+            thread_num, " threads, ", 1e9 * IO_ROUND * (int(workload == 2) + 1) * thread_num / time, " iops");
     if (testtype == 4)
     {
-        auto rt = tai::Log::run_time.load() * 1e-9;
-        auto st = tai::Log::steal_time.load() * 1e-9;
-        auto bt = tai::Log::barrier_time.load() * 1e-9;
+        auto rt = tai::Log::run_time.load() / 1e9;
+        auto st = tai::Log::steal_time.load() / 1e9;
+        auto bt = tai::Log::barrier_time.load() / 1e9;
         tai::Log::log("Total run time: " , rt, " s, steal time: ", st, " s, barrier time: ", bt, " s");
     }
 

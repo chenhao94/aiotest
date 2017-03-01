@@ -97,9 +97,9 @@ test_mt: all
 	if [ `uname` == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
-	for i in `seq 0 3`; do dd if=/dev/zero of=tmp/file$$i bs=1G count=1; done
+	for i in `seq 0 2`; do dd if=/dev/zero of=tmp/file$$i bs=512M count=1; done
 	echo 'thread num = 3'
-	for i in `seq 0 4`; do for j in `seq 0 2`; do for k in `seq 1 3`; do \
+	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in 1 2; do \
 		if [ `uname` == Darwin ]; then sudo purge; fi; \
 		if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
 		time (bin/multi_thread_comp $$k $$i $$j); \

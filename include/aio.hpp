@@ -55,7 +55,7 @@ namespace tai
 
             static void init()
             {
-                ctrl.reset(new Controller(1 << 28, 1 << 30, 4));
+                ctrl.reset(new Controller(1 << 28, 1 << 30, 3));
             }
 
             static void end()

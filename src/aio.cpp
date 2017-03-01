@@ -95,8 +95,8 @@ namespace tai
             return false;
         }
 
-        //auto tree = new BTreeDefault(path);
-        auto tree = new BTreeTrivial(path);
+        auto tree = new BTree<34, 5, 2, 1, 1, 2, 7, 12>(path);
+        // auto tree = new BTreeTrivial(path);
         if (tree->failed())
         {
             Log::debug("Failed to register fd = ", fd, " due to B-tree construction failure.");
