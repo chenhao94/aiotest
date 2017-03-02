@@ -19,7 +19,7 @@
 #include <errno.h>
 #include <aio.h>
 
-#ifdef LINUX
+#ifdef __linux__
 #include <libaio.h>
 #endif
 
@@ -97,7 +97,7 @@ public:
         tai::deregister_fd(fd);
         //fclose(file);
         close(fd);
-        delete[] data;
+        operator delete[](data, align_val_t(512));
     }
 
     void run_readonly(size_t thread_id)
@@ -122,7 +122,7 @@ public:
         cleanup();
         tai::deregister_fd(fd);
         close(fd);
-        delete[] buf;
+        operator delete[](buf, align_val_t(512));
     }
 
     void run_readwrite(size_t thread_id)
@@ -160,8 +160,8 @@ public:
         cleanup();
         tai::deregister_fd(fd);
         close(fd);
-        delete[] data;
-        delete[] buf;
+        operator delete[](data, align_val_t(512));
+        operator delete[](buf, align_val_t(512));
     }
 
     void run(size_t thread_id)
@@ -320,25 +320,25 @@ public:
 
     LibAIOWrite()
     {
-        #ifdef LINUX
+        #ifdef __linux__
         cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); openflags |= O_DIRECT;
         #endif
     }
 
-    #ifdef LINUX
+    #ifdef __linux__
     vector<iocb*> cbs;
     #endif
 
     void reset_cb() override
     {
-        #ifdef LINUX
+        #ifdef __linux__
         cbs.clear();
         #endif
     }
 
     void wait_cb() override
     {
-        #ifdef LINUX
+        #ifdef __linux__
         io_getevents(io_cxt, cnt, cnt, events, NULL);
         #endif
         cnt = 0;
@@ -346,7 +346,7 @@ public:
 
     void writeop(off_t offset, char* data) override
     {
-        #ifdef LINUX
+        #ifdef __linux__
         cbs.emplace_back(new iocb);
         auto& cb = cbs.back();
         io_prep_pwrite(cb, fd, data, WRITE_SIZE, offset);
@@ -361,7 +361,7 @@ public:
 
     void readop(off_t offset, char* data) override
     {
-        #ifdef LINUX
+        #ifdef __linux__
         cbs.emplace_back(new iocb);
         auto& cb = cbs.back();
         io_prep_pread(cb, fd, data, READ_SIZE, offset);
@@ -398,13 +398,13 @@ public:
 
     int cnt = 0;
 
-    #ifdef LINUX
+    #ifdef __linux__
     io_event events[65536];
     static io_context_t io_cxt;
     #endif
 };
 
-#ifdef LINUX
+#ifdef __linux__
 io_context_t LibAIOWrite::io_cxt;
 #endif
 
@@ -505,7 +505,7 @@ int main(int argc, char* argv[])
     case 1:
         for (size_t i = 0; i < thread_num; ++i)
             threads.emplace_back(thread(BlockingWrite::startEntry, i, testtype & (
-                            #ifdef LINUX
+                            #ifdef __linux__
                             O_DIRECT |
                             #endif
                             O_SYNC)));
@@ -515,7 +515,7 @@ int main(int argc, char* argv[])
             threads.emplace_back(thread(AIOWrite::startEntry, i));
         break;
     case 3:
-        #ifdef LINUX
+        #ifdef __linux__
         io_setup(1048576, &LibAIOWrite::io_cxt);
         #endif
         for (size_t i = 0; i < thread_num; ++i)
