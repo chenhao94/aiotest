@@ -89,6 +89,7 @@ namespace tai
                     for (; dst.load(std::memory_order_acquire) != Sync; std::this_thread::yield());
             }
             state.store(post = f(), std::memory_order_relaxed);
+            Log::debug("State changes to ", to_string(post));
             ctrl.state.store(post, std::memory_order_release);
         }
         Log::debug_counter_add(Log::barrier_time, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());

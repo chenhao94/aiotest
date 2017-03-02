@@ -82,7 +82,7 @@ namespace tai::Log
     template<typename... T>
     void debug(T&&... elem)
     {
-        // std::cerr << concat(elem...) + "\n" << std::flush;
+        std::cerr << concat(elem...) + "\n" << std::flush;
     }
 
     template<typename... T>
