@@ -16,13 +16,15 @@ namespace tai
             return "Running";
         case Unlocking:
             return "Unlocking";
+        case Cleanup:
+            return "Cleanup";
+        case Idle:
+            return "Idle";
         case GC:
             return "GC";
         case Quit:
             return "Quit";
         case Sync:
-            return "Sync";
-        case Idle:
             return "Sync";
         }
         return "Unknown";

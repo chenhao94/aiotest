@@ -74,24 +74,23 @@ namespace tai
         state.store(Sync, std::memory_order_release);
         if (id)
         {
-            for (auto i = Controller::spin; i-- && (post = state.load(std::memory_order_relaxed)) == Sync;);
+            for (auto i = Controller::spin; i-- && (post = ctrl.state.load(std::memory_order_acquire)) == Sync;);
             if (post == Sync)
-                for (; (post = state.load(std::memory_order_relaxed)) == Sync; std::this_thread::yield());
+                for (; (post = ctrl.state.load(std::memory_order_acquire)) == Sync; std::this_thread::yield());
         }
         else
         {
+            ctrl.state.store(Sync, std::memory_order_acquire);
             for (size_t i = 1; i < ctrl.concurrency; ++i)
             {
                 auto& dst = ctrl.workers[i].state;
-                if (dst.load(std::memory_order_relaxed) == Idle)
-                    continue;
-                for (auto j = Controller::spin; j-- && (post = dst.load(std::memory_order_relaxed)) != Sync;);
+                for (auto j = Controller::spin; j-- && (post = dst.load(std::memory_order_acquire)) != Sync;);
                 if (post != Sync)
-                    for (; dst.load(std::memory_order_relaxed) != Sync; std::this_thread::yield());
+                    for (; dst.load(std::memory_order_acquire) != Sync; std::this_thread::yield());
             }
-            state.store(post = f(), std::memory_order_acquire);
+            state.store(post = f(), std::memory_order_relaxed);
+            ctrl.state.store(post, std::memory_order_release);
         }
-        broadcast(post, std::memory_order_acquire);
         Log::debug_counter_add(Log::barrier_time, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
         return post;
     }
@@ -112,6 +111,83 @@ namespace tai
     {
         using namespace std::chrono;
         auto start = high_resolution_clock::now();
+
+        Controller::ctrl = &ctrl;
+        worker = this;
+        sgid = gid;
+        state.store(Created, std::memory_order_release);
+        while (state.load(std::memory_order_acquire) != Pulling);
+        ssize_t roundIdle = 0;
+        std::function<State()> decision = [](){ return Running; };
+        for (auto entry = Pulling; entry != Quit;)
+            switch (entry = barrier(decision))
+            {
+            case Running:
+                Log::debug("[", id, "] Steal");
+                roundIdle = 0;
+                steal();
+                if (!id)
+                    decision = [](){
+                        for (auto& i : Controller::ctrl->workers)
+                            i.queue.clearCurrent();
+                        return GC;
+                    };
+                break;
+            case Unlocking:
+                steal();
+                if (!id)
+                    decision = [this](){
+                        for (auto& i : Controller::ctrl->workers)
+                            i.queue.clearCurrent("Done");
+                        if (closing())
+                            return Cleanup;
+                        for (auto& i : Controller::ctrl->workers)
+                            i.queue.roll();
+                        return queue.popTodo() ? Running : Idle;
+                    };
+                break;
+            case Cleanup:
+                cleanup = true;
+                --roundIdle;
+            case Idle:
+                ++roundIdle;
+            case GC:
+                {
+                    const auto exceed = roundIdle - Controller::roundIdle;
+                    if (!roundIdle || ctrl.lower >> std::max(exceed - 1, (ssize_t)0))
+                    {
+                        const auto lower = cleanup ? 0 : ctrl.lower >> std::max(exceed, (ssize_t)0);
+                        while (ctrl.used.load(std::memory_order_relaxed) > lower && ctrl.cache.consume_one([](auto i){ i->gc(); }));
+                        if (!id)
+                            decision = [](){
+                                for (auto& i : Controller::ctrl->workers)
+                                    i.queue.setupDone();
+                                return Unlocking;
+                            };
+                    }
+                    else if (!id)
+                        decision = [this](){
+                            if (closing())
+                                return Quit;
+                            for (auto& i : Controller::ctrl->workers)
+                                i.queue.roll();
+                            return queue.popTodo() ? Running : Idle;
+                        };
+                }
+                break;
+            default:
+                break;
+            }
+
+        Log::debug_counter_add(Log::run_time, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
+    }
+
+    /*
+       void Worker::run()
+       {
+       using namespace std::chrono;
+        auto start = high_resolution_clock::now();
+
         Controller::ctrl = &ctrl;
         worker = this;
         sgid = gid;
@@ -151,8 +227,10 @@ namespace tai
                     break;
             }
         }
+
         Log::debug_counter_add(Log::run_time, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
     }
+    */
 
     std::atomic<size_t> Worker::poolSize;
     boost::lockfree::queue<size_t> Worker::pool(std::thread::hardware_concurrency());

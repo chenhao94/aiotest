@@ -11,10 +11,11 @@ namespace tai
         Pulling,
         Running,
         Unlocking,
+        Cleanup,
+        Idle,
         GC,
         Quit,
-        Sync,
-        Idle
+        Sync
     };
 
     const char* to_cstring(WorkerState _);
