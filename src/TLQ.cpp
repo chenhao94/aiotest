@@ -27,8 +27,8 @@ namespace tai
             task = nullptr;
         }
         // Controller::ctrl->todo.fetch_add(ready.size(), std::memory_order_relaxed);
-        Controller::ctrl->todo += ready.size();
         setup(ready);
+        Controller::ctrl->todo += current->size();
         if (current->size())
             Log::debug("[", Worker::worker->id, "] ",
                     current->size(),
