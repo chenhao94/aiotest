@@ -77,10 +77,11 @@ namespace tai
             for (auto i = Controller::spin; i-- && (post = ctrl.state.load(std::memory_order_acquire)) == Sync;);
             if (post == Sync)
                 for (; (post = ctrl.state.load(std::memory_order_acquire)) == Sync; std::this_thread::yield());
+            state.store(post, std::memory_order_relaxed);
         }
         else
         {
-            ctrl.state.store(Sync, std::memory_order_acquire);
+            ctrl.state.store(Sync, std::memory_order_relaxed);
             for (size_t i = 1; i < ctrl.concurrency; ++i)
             {
                 auto& dst = ctrl.workers[i].state;
