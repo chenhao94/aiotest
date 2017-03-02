@@ -55,7 +55,7 @@ namespace tai
 
     bool Worker::closing()
     {
-        return !ctrl.ready.load(std::memory_order_relaxed);
+        return !ctrl.ready.load(std::memory_order_acquire);
     }
 
     void Worker::idle()
@@ -156,6 +156,7 @@ namespace tai
             case GC:
                 {
                     const auto exceed = roundIdle - Controller::roundIdle;
+                    Log::debug("Exceed ", exceed, " = ", roundIdle, " - ", Controller::roundIdle, " : ", ctrl.lower);
                     if (!roundIdle || ctrl.lower >> std::max(exceed - 1, (ssize_t)0))
                     {
                         const auto lower = cleanup ? 0 : ctrl.lower >> std::max(exceed, (ssize_t)0);
