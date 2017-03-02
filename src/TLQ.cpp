@@ -7,15 +7,12 @@
 
 namespace tai
 {
-    size_t TLQ::busy()
-    {
-        return Controller::ctrl->todo.load(std::memory_order_relaxed);
-    }
-
     size_t TLQ::popTodo()
     {
-        const auto ret = Controller::ctrl->todo.load(std::memory_order_relaxed);
-        Controller::ctrl->todo.store(0, std::memory_order_relaxed);
+        // const auto ret = Controller::ctrl->todo.load(std::memory_order_relaxed);
+        // Controller::ctrl->todo.store(0, std::memory_order_relaxed);
+        const auto ret = Controller::ctrl->todo;
+        Controller::ctrl->todo = 0;
         return ret;
     }
 
@@ -29,7 +26,8 @@ namespace tai
             delete task;
             task = nullptr;
         }
-        Controller::ctrl->todo.fetch_add(ready.size(), std::memory_order_relaxed);
+        // Controller::ctrl->todo.fetch_add(ready.size(), std::memory_order_relaxed);
+        Controller::ctrl->todo += ready.size();
         setup(ready);
         if (current->size())
             Log::debug("[", Worker::worker->id, "] ",

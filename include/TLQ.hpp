@@ -46,9 +46,6 @@ namespace tai
         {
         }
 
-        // Check if there's anything to do.
-        size_t busy();
-
         // Pull and clear todo counter;
         size_t popTodo();
 

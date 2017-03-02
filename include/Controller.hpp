@@ -46,7 +46,8 @@ namespace tai
         std::atomic<bool> ready = { true };
 
         // Number of tasks to do in this round.
-        std::atomic<size_t> todo = { 0 };
+        // std::atomic<size_t> todo = { 0 };
+        size_t todo = 0;
 
         // GC until memory usage goes down to lower bound.
         const size_t lower;
