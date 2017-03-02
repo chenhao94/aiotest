@@ -9,8 +9,6 @@
 
 namespace tai
 {
-    std::atomic_llong Log::barrier_time, Log::steal_time, Log::run_time;
-
     Worker::Worker(Controller& ctrl, size_t id) : ctrl(ctrl), id(id)
     {
         if (!pool.pop(gid))
@@ -154,13 +152,6 @@ namespace tai
             }
         }
         Log::debug_counter_add(Log::run_time, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
-    }
-
-    void Log::debug_counter_add(std::atomic_llong &counter, long long num)
-    {
-#ifdef _DEBUG
-        counter.fetch_add(num, std::memory_order_relaxed);
-#endif
     }
 
     std::atomic<size_t> Worker::poolSize;

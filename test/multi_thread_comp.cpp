@@ -18,7 +18,10 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <aio.h>
+
+#ifdef LINUX
 #include <libaio.h>
+#endif
 
 #include "tai.hpp"
 #include "aio.hpp"
@@ -182,7 +185,7 @@ class BlockingWrite : public RandomWrite
 {
 public: 
 
-    BlockingWrite() : RandomWrite() {}
+    BlockingWrite() {}
 
     void writeop(off_t offset, char* data) override
     {
@@ -233,7 +236,7 @@ class AIOWrite : public RandomWrite
 {
 public:
 
-    AIOWrite() : RandomWrite() { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); }
+    AIOWrite() { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); }
 
     vector<aiocb> cbs;
 
@@ -315,20 +318,35 @@ class LibAIOWrite : public RandomWrite
 {
 public:
 
-    LibAIOWrite() : RandomWrite(), cnt(0) { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); openflags |= O_DIRECT; }
+    LibAIOWrite()
+    {
+        #ifdef LINUX
+        cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); openflags |= O_DIRECT;
+        #endif
+    }
 
+    #ifdef LINUX
     vector<iocb*> cbs;
+    #endif
 
-    void reset_cb() override { cbs.clear(); }
+    void reset_cb() override
+    {
+        #ifdef LINUX
+        cbs.clear();
+        #endif
+    }
 
     void wait_cb() override
     {
+        #ifdef LINUX
         io_getevents(io_cxt, cnt, cnt, events, NULL);
+        #endif
         cnt = 0;
     }
 
     void writeop(off_t offset, char* data) override
     {
+        #ifdef LINUX
         cbs.emplace_back(new iocb);
         auto& cb = cbs.back();
         io_prep_pwrite(cb, fd, data, WRITE_SIZE, offset);
@@ -337,11 +355,13 @@ public:
             cerr << "Error " << errno << ": " << strerror(errno) << " at libaio: write." << endl;
             exit(-1);
         }
+        #endif
         ++cnt;
     }
 
     void readop(off_t offset, char* data) override
     {
+        #ifdef LINUX
         cbs.emplace_back(new iocb);
         auto& cb = cbs.back();
         io_prep_pread(cb, fd, data, READ_SIZE, offset);
@@ -350,6 +370,7 @@ public:
             cerr << "Error " << errno << ": " << strerror(errno) << " at libaio: read." << endl;
             exit(-1);
         }
+        #endif
         ++cnt;
     }
 
@@ -375,16 +396,23 @@ public:
         lw.run(thread_id);
     }
 
-    int cnt;
+    int cnt = 0;
+
+    #ifdef LINUX
     io_event events[65536];
     static io_context_t io_cxt;
+    #endif
 };
+
+#ifdef LINUX
+io_context_t LibAIOWrite::io_cxt;
+#endif
 
 class TAIWrite : public RandomWrite
 {
 public: 
 
-    TAIWrite() : RandomWrite() { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); }
+    TAIWrite() { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); }
 
     vector<tai::aiocb> cbs;
 
@@ -451,8 +479,6 @@ public:
     }
 };
 
-io_context_t LibAIOWrite::io_cxt;
-
 int main(int argc, char* argv[])
 {
     if (argc != 4)
@@ -478,14 +504,20 @@ int main(int argc, char* argv[])
     case 0:
     case 1:
         for (size_t i = 0; i < thread_num; ++i)
-            threads.emplace_back(thread(BlockingWrite::startEntry, i, testtype & (O_DIRECT | O_SYNC)));
+            threads.emplace_back(thread(BlockingWrite::startEntry, i, testtype & (
+                            #ifdef LINUX
+                            O_DIRECT |
+                            #endif
+                            O_SYNC)));
         break;
     case 2:
         for (size_t i = 0; i < thread_num; ++i)
             threads.emplace_back(thread(AIOWrite::startEntry, i));
         break;
     case 3:
+        #ifdef LINUX
         io_setup(1048576, &LibAIOWrite::io_cxt);
+        #endif
         for (size_t i = 0; i < thread_num; ++i)
             threads.emplace_back(thread(LibAIOWrite::startEntry, i));
         break;

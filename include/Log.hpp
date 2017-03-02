@@ -91,7 +91,9 @@ namespace tai::Log
         std::cerr << concat(elem...) + "\n" << std::flush;
     }
 
-    void debug_counter_add(std::atomic_llong &counter, long long num);
+    void debug_counter_add(std::atomic<ssize_t>& counter, ssize_t num);
 
-    extern std::atomic_llong barrier_time, steal_time, run_time;
+    extern std::atomic<ssize_t> barrier_time;
+    extern std::atomic<ssize_t> steal_time;
+    extern std::atomic<ssize_t> run_time;
 }

@@ -23,12 +23,12 @@ export CXX = clang++
 # export CXX = g++
 export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g 
 ifeq ($(mode), debug) 
-	CXXFLAGS += -D_DEBUG
+	CXXFLAGS += -DTAI_DEBUG
 endif
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
-export CXXFLAGS += -lm -lpthread -laio
-export CXXFLAGS += $(shell if [ `uname` = Linux ]; then echo '-lrt'; fi)
+export CXXFLAGS += -lm -lpthread
+export CXXFLAGS += $(shell if [ `uname` = Linux ]; then echo '-lrt -laio'; fi)
 # export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
 export MKDIR = @mkdir -p
