@@ -34,7 +34,7 @@ namespace tai
         std::atomic<ssize_t> remain = { 0 };
 
         // Reference the queue for current phase.
-        std::vector<Task>* current = nullptr;
+        std::vector<Task>* current = &ready;
 
     public:
         TLQ() :
