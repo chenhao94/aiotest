@@ -11,17 +11,17 @@ namespace tai
         for (size_t i = 0; i < concurrency; workers.emplace_back(*this, i++));
         for (auto& i : workers)
             i.go();
-        wait(Created, std::memory_order_relaxed);
-        atomic_thread_fence(std::memory_order_acq_rel);
+        wait(Created, std::memory_order_acquire);
+        // atomic_thread_fence(std::memory_order_acq_rel);
         for (auto& i : workers)
-            i.state.store(Pulling, std::memory_order_relaxed);
+            i.state.store(Pulling, std::memory_order_release);
     }
 
     Controller::~Controller()
     {
         for (auto& i : workers)
             i.reject.store(true, std::memory_order_relaxed);
-        ready.store(false, std::memory_order_release);
+        ready.store(false, std::memory_order_relaxed);
         wait(Quit, std::memory_order_relaxed);
     }
 

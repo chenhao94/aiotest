@@ -55,7 +55,7 @@ namespace tai
 
     bool Worker::closing()
     {
-        return !ctrl.ready.load(std::memory_order_acquire);
+        return !ctrl.ready.load(std::memory_order_relaxed);
     }
 
     void Worker::idle()
@@ -81,7 +81,7 @@ namespace tai
         }
         else
         {
-            ctrl.state.store(Sync, std::memory_order_relaxed);
+            ctrl.state.store(Sync, std::memory_order_release);
             for (size_t i = 1; i < ctrl.concurrency; ++i)
             {
                 auto& dst = ctrl.workers[i].state;
@@ -118,7 +118,7 @@ namespace tai
         worker = this;
         sgid = gid;
         state.store(Created, std::memory_order_release);
-        while (state.load(std::memory_order_acquire) != Pulling);
+        while (state.load(std::memory_order_acquire) == Created);
         ssize_t roundIdle = 0;
         std::function<State()> decision = [](){ return Running; };
         for (auto entry = Pulling; entry != Quit;)
@@ -150,13 +150,11 @@ namespace tai
                 break;
             case Cleanup:
                 cleanup = true;
-                --roundIdle;
             case Idle:
                 ++roundIdle;
             case GC:
                 {
                     const auto exceed = roundIdle - Controller::roundIdle;
-                    Log::debug("Exceed ", exceed, " = ", roundIdle, " - ", Controller::roundIdle, " : ", ctrl.lower);
                     if (!roundIdle || ctrl.lower >> std::max(exceed - 1, (ssize_t)0))
                     {
                         const auto lower = cleanup ? 0 : ctrl.lower >> std::max(exceed, (ssize_t)0);
