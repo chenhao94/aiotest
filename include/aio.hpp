@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <atomic>
+#include <thread>
 
 #include <signal.h>
 
@@ -55,7 +56,7 @@ namespace tai
 
             static void init()
             {
-                ctrl.reset(new Controller(1 << 28, 1 << 30, 3));
+                ctrl.reset(new Controller(1 << 28, 1 << 30, std::thread::hardware_concurrency()));
             }
 
             static void end()

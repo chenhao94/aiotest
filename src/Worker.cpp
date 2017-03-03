@@ -71,7 +71,8 @@ namespace tai
         using namespace std::chrono;
         auto start = high_resolution_clock::now();
         auto post = Sync;
-        state.store(Sync, std::memory_order_release);
+        // state.store(Sync, std::memory_order_release);
+        state.store(Sync);
         if (id)
         {
             for (auto i = Controller::spin; i-- && (post = ctrl.state.load(std::memory_order_acquire)) == Sync;);
@@ -91,7 +92,8 @@ namespace tai
             }
             state.store(post = f(), std::memory_order_relaxed);
             Log::debug("State changes to ", to_string(post));
-            ctrl.state.store(post, std::memory_order_release);
+            // ctrl.state.store(post, std::memory_order_release);
+            ctrl.state.store(post);
         }
         Log::debug_counter_add(Log::barrier_time, duration_cast<nanoseconds>(high_resolution_clock::now() - start).count());
         return post;
