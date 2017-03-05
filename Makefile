@@ -121,7 +121,9 @@ test_mt:
 	done done done
 
 ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),test_mt)
 sinclude $(DEPS)
+endif
 endif
 
 .PHONY: clean
