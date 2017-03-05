@@ -485,10 +485,12 @@ int main(int argc, char* argv[])
         cerr << "Need arguments for thread number, type of IO to test and workload type" << endl;
         exit(-1);
     }
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 1])); }({
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 1])); }({
             &thread_num,
             &testType,
-            &workload,
+            &workload
+            });
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 4])); }({
             &FILE_SIZE,
             &READ_SIZE,
             &WRITE_SIZE,
