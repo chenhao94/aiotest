@@ -16,7 +16,8 @@ build:
   script:
     - mkdir -p log
     - make test_mt TEST_ARGS='24 12 12 18 8 10' 2>&1 | tee log/4K-Overlay.log
-    - head -n11 log/*.log | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - head -n11 log/*.log | tail -n+2
+    - grep iops log/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
   artifacts:
     paths:
       - log/
@@ -27,7 +28,8 @@ build:
   script:
     - mkdir -p log
     - make test_mt TEST_ARGS='30 12 12 16 8 10' 2>&1 | tee log/4K-Discrete.log
-    - head -n11 log/*.log | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - head -n11 log/*.log | tail -n+2
+    - grep iops log/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
   artifacts:
     paths:
       - log/
@@ -38,7 +40,8 @@ build:
   script:
     - mkdir -p log
     - make test_mt TEST_ARGS='25 14 14 16 8 10' 2>&1 | tee log/16K-Overlay.log
-    - head -n11 log/*.log | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - head -n11 log/*.log | tail -n+2
+    - grep iops log/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
   artifacts:
     paths:
       - log/
@@ -49,7 +52,8 @@ build:
   script:
     - mkdir -p log
     - make test_mt TEST_ARGS='31 14 14 15 8 10' 2>&1 | tee log/16K-Discrete.log
-    - head -n11 log/*.log | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - head -n11 log/*.log | tail -n+2
+    - grep iops log/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
   artifacts:
     paths:
       - log/
@@ -60,7 +64,8 @@ build:
   script:
     - mkdir -p log
     - make test_mt TEST_ARGS='26 20 20 12 5 7' 2>&1 | tee log/1M-Overlay.log
-    - head -n11 log/*.log | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - head -n11 log/*.log | tail -n+2
+    - grep iops log/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
   artifacts:
     paths:
       - log/
@@ -70,8 +75,9 @@ build:
   stage: test
   script:
     - mkdir -p log
-    - make test_mt TEST_ARGS='31 20 20 10 5 7' 2>&1 | tee log/1M-Discrete.log
-    - head -n11 log/*.log | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - make test_mt TEST_ARGS='31 20 20 9 4 6' 2>&1 | tee log/1M-Discrete.log
+    - head -n11 log/*.log | tail -n+2
+    - grep iops log/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
   artifacts:
     paths:
       - log/
