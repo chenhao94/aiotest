@@ -111,7 +111,7 @@ test_mt:
 	if [ `uname` == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
-	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=`sed 's/\([0-9]*\).*/2^\1/' <<<"$(TEST_ARGS)" | bc` count=1; done
+	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=1048576 count=`sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' <<<"$(TEST_ARGS)" | bc`; done
 	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do \
 		if [ `uname` == Darwin ]; then sudo purge; fi; \
 		if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
