@@ -32,31 +32,20 @@ using namespace std;
 using namespace chrono;
 using namespace this_thread;
 
+size_t thread_num;
+size_t testType;
+size_t workload;
 size_t FILE_SIZE;
 size_t READ_SIZE;
 size_t WRITE_SIZE;
 size_t IO_ROUND;
 size_t SYNC_RATE;
 size_t WAIT_RATE;
-size_t ALIGN;
 
-/*
-constexpr size_t    READ_SIZE = 1ll << 16;
-constexpr size_t    WRITE_SIZE = 1ll << 16;
-constexpr size_t    ALIGN = max(READ_SIZE, WRITE_SIZE);
-constexpr size_t    FILE_SIZE = 1ll << 31;
-constexpr size_t    IO_ROUND = 1ll << 16;
-constexpr size_t    SYNC_RATE = 1ll << 10;
-constexpr size_t    WAIT_RATE = 1ll << 10;
-*/
-
-size_t thread_num;
-int workload;
-
-auto randgen()
+auto randgen(size_t align = 0)
 {
     static const auto size = FILE_SIZE - (READ_SIZE > WRITE_SIZE ? READ_SIZE : WRITE_SIZE) + 1;
-    return rand() % size;
+    return rand() % size & -align;
 }
 
 class RandomWrite;
@@ -96,7 +85,7 @@ public:
                 if (!(i & ~-WAIT_RATE))
                     wait_cb();
             }
-            auto offset = randgen() & -ALIGN;
+            auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
             writeop(offset, data);
             if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
                 tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
@@ -122,7 +111,7 @@ public:
             {
                 wait_cb();
             }
-            auto offset = randgen() & -ALIGN;
+            auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
             readop(offset, buf + (i & ~-WAIT_RATE) * WRITE_SIZE);
             if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
                 tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
@@ -157,7 +146,7 @@ public:
                     wait_cb();
                 }
             }
-            auto offset = randgen() & -ALIGN;
+            auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
             offs.push_back(offset);
             writeop(offset, data);
             if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
@@ -496,10 +485,10 @@ int main(int argc, char* argv[])
         cerr << "Need arguments for thread number, type of IO to test and workload type" << endl;
         exit(-1);
     }
-    thread_num = stoll(argv[1]);
-    auto testtype = stoll(argv[2]);
-    workload = stoi(argv[3]);
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 4])); }({
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 1])); }({
+            &thread_num,
+            &testType,
+            &workload,
             &FILE_SIZE,
             &READ_SIZE,
             &WRITE_SIZE,
@@ -516,16 +505,14 @@ int main(int argc, char* argv[])
     string wlname[] = {"read", "write", "read&write"};
     auto begin = high_resolution_clock::now();
 
-    ALIGN = max(READ_SIZE, WRITE_SIZE);
-
-    tai::Log::log(testname[testtype]);
+    tai::Log::log(testname[testType]);
     vector<thread> threads;
-    switch (testtype)
+    switch (testType)
     {
     case 0:
     case 1:
         for (size_t i = 0; i < thread_num; ++i)
-            threads.emplace_back(thread(BlockingWrite::startEntry, i, testtype & (
+            threads.emplace_back(thread(BlockingWrite::startEntry, i, testType & (
                             #ifdef __linux__
                             O_DIRECT |
                             #endif
@@ -552,11 +539,11 @@ int main(int argc, char* argv[])
 	t.join();
 
     auto time = duration_cast<nanoseconds>(high_resolution_clock::now() - begin).count();
-    if (testtype == 4)
+    if (testType == 4)
         tai::aio_end();
-    tai::Log::log(testname[testtype], " random ", wlname[workload], ": ", time / 1e9, " s in total, ", IO_ROUND * (int(workload == 2) + 1), " ops/thread, ",
+    tai::Log::log(testname[testType], " random ", wlname[workload], ": ", time / 1e9, " s in total, ", IO_ROUND * (int(workload == 2) + 1), " ops/thread, ",
             thread_num, " threads, ", 1e9 * IO_ROUND * (int(workload == 2) + 1) * thread_num / time, " iops");
-    if (testtype == 4)
+    if (testType == 4)
     {
         auto rt = tai::Log::run_time.load() / 1e9;
         auto st = tai::Log::steal_time.load() / 1e9;

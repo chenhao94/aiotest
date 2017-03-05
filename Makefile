@@ -94,7 +94,7 @@ test: all
 	$(CMP) tmp/sync tmp/aio || $(CMP) -l tmp/sync tmp/aio | wc -l
 
 .PHONY: test_mt
-test_mt: all
+test_mt:
 	@echo
 	@echo '================================'
 	@echo 'Workload     = '$(TEST_LOAD)' thread(s)'
