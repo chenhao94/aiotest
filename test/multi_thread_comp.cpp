@@ -32,20 +32,30 @@ using namespace std;
 using namespace chrono;
 using namespace this_thread;
 
-constexpr size_t    ALIGN = 1ll << 24;
-constexpr size_t    WRITE_SIZE = 1ll << 24;
-constexpr size_t    READ_SIZE = 1ll << 24;
+size_t FILE_SIZE;
+size_t READ_SIZE;
+size_t WRITE_SIZE;
+size_t IO_ROUND;
+size_t SYNC_RATE;
+size_t WAIT_RATE;
+size_t ALIGN;
+
+/*
+constexpr size_t    READ_SIZE = 1ll << 16;
+constexpr size_t    WRITE_SIZE = 1ll << 16;
+constexpr size_t    ALIGN = max(READ_SIZE, WRITE_SIZE);
 constexpr size_t    FILE_SIZE = 1ll << 31;
-constexpr size_t    IO_ROUND = 1ll << 10;
-constexpr size_t    SYNC_RATE = 1ll << 4;
-constexpr size_t    WAIT_RATE = 1ll << 6;
+constexpr size_t    IO_ROUND = 1ll << 16;
+constexpr size_t    SYNC_RATE = 1ll << 10;
+constexpr size_t    WAIT_RATE = 1ll << 10;
+*/
 
 size_t thread_num;
 int workload;
 
 auto randgen()
 {
-    constexpr auto size = FILE_SIZE - (READ_SIZE > WRITE_SIZE ? READ_SIZE : WRITE_SIZE) + 1;
+    static const auto size = FILE_SIZE - (READ_SIZE > WRITE_SIZE ? READ_SIZE : WRITE_SIZE) + 1;
     return rand() % size;
 }
 
@@ -481,21 +491,32 @@ public:
 
 int main(int argc, char* argv[])
 {
-    if (argc != 4)
+    if (argc != 10)
     {
         cerr << "Need arguments for thread number, type of IO to test and workload type" << endl;
         exit(-1);
     }
     thread_num = stoll(argv[1]);
+    auto testtype = stoll(argv[2]);
+    workload = stoi(argv[3]);
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 4])); }({
+            &FILE_SIZE,
+            &READ_SIZE,
+            &WRITE_SIZE,
+            &IO_ROUND,
+            &SYNC_RATE,
+            &WAIT_RATE
+            });
+
     tai::Log::log("thread number: ", thread_num);
     srand(time(nullptr));
     system("sync");
 
     string testname[] = {"Blocking IO", "Blocking IO (O_DIRECT | O_SYNC)", "Async IO", "LibAIO", "TAI"};
     string wlname[] = {"read", "write", "read&write"};
-    auto testtype = stoll(argv[2]);
-    workload = stoi(argv[3]);
     auto begin = high_resolution_clock::now();
+
+    ALIGN = max(READ_SIZE, WRITE_SIZE);
 
     tai::Log::log(testname[testtype]);
     vector<thread> threads;

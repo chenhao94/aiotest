@@ -10,8 +10,8 @@ namespace tai::Log
 
     void debug_counter_add(std::atomic<ssize_t>& counter, ssize_t num)
     {
-#ifdef TAI_DEBUG
+        #ifdef TAI_DEBUG
         counter.fetch_add(num, std::memory_order_relaxed);
-#endif
+        #endif
     }
 }

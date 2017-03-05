@@ -11,11 +11,61 @@ build:
     untracked: true
     expire_in: 1 day
 
-test_mt:
+4K-Overlay:
   stage: test
   script:
     - mkdir -p log
-    - make test_mt 2>&1 | tee log/test_mt.log
+    - make test_mt TEST_ARGS='24 12 12 16 8 10' 2>&1 | tee log/4K-Overlay.log
+  artifacts:
+    paths:
+      - log/
+    expire_in: 1 day
+
+4K-Discrete:
+  stage: test
+  script:
+    - mkdir -p log
+    - make test_mt TEST_ARGS='30 12 12 16 8 10' 2>&1 | tee log/4K-Discrete.log
+  artifacts:
+    paths:
+      - log/
+    expire_in: 1 day
+
+16K-Overlay:
+  stage: test
+  script:
+    - mkdir -p log
+    - make test_mt TEST_ARGS='25 14 14 15 8 10' 2>&1 | tee log/16K-Overlay.log
+  artifacts:
+    paths:
+      - log/
+    expire_in: 1 day
+
+16K-Discrete:
+  stage: test
+  script:
+    - mkdir -p log
+    - make test_mt TEST_ARGS='31 14 14 15 8 10' 2>&1 | tee log/16K-Discrete.log
+  artifacts:
+    paths:
+      - log/
+    expire_in: 1 day
+
+1M-Overlay:
+  stage: test
+  script:
+    - mkdir -p log
+    - make test_mt TEST_ARGS='26 20 20 10 5 7' 2>&1 | tee log/1M-Overlay.log
+  artifacts:
+    paths:
+      - log/
+    expire_in: 1 day
+
+1M-Discrete:
+  stage: test
+  script:
+    - mkdir -p log
+    - make test_mt TEST_ARGS='31 20 20 10 5 7' 2>&1 | tee log/1M-Discrete.log
   artifacts:
     paths:
       - log/
@@ -24,5 +74,5 @@ test_mt:
 analysis:
   stage: analysis
   script:
-    - grep iops log/test_mt.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t; done
 

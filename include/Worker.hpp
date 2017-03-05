@@ -116,22 +116,9 @@ namespace tai
         static void pushDone(Task task);
         bool pushPending(Task task);
 
-        // Broadcast a state to neighbors.
-        void broadcast(State _, std::memory_order sync = std::memory_order_seq_cst);
-
     protected:
         // Decide whether this worker should close.
         bool closing();
-
-        // Switch to idle state.
-        void idle();
-
-        // Set worker state to "Sync", wait for all workers to sync and advance to next state.
-        State barrier(State post)
-        {
-            barrier([post](){ return post; });
-            return post;
-        }
 
         // Set worker state to "Sync", wait for all workers to sync and advance to next state.
         // The next state is decided by evaluating f() at master worker after everyone reaches "Sync".

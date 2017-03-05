@@ -57,6 +57,7 @@ namespace tai
             static void init()
             {
                 ctrl.reset(new Controller(1 << 28, 1 << 30, std::thread::hardware_concurrency()));
+                // ctrl.reset(new Controller(1 << 28, 1 << 30, 2));
             }
 
             static void end()

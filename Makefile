@@ -18,10 +18,13 @@ export TESTEXES = $(patsubst $(TESTS_DIR)/%.cpp,$(TARGETS_DIR)/%,$(TESTS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
+export TEST_LOAD ?= $(shell nproc --all)
+export TEST_ARGS ?= 31 16 16 16 8 10
+
 export CXX = clang++
 # export CXX = g++-6
 # export CXX = g++
-export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g 
+export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
 ifeq ($(mode), debug) 
 	CXXFLAGS += -DTAI_DEBUG
 endif
@@ -92,17 +95,27 @@ test: all
 
 .PHONY: test_mt
 test_mt: all
+	@echo
+	@echo '================================'
+	@echo 'Workload     = '$(TEST_LOAD)' thread(s)'
+	@echo 'File Size    = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^(\1-20)/' | bc -l`' MB'
+	@echo 'Read Size    = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^(\2-10)/' | bc`' KB'
+	@echo 'Write Size   = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^(\3-10)/' | bc`' KB'
+	@echo 'I/O Rounds   = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\4/' | bc`
+	@echo 'Sync Rate    = 1/'`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\5/' | bc`
+	@echo 'Wait Rate    = 1/'`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\6/' | bc`
+	@echo '================================'
+	@echo
 	sudo sync
 	if [ `uname` == Darwin ]; then sudo purge; fi
 	if [ `uname` == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
-	for i in `seq 0 2`; do dd if=/dev/zero of=tmp/file$$i bs=2G count=1; done
-	echo 'thread num = 3'
-	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in 1 2; do \
+	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=`sed 's/\([0-9]*\).*/2^\1/' <<<"$(TEST_ARGS)" | bc` count=1; done
+	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do \
 		if [ `uname` == Darwin ]; then sudo purge; fi; \
 		if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
-		time (bin/multi_thread_comp $$k $$i $$j); \
+		time (bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS)); \
 		time (sync tmp/*); \
 		time sync; \
 	done done done

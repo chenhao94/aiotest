@@ -59,9 +59,6 @@ namespace tai
         // Cahce queue for GC.
         boost::lockfree::queue<BTreeNodeBase*> cache;
 
-        // Job available under this controller.
-        std::atomic<WorkerState> state = { Sync };
-
         explicit Controller(size_t lower, size_t upper, size_t concurrency = std::max(std::thread::hardware_concurrency() * 4 / 5, 1u));
 
         ~Controller();
