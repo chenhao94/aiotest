@@ -321,6 +321,8 @@ public:
     {
         #ifdef __linux__
         cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); openflags |= O_DIRECT;
+        #else
+        cerr << "Warning: LibAIO is not supported on non-Linux system." << endl;
         #endif
     }
 
