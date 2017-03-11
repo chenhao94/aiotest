@@ -20,6 +20,7 @@ export LIBTAI = $(LIBS_DIR)/libtai.a
 
 export TEST_LOAD ?= $(shell nproc --all)
 export TEST_ARGS ?= 31 16 16 16 8 10
+# file size, read size, write size, io round, sync rate, wait rate (2^x)
 
 export CXX = clang++
 # export CXX = g++-6
