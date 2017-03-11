@@ -516,11 +516,11 @@ int main(int argc, char* argv[])
     case 0:
     case 1:
         for (size_t i = 0; i < thread_num; ++i)
-            threads.emplace_back(thread(BlockingWrite::startEntry, i, testType ? (
+            threads.emplace_back(thread(BlockingWrite::startEntry, i, -testType & (
                             #ifdef __linux__
                             O_DIRECT |
                             #endif
-                            O_SYNC):0));
+                            O_SYNC)));
         break;
     case 2:
         for (size_t i = 0; i < thread_num; ++i)
