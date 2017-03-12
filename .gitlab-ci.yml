@@ -87,4 +87,7 @@ analysis:
   stage: analysis
   script:
     - for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t; echo; echo; done
+  artifacts:
+    paths:
+      - log/
 
