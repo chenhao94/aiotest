@@ -63,7 +63,7 @@ build:
   stage: test
   script:
     - mkdir -p log
-    - nice -n 0 make test_mt TEST_ARGS='26 20 20 12 5 7' 2>&1 | tee log/1M-Overlay.log
+    - nice -n 0 make test_mt TEST_ARGS='26 20 20 10 5 7' 2>&1 | tee log/1M-Overlay.log
     - head -n11 log/*.log | tail -n+2
     - grep iops log/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
   artifacts:
