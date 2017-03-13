@@ -46,7 +46,6 @@ namespace tai
         std::atomic<bool> ready = { true };
 
         // Number of tasks to do in this round.
-        // std::atomic<size_t> todo = { 0 };
         size_t todo = 0;
 
         // GC until memory usage goes down to lower bound.
@@ -54,7 +53,7 @@ namespace tai
         // Refuse (but not strictly) to allocate cache memory beyond upper bound.
         const size_t upper;
         // Memory usage.
-        std::atomic<size_t> used = {0};
+        std::atomic<size_t> used = { 0 };
 
         // Cahce queue for GC.
         boost::lockfree::queue<BTreeNodeBase*> cache;
