@@ -41,7 +41,7 @@ namespace tai
         // Workers.
         std::vector<Worker> workers;
         const size_t concurrency;
-        const bool affinity = false;
+        const bool affinity = true;
 
         // Main loop switch.
         std::atomic<bool> ready = { true };
