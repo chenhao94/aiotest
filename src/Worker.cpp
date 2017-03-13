@@ -3,6 +3,18 @@
 #include <functional>
 #include <algorithm>
 
+#ifdef __unix__
+#include <unistd.h>
+#endif
+
+#ifdef _POSIX_VERSION
+#include <errno.h>
+#endif
+
+#ifdef _POSIX_THREADS
+#include <pthread.h>
+#endif
+
 #include "Log.hpp"
 #include "BTreeNodeBase.hpp"
 #include "Worker.hpp"
@@ -19,6 +31,25 @@ namespace tai
         for (auto& i : neighbor)
             if (i >= ctrl.concurrency)
                 i = -1;
+    }
+
+    void Worker::go()
+    {
+        using namespace std;
+
+        handle.reset(new thread([this](){ run(); }));
+
+        #ifdef _POSIX_THREADS
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        if (ctrl.affinity)
+            CPU_SET(getGID() % thread::hardware_concurrency(), &cpuset);
+        else
+            for (auto i = thread::hardware_concurrency(); i--; CPU_SET(i, &cpuset));
+
+        if (auto err = pthread_setaffinity_np(handle->native_handle(), sizeof(cpu_set_t), &cpuset))
+            Log::log("Warning: Failed to set thread affinity (Error: ", err, " ", strerror(err), ").");
+        #endif
     }
 
     void Worker::pushWait(Task task)

@@ -1,4 +1,5 @@
 export SHELL = /bin/bash
+export OS = $(shell uname)
 export DIR = $(shell pwd)
 export INCS_DIR = $(DIR)/include
 export SRCS_DIR = $(DIR)/src
@@ -32,7 +33,7 @@ endif
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
 export CXXFLAGS += -lm -lpthread
-export CXXFLAGS += $(shell if [ `uname` = Linux ]; then echo '-lrt -laio'; fi)
+export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-lrt -laio'; fi)
 # export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = ar
 export MKDIR = @mkdir -p
@@ -68,26 +69,26 @@ $(LIBTAI): $(OBJS)
 .PHONY: test
 test: all
 	sudo sync
-	if [ `uname` == Darwin ]; then sudo purge; fi
-	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	if [ $(OS) == Darwin ]; then sudo purge; fi
+	if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
 	dd if=/dev/zero of=tmp/sync bs=1G count=1
 	dd if=/dev/zero of=tmp/aio bs=1G count=1
 	dd if=/dev/zero of=tmp/tai bs=1G count=1
 	sync
-	if [ `uname` == Darwin ]; then sudo purge; fi
-	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	if [ $(OS) == Darwin ]; then sudo purge; fi
+	if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	time (bin/fixSizedWrites 1 1024)
 	time (sync tmp/sync)
 	time sync
-	if [ `uname` == Darwin ]; then sudo purge; fi
-	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	if [ $(OS) == Darwin ]; then sudo purge; fi
+	if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	time (bin/fixSizedWrites 2 1024)
 	time (sync tmp/aio)
 	time sync
-	if [ `uname` == Darwin ]; then sudo purge; fi
-	if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	if [ $(OS) == Darwin ]; then sudo purge; fi
+	if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	time (bin/fixSizedWrites 4 1024)
 	time (sync tmp/tai)
 	time sync
@@ -108,15 +109,15 @@ test_mt:
 	@echo '================================'
 	@echo
 	sudo sync
-	if [ `uname` == Darwin ]; then sudo purge; fi
-	if [ `uname` == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	if [ $(OS) == Darwin ]; then sudo purge; fi
+	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
 	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=1048576 count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; done
 	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do \
-		if [ `uname` == Darwin ]; then sudo purge; fi; \
-		if [ `uname` == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
-		time (bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS)); \
+		if [ $(OS) == Darwin ]; then sudo purge; fi; \
+		if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
+		time (`if [ $(OS) == Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS)); \
 		time (sync tmp/*); \
 		time sync; \
 	done done done

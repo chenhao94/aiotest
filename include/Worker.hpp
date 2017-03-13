@@ -78,10 +78,7 @@ namespace tai
             pool.push(gid);
         }
 
-        void go()
-        {
-            handle.reset(new std::thread([this](){ run(); }));
-        }
+        void go();
 
         // Get global thread ID;
         auto getGID() const
