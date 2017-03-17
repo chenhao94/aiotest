@@ -82,7 +82,7 @@ namespace tai
         ~BTreeNode() override
         {
             Log::debug("Destruct B-tree node [", offset, ", ", offset + NM, "].");
-            evict();
+            evict(true);
         }
 
         void merge(BTreeNodeBase* node, IOCtrl* io = nullptr) override
@@ -297,6 +297,11 @@ namespace tai
             Worker::pushWait([=](){ Child::sync(io); });
         }
 
+        static void sync(Task task, IOCtrl* io = nullptr)
+        {
+            Worker::pushWait([=](){ Child::sync(task, io); });
+        }
+
         void flush(IOCtrl* io) override
         {
             if (dirty)
@@ -313,7 +318,7 @@ namespace tai
                         Worker::pushWait([=](){ i->flush(io); });
         }
 
-        void evict() override
+        void evict(bool release) override
         {
             Log::debug("Evicting {", offset, ", ", offset + N, "}");
             if (dirty)
@@ -322,7 +327,7 @@ namespace tai
                 dirty = false;
                 unlock();
             }
-            if (data)
+            if (release && data)
                 conf(this, NM);
         }
     };
@@ -345,7 +350,7 @@ namespace tai
         ~BTreeNode() override
         {
             Log::debug("Destruct B-tree node [", offset, ", ", offset + N, "].");
-            evict();
+            evict(true);
         }
 
         void merge(BTreeNodeBase* node, IOCtrl* io = nullptr) override
@@ -442,6 +447,13 @@ namespace tai
             io->notify();
         }
 
+        static void sync(Task task, IOCtrl* io = nullptr)
+        {
+            task();
+            if (io)
+                io->notify();
+        }
+
         void flush(IOCtrl* io) override
         {
             if (dirty)
@@ -455,7 +467,7 @@ namespace tai
             }
         }
 
-        void evict() override
+        void evict(bool release) override
         {
             Log::debug("Evicting {", offset, ", ", offset + N, "}");
             if (dirty)
@@ -464,7 +476,7 @@ namespace tai
                 dirty = false;
                 unlock();
             }
-            if (data)
+            if (release && data)
                 conf(this, N);
         }
     };
@@ -559,15 +571,35 @@ namespace tai
         }
 
         // Issue a sync request to this file to the given controller.
-        IOCtrl* sync(Controller& ctrl) override
+        // Sync by recursively scan the B-tree.
+        IOCtrl* syncTree(Controller& ctrl) override
         {
-            Log::debug("Issued sync");
+            Log::debug("Issued recursive sync");
             auto io = new IOCtrl;
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->flush(io); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            auto task = [](){};
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->flush(io); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(task, io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
 
+        // Issue a sync request to this file to the given controller.
+        // Sync by scanning controller's cache list.
+        IOCtrl* syncCache(Controller& ctrl) override
+        {
+            Log::debug("Issued linear sync");
+            auto io = new IOCtrl;
+            auto task = [&](){ ctrl.flush(); };
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->sync(task); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            return io;
+        }
+
+        IOCtrl* sync(Controller& ctrl) override
+        {
+            return syncTree(ctrl);
+        }
+
+        // Issue a sync request to this file to the given controller.
         IOCtrl* detach(Controller& ctrl) override
         {
             Log::debug("Issued detach");

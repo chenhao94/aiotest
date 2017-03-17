@@ -46,6 +46,9 @@ namespace tai
         // Main loop switch.
         std::atomic<bool> ready = { true };
 
+        // Flush switch
+        std::atomic_flag flushing = ATOMIC_FLAG_INIT;
+
         // Number of tasks to do in this round.
         size_t todo = 0;
 
@@ -59,12 +62,17 @@ namespace tai
         // Cahce queue for GC.
         boost::lockfree::queue<BTreeNodeBase*> cache;
 
-        explicit Controller(size_t lower, size_t upper, size_t concurrency = std::max(std::thread::hardware_concurrency() * 4 / 5, 1u));
+        explicit Controller(size_t lower, size_t upper, size_t concurrency = std::thread::hardware_concurrency());
 
         ~Controller();
 
         // Ask if it is OK to allocate more memory.
         Usage usage(size_t alloc = 0);
+
+        bool flush()
+        {
+            return flushing.test_and_set(std::memory_order_relaxed);
+        }
 
     protected:
         // Wait until all worker reaches the given state.

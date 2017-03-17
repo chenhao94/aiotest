@@ -10,6 +10,7 @@
 #include <vector>
 #include <atomic>
 #include <functional>
+// #include <filesystem>
 
 #include "Log.hpp"
 #include "IOCtrl.hpp"
@@ -21,12 +22,14 @@ namespace tai
     class BTreeConfig
     {
     public:
-        const std::string path = "";
+        // const std::filesystem::path path;
+        const std::string path;
         std::vector<std::unique_ptr<std::fstream>> files;
         std::atomic_flag mtxFiles = ATOMIC_FLAG_INIT;
         std::atomic<bool> failed = { false };
         size_t size = 0;
 
+        // BTreeConfig(const std::filesystem::path& path) : path(path)
         BTreeConfig(const std::string& path) : path(path)
         {
         }
@@ -40,6 +43,7 @@ namespace tai
         friend class BTreeConfig;
 
         using Self = BTreeNodeBase;
+        using Task = std::function<void()>;
 
         // Merge cache to ptr.
         virtual void merge(BTreeNodeBase* ptr, IOCtrl* io = nullptr) = 0;
@@ -59,7 +63,7 @@ namespace tai
         // Flush subtree cache.
         virtual void flush(IOCtrl* io) = 0;
         // Evict (flush+drop) node cache.
-        virtual void evict() = 0;
+        virtual void evict(bool release) = 0;
 
         // Check if this subtree is still connected to the root.
         bool valid()
@@ -72,7 +76,7 @@ namespace tai
         {
             if (valid())
             {
-                evict();
+                evict(true);
                 if (parent == this)
                     suicide();
             }

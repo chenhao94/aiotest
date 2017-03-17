@@ -40,6 +40,7 @@ namespace tai
         handle.reset(new thread([this](){ run(); }));
 
         #ifdef _POSIX_THREADS
+        #ifndef __APPLE__
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
         if (ctrl.affinity)
@@ -49,6 +50,7 @@ namespace tai
 
         if (auto err = pthread_setaffinity_np(handle->native_handle(), sizeof(cpu_set_t), &cpuset))
             Log::log("Warning: Failed to set thread affinity (Error: ", err, " ", strerror(err), ").");
+        #endif
         #endif
     }
 
@@ -192,6 +194,16 @@ namespace tai
                     {
                         const auto lower = cleanup ? 0 : ctrl.lower >> max(exceed, (ssize_t)0);
                         while (ctrl.used.load(memory_order_relaxed) > lower && ctrl.cache.consume_one([](auto i){ i->gc(); }));
+                        if (ctrl.flushing.test_and_set(std::memory_order_relaxed))
+                            for (BTreeNodeBase* i = nullptr; ctrl.cache.pop(i) && i;)
+                                if (i->valid())
+                                {
+                                    i->evict(false);
+                                    ctrl.cache.push(i);
+                                }
+                                else
+                                    i->suicide();
+                        ctrl.flushing.clear(std::memory_order_relaxed);
                         if (!id)
                             decision = [](){
                                 for (auto& i : Controller::ctrl->workers)
