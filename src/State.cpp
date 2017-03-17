@@ -22,6 +22,8 @@ namespace tai
             return "Idle";
         case GC:
             return "GC";
+        case Flushing:
+            return "Flushing";
         case Quit:
             return "Quit";
         case Sync:

@@ -193,19 +193,16 @@ namespace tai
                     if (!roundIdle || ctrl.lower >> max(exceed - 1, (ssize_t)0))
                     {
                         const auto lower = cleanup ? 0 : ctrl.lower >> max(exceed, (ssize_t)0);
-                        while (ctrl.used.load(memory_order_relaxed) > lower && ctrl.cache.consume_one([](auto i){ i->gc(); }));
-                        if (ctrl.flushing.test_and_set(std::memory_order_relaxed))
-                            for (BTreeNodeBase* i = nullptr; ctrl.cache.pop(i) && i;)
-                                if (i->valid())
-                                {
-                                    i->evict(false);
-                                    ctrl.cache.push(i);
-                                }
-                                else
-                                    i->suicide();
-                        ctrl.flushing.clear(std::memory_order_relaxed);
+                        while (ctrl.used.load(memory_order_relaxed) > lower && ctrl.cache.consume_one([](auto i){ if (i) i->gc(); }));
                         if (!id)
                             decision = [](){
+                                auto flush = Controller::ctrl->flush();
+                                Controller::ctrl->flushing.clear(std::memory_order_relaxed);
+                                if (flush)
+                                {
+                                    for (auto i = Controller::ctrl->workers.size(); i--; Controller::ctrl->cache.push(nullptr));
+                                    return Flushing;
+                                }
                                 for (auto& i : Controller::ctrl->workers)
                                     i.queue.setupDone();
                                 return Unlocking;
@@ -220,6 +217,22 @@ namespace tai
                             return queue.popTodo() ? Running : Idle;
                         };
                 }
+                break;
+            case Flushing:
+                for (BTreeNodeBase* i = nullptr; ctrl.cache.pop(i) && i;)
+                    if (i->valid())
+                    {
+                        i->evict(false);
+                        ctrl.cache.push(i);
+                    }
+                    else
+                        i->suicide();
+                if (!id)
+                    decision = [&](){
+                        for (auto& i : Controller::ctrl->workers)
+                            i.queue.setupDone();
+                        return Unlocking;
+                    };
                 break;
             default:
                 break;

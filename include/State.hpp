@@ -14,6 +14,7 @@ namespace tai
         Cleanup,
         Idle,
         GC,
+        Flushing,
         Quit,
         Sync
     };
