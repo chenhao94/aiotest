@@ -596,7 +596,8 @@ namespace tai
 
         IOCtrl* sync(Controller& ctrl) override
         {
-            return syncTree(ctrl);
+            // return syncTree(ctrl);
+            return syncCache(ctrl);
         }
 
         // Issue a sync request to this file to the given controller.
@@ -621,4 +622,5 @@ namespace tai
     // Default hierarchy.
     using BTreeDefault = BTree<32, 2, 9, 9, 12>;
     using BTreeTrivial = BTree<64>;
+    using BTreeBinary = BTree<1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>;
 }
