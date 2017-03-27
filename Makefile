@@ -19,9 +19,11 @@ export TESTEXES = $(patsubst $(TESTS_DIR)/%.cpp,$(TARGETS_DIR)/%,$(TESTS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
-export TEST_LOAD ?= $(shell nproc --all)
-export TEST_ARGS ?= 31 16 16 16 8 10
-# file size, read size, write size, io round, sync rate, wait rate (2^x)
+# export TEST_LOAD ?= $(shell nproc --all)
+export TEST_LOAD ?= 1 # $(shell echo $$(nproc --all)-2 | bc)
+export TEST_ARGS ?= 64 64 31 16 8 10
+# read size, write size (KB)
+# file size, io round, sync rate, wait rate (2^x)
 
 # export LD=lld
 export CXX = clang++
@@ -116,13 +118,14 @@ test_mt:
 	$(MKDIR) tmp
 	$(RM) tmp/*
 	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=1048576 count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; done
-	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do \
+	# for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do
+	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in $(TEST_LOAD); do for l in `seq 4`; do\
 		if [ $(OS) == Darwin ]; then sudo purge; fi; \
 		if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
 		time (`if [ $(OS) == Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS)); \
 		time (sync tmp/*); \
 		time sync; \
-	done done done
+	done done done done
 
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),test_mt)

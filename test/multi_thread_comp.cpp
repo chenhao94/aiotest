@@ -490,16 +490,19 @@ int main(int argc, char* argv[])
     [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 1])); }({
             &thread_num,
             &testType,
-            &workload
-            });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 4])); }({
-            &FILE_SIZE,
+            &workload,
             &READ_SIZE,
             &WRITE_SIZE,
+            });
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 6])); }({
+            &FILE_SIZE,
             &IO_ROUND,
             &SYNC_RATE,
             &WAIT_RATE
             });
+
+    READ_SIZE = READ_SIZE << 10;
+    WRITE_SIZE = WRITE_SIZE << 10;
 
     tai::Log::log("thread number: ", thread_num);
     srand(time(nullptr));
@@ -545,7 +548,9 @@ int main(int argc, char* argv[])
     auto time = duration_cast<nanoseconds>(high_resolution_clock::now() - begin).count();
     if (testType == 4)
         tai::aio_end();
-    tai::Log::log(testname[testType], " random ", wlname[workload], ": ", time / 1e9, " s in total, ", IO_ROUND * (int(workload == 2) + 1), " ops/thread, ",
+    tai::Log::log(testname[testType], " random ", wlname[workload], ": ", time / 1e9, " s in total, ",
+            IO_ROUND * (int(workload == 2) + 1), " ops/thread, ",
+            READ_SIZE >> 10, " KB/read, " , WRITE_SIZE >> 10, " KB/write, ", 
             thread_num, " threads, ", 1e9 * IO_ROUND * (int(workload == 2) + 1) * thread_num / time, " iops");
     if (testType == 4)
     {
