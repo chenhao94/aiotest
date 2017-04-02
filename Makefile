@@ -8,7 +8,7 @@ export DEPS_DIR = $(DIR)/dep
 export OBJS_DIR = $(DIR)/obj
 export TARGETS_DIR = $(DIR)/bin
 export TESTS_DIR = $(DIR)/test
-export TESTSLIB_DIR = $(DIR)/test/lib
+export TESTSLIB_DIR = $(DIR)/test/testlib
 export TESTOBJ_DIR = $(DIR)/testobj
 
 export INCS = $(wildcard $(INCS_DIR)/*.hpp)
@@ -58,7 +58,7 @@ $(TESTEXES): $(TARGETS_DIR)/%: $(TESTS_DIR)/%.cpp  $(TESTOBJS) $(LIBTAI)
 	$(MKDIR) $(TARGETS_DIR)
 	$(CXX) $(CXXFLAGS) $< -L$(LIBS_DIR) $(TESTOBJS) -ltai -o $@
 
-$(TESTOBJS): $(TESTOBJ_DIR)/%.o: $(TESTS_DIR)/lib/%.cpp $(LIBTAI)
+$(TESTOBJS): $(TESTOBJ_DIR)/%.o: $(TESTSLIB_DIR)/%.cpp $(LIBTAI)
 	$(MKDIR) $(TESTOBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -L$(LIBS_DIR) -ltai -o $@
 

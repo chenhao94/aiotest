@@ -25,7 +25,7 @@
 
 #include "tai.hpp"
 #include "aio.hpp"
-#include "./lib/iotest.hpp"
+#include "./testlib/iotest.hpp"
 
 #define unlikely(x)     __builtin_expect((x),0)
 
