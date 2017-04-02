@@ -8,13 +8,17 @@ export DEPS_DIR = $(DIR)/dep
 export OBJS_DIR = $(DIR)/obj
 export TARGETS_DIR = $(DIR)/bin
 export TESTS_DIR = $(DIR)/test
+export TESTSLIB_DIR = $(DIR)/test/lib
+export TESTOBJ_DIR = $(DIR)/testobj
 
 export INCS = $(wildcard $(INCS_DIR)/*.hpp)
 export PCHS = $(patsubst %,%.gch,$(INCS))
 export SRCS = $(wildcard $(SRCS_DIR)/*.cpp)
 export TESTS = $(wildcard $(TESTS_DIR)/*.cpp)
+export TESTLIBS = $(wildcard $(TESTSLIB_DIR)/*.cpp)
 export DEPS = $(patsubst $(INCS_DIR)/%,$(DEPS_DIR)/%.d,$(INCS)) $(patsubst $(SRCS_DIR)/%,$(DEPS_DIR)/%.d,$(SRCS))
 export OBJS = $(patsubst $(SRCS_DIR)/%,$(OBJS_DIR)/%.o,$(SRCS))
+export TESTOBJS = $(patsubst $(TESTSLIB_DIR)/%.cpp,$(TESTOBJ_DIR)/%.o,$(TESTLIBS))
 export TESTEXES = $(patsubst $(TESTS_DIR)/%.cpp,$(TARGETS_DIR)/%,$(TESTS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
@@ -50,9 +54,13 @@ export RM = rm -rf
 .PHONY: all
 all: $(LIBTAI) $(TESTEXES)
 
-$(TESTEXES): $(TARGETS_DIR)/%: $(TESTS_DIR)/%.cpp $(LIBTAI)
+$(TESTEXES): $(TARGETS_DIR)/%: $(TESTS_DIR)/%.cpp  $(TESTOBJS) $(LIBTAI)
 	$(MKDIR) $(TARGETS_DIR)
-	$(CXX) $(CXXFLAGS) $< -L$(LIBS_DIR) -ltai -o $@
+	$(CXX) $(CXXFLAGS) $< -L$(LIBS_DIR) $(TESTOBJS) -ltai -o $@
+
+$(TESTOBJS): $(TESTOBJ_DIR)/%.o: $(TESTS_DIR)/lib/%.cpp $(LIBTAI)
+	$(MKDIR) $(TESTOBJ_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -L$(LIBS_DIR) -ltai -o $@
 
 $(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/% $(PCHS)
 	$(MKDIR) $(OBJS_DIR)
@@ -135,4 +143,4 @@ endif
 
 .PHONY: clean
 clean:
-	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(PCHS) tai tai.dSYM
+	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(TESTOBJ_DIR) $(PCHS) tai tai.dSYM
