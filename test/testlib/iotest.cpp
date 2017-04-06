@@ -2,15 +2,15 @@
 
 using namespace std;
 
-size_t thread_num;
+size_t thread_num = 1;
 size_t testType;
 size_t workload;
-size_t FILE_SIZE;
-size_t READ_SIZE;
-size_t WRITE_SIZE;
-size_t IO_ROUND;
+size_t FILE_SIZE = 1 << 31;
+size_t READ_SIZE = 1 << 12;
+size_t WRITE_SIZE = 1 << 12;
+size_t IO_ROUND = 1 << 10;
 size_t SYNC_RATE = 1;
-size_t WAIT_RATE;
+size_t WAIT_RATE = 1;
 
 #ifdef __linux__
 io_context_t LibAIOWrite::io_cxt;

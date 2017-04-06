@@ -137,6 +137,7 @@ public:
 
     void reset_cb() override;
     void wait_cb() override;
+    void busywait_cb() override { wait_cb(); } // no way to busywait
     void writeop(off_t offset, char* data) override;
     void readop(off_t offset, char* data) override;
     void syncop() override;
