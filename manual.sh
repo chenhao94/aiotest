@@ -5,7 +5,7 @@ make -j
 mkdir -p log
 
 /mnt/ssd/flsm/lock_server.sh hao_tongliang
-if [ `cat /mnt/ssd/flsm/lock`!="hao_tongliang" ]; then
+if [ `cat /mnt/ssd/flsm/lock` != "hao_tongliang" ]; then
     echo "Server lock acquiring failed: held by" `cat /mnt/ssd/flsm/lock`
     exit 1
 fi

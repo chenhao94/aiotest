@@ -5,7 +5,7 @@ mkdir -p log
 truncate -s0 cs.log
 
 /mnt/ssd/flsm/lock_server.sh hao_tongliang
-if [ `cat /mnt/ssd/flsm/lock`!="hao_tongliang" ]; then
+if [ `cat /mnt/ssd/flsm/lock` != "hao_tongliang" ]; then
     echo "Server lock acquiring failed: held by" `cat /mnt/ssd/flsm/lock`
     exit 1
 fi
@@ -16,7 +16,7 @@ for t in `seq 3`; do
             for l in `seq 4`; do
                 sync
                 sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"
-                sudo bash -c "perf stat -age cs bin/multi_thread_comp 4 $i 1 $k $k 31 10 8 8 2>&1" | tee -a cs.log
+                sudo bash -c "perf stat -age cs bin/multi_thread_comp 4 $i 1 31 $k $k 10 8 8 2>&1" | tee -a cs.log
             done
             echo 'Context Switch:'
             grep '  cs' cs.log | sed 's/,//g' | sed 's/ *\([0-9]*\).*/\1/' | paste - - - - -

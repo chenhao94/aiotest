@@ -18,7 +18,7 @@ for k in 4 8 16 32 64 128 256 512 1024 2048 4096; do
         for l in `seq 0 6`; do
             sync
             sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"
-            bin/latency $i $k $l 2>&1 | tee -a log/latency/latency.log
+            bin/latency 1 $i 1 31 $k $k 10 $l $l 2>&1 | tee -a log/latency/latency.log
         done
 done done
 
