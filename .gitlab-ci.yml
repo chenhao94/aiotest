@@ -84,8 +84,8 @@ build:
     expire_in: 1 day
 
 latency:
-    stage: test
-    script:
+  stage: test
+  script:
       - mkdir -p log
       - make test_lat 2&>1 | tee log/latency.log
   artifacts:
