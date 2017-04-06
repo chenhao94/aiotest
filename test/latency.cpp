@@ -35,17 +35,31 @@ using namespace this_thread;
 
 int main(int argc, char *argv[])
 {
-    if (argc != 4)
+    if (argc != 10)
     {
-        cerr << "Need arguments for type of IO to test, write size and number of IOs issuing once." << endl;
+        cerr << "[Same CL options as MT]Need arguments for type of IO to test, write size and number of IOs issuing once." << endl;
         exit(-1);
     }
     [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 1])); }({
+            &thread_num,
             &testType,
-            &WRITE_SIZE,
-            &IO_ROUND
+            &workload,
             });
-    READ_SIZE = WRITE_SIZE = WRITE_SIZE << 10;
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 4])); }({
+            &FILE_SIZE,
+            });
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 5])); }({
+            &READ_SIZE,
+            &WRITE_SIZE,
+            });
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 7])); }({
+            &IO_ROUND,
+            &SYNC_RATE,
+            &WAIT_RATE
+            });
+
+    READ_SIZE = READ_SIZE << 10;
+    WRITE_SIZE = WRITE_SIZE << 10;
 
     RandomWrite *rw;
 
@@ -84,14 +98,14 @@ int main(int argc, char *argv[])
     auto data = new(align_val_t(512)) char[WRITE_SIZE];
     memset(data, 'a', sizeof(WRITE_SIZE));
 
-    auto TEST_ROUND = 1 << 10;
     auto sum_issue = 0ull, sum_sync = 0ull; 
-    for (int T = 0; T < 1024; ++T)
+    auto tot_rnd = IO_ROUND / SYNC_RATE;
+    for (int T = 0; T < tot_rnd; ++T)
     {
         rw->reset_cb();
 
         auto start = high_resolution_clock::now();
-        for (int i = IO_ROUND; i--; )
+        for (int i = SYNC_RATE; i--; )
         {
             auto offset = randgen(WRITE_SIZE);
             rw->writeop(offset, data);
@@ -111,8 +125,8 @@ int main(int argc, char *argv[])
 
     string testname[] = {"Blocking IO", "Blocking IO (O_DIRECT | O_SYNC)", "Async IO", "LibAIO", "TAI"};
     tai::Log::log( testname[testType], " ", 
-            IO_ROUND, "x " , WRITE_SIZE >> 10, "KB writes; ", 
-            "Avg total issue time: ", sum_issue * 1e-3 / TEST_ROUND, " us ; avg total sync time: ", sum_sync * 1e-3 / TEST_ROUND, " us");
+            SYNC_RATE, "x " , WRITE_SIZE >> 10, "KB writes; ", 
+            "Avg total issue time: ", sum_issue * 1e-3 / tot_rnd, " us ; avg total sync time: ", sum_sync * 1e-3 / tot_rnd, " us");
     close(rw->fd);
     return 0;
 }

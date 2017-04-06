@@ -44,11 +44,15 @@ int main(int argc, char* argv[])
             &thread_num,
             &testType,
             &workload,
+            });
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 4])); }({
+            &FILE_SIZE,
+            });
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 5])); }({
             &READ_SIZE,
             &WRITE_SIZE,
             });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 6])); }({
-            &FILE_SIZE,
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 7])); }({
             &IO_ROUND,
             &SYNC_RATE,
             &WAIT_RATE

@@ -25,7 +25,7 @@ export LIBTAI = $(LIBS_DIR)/libtai.a
 
 # export TEST_LOAD ?= $(shell nproc --all)
 export TEST_LOAD ?= 1 # $(shell echo $$(nproc --all)-2 | bc)
-export TEST_ARGS ?= 64 64 31 16 8 10
+export TEST_ARGS ?= 31 64 64 16 8 10
 # For mt only
 # read size, write size (KB)
 # file size, io round, sync rate, wait rate (2^x)
@@ -109,7 +109,7 @@ test: all
 	$(CMP) tmp/sync tmp/aio || $(CMP) -l tmp/sync tmp/aio | wc -l
 
 .PHONY: test_mt
-test_mt:
+test_mt: all
 	@echo
 	@echo '================================'
 	@echo 'Workload     = '$(TEST_LOAD)' thread(s)'
@@ -137,23 +137,21 @@ test_mt:
 	done done done done
 
 .PHONY: test_lat
-test_lat:
+test_lat: all
 	sudo sync
 	if [ $(OS) == Darwin ]; then sudo purge; fi
 	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
 	dd if=/dev/zero of=tmp/file bs=2G count=1
-	for k in 4 8 16 32 64 128 256 512 1024 2048 4096; do\
-		for i in `seq 0 4`; do\
-			for l in 1 2 4 8 16 32 64; do\
-				sync;\
-				if [ $(OS) == Darwin ]; then sudo purge; fi; \
-				if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
-				bin/latency $$i $$k $$l;\
-				sync tmp/*;\
-				sync;\
-	done done done
+	for i in `seq 0 4`; do\
+		sync;\
+		if [ $(OS) == Darwin ]; then sudo purge; fi; \
+		if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
+		bin/latency 1 $$i 1 $(TEST_ARGS);\
+		sync tmp/*;\
+		sync;\
+	done 
 	
 
 ifneq ($(MAKECMDGOALS),clean)
