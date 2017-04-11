@@ -12,6 +12,7 @@
 #include <numeric>
 #include <functional>
 #include <new>
+#include <algorithm>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -100,6 +101,9 @@ int main(int argc, char *argv[])
 
     auto sum_issue = 0ull, sum_sync = 0ull; 
     auto tot_rnd = IO_ROUND / SYNC_RATE;
+    auto pcnt20 = tot_rnd / 5, pcnt80 = tot_rnd - pcnt20;
+    vector<double> issue;
+    vector<double> sync;
     for (int T = 0; T < tot_rnd; ++T)
     {
         rw->reset_cb();
@@ -114,19 +118,30 @@ int main(int argc, char *argv[])
         rw->syncop();
         rw->busywait_cb();
         auto end = high_resolution_clock::now();
-        sum_issue += std::chrono::duration_cast<std::chrono::nanoseconds>(mid - start).count();
-        sum_sync += std::chrono::duration_cast<std::chrono::nanoseconds>(end - mid).count();
+        issue.push_back(1e-3 * duration_cast<nanoseconds>(mid - start).count());
+        sync.push_back(1e-3 * duration_cast<nanoseconds>(end - mid).count());
     }
+    sort(issue.begin(), issue.end());
+    sort(sync.begin(), sync.end());
+    auto avg_st_issue = issue.begin() + pcnt20, avg_en_issue = issue.begin() + pcnt80 + 1;
+    double mid_issue = issue[issue.size() / 2], pcnt20_issue = issue[pcnt20], pcnt80_issue = issue[pcnt80];
+    double avg_issue = accumulate(avg_st_issue,  avg_en_issue, 0.) / (avg_en_issue - avg_st_issue);
+
+    auto avg_st_sync = sync.begin() + pcnt20, avg_en_sync = sync.begin() + pcnt80 + 1;
+    double mid_sync = sync[sync.size() / 2], pcnt20_sync = sync[pcnt20], pcnt80_sync = sync[pcnt80];
+    double avg_sync = accumulate(avg_st_sync,  avg_en_sync, 0.) / (avg_en_sync - avg_st_sync);
 
     rw->cleanup();
     tai::deregister_fd(rw->fd);
     if (testType == 4)
         tai::aio_end();
 
-    string testname[] = {"Blocking IO", "Blocking IO (O_DIRECT | O_SYNC)", "Async IO", "LibAIO", "TAI"};
+    string testname[] = {"BIO", "DIO", "PAIO", "LAIO", "TAI"};
     tai::Log::log( testname[testType], " ", 
-            SYNC_RATE, "x " , WRITE_SIZE >> 10, "KB writes; ", 
-            "Avg total issue time: ", sum_issue * 1e-3 / tot_rnd, " us ; avg total sync time: ", sum_sync * 1e-3 / tot_rnd, " us");
+            "testType, X of IO, size per IO(KB), 20 percentile of issuing(us), average, median, 80 percentile, ",
+            "20 percentile of syncing, average, median, 80 percentile");
+    cout << testname[testType] << ", " << SYNC_RATE << ", " << (WRITE_SIZE >> 10) << ", " << pcnt20_issue << ", " << avg_issue << ", " << mid_issue << ", " <<pcnt80_issue;
+    cout << ", " << pcnt20_sync << ", " << avg_sync << ", " << mid_sync << ", " <<pcnt80_sync << endl;
     close(rw->fd);
     return 0;
 }
