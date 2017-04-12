@@ -87,7 +87,7 @@ build:
   stage: test
   script:
       - mkdir -p log
-      - nice -n 0 make test_lat TEST_ARGS='31 4 4 10 0 0' 2&>1 | tee log/4K-1IO-latency.log
+      - nice -n 0 make test_lat TEST_ARGS='31 4 4 10 0 0' 2>&1 | tee log/4K-1IO-latency.log
   artifacts:
     paths:
       - log/
@@ -97,7 +97,7 @@ build:
   stage: test
   script:
       - mkdir -p log
-      - nice -n 0 make test_lat TEST_ARGS='31 4 4 10 3 3' 2&>1 | tee log/4K-8IOs-latency.log
+      - nice -n 0 make test_lat TEST_ARGS='31 4 4 10 3 3' 2>&1 | tee log/4K-8IOs-latency.log
   artifacts:
     paths:
       - log/
@@ -107,7 +107,7 @@ build:
   stage: test
   script:
       - mkdir -p log
-      - nice -n 0 make test_lat TEST_ARGS='31 4 4 10 6 6' 2&>1 | tee log/4K-64IOs-latency.log
+      - nice -n 0 make test_lat TEST_ARGS='31 4 4 10 6 6' 2>&1 | tee log/4K-64IOs-latency.log
   artifacts:
     paths:
       - log/
@@ -117,7 +117,7 @@ build:
   stage: test
   script:
       - mkdir -p log
-      - nice -n 0 make test_lat TEST_ARGS='31 64 64 10 0 0' 2&>1 | tee log/64K-1IO-latency.log
+      - nice -n 0 make test_lat TEST_ARGS='31 64 64 10 0 0' 2>&1 | tee log/64K-1IO-latency.log
   artifacts:
     paths:
       - log/
@@ -127,7 +127,7 @@ build:
   stage: test
   script:
       - mkdir -p log
-      - nice -n 0 make test_lat TEST_ARGS='31 64 64 10 3 3' 2&>1 | tee log/64K-8IOs-latency.log
+      - nice -n 0 make test_lat TEST_ARGS='31 64 64 10 3 3' 2>&1 | tee log/64K-8IOs-latency.log
   artifacts:
     paths:
       - log/
@@ -137,7 +137,7 @@ build:
   stage: test
   script:
       - mkdir -p log
-      - nice -n 0 make test_lat TEST_ARGS='31 64 64 10 6 6' 2&>1 | tee log/64K-64IOs-latency.log
+      - nice -n 0 make test_lat TEST_ARGS='31 64 64 10 6 6' 2>&1 | tee log/64K-64IOs-latency.log
   artifacts:
     paths:
       - log/
@@ -147,7 +147,7 @@ build:
   stage: test
   script:
       - mkdir -p log
-      - nice -n 0 make test_lat TEST_ARGS='31 1024 1024 10 0 0' 2&>1 | tee log/1M-1IO-latency.log
+      - nice -n 0 make test_lat TEST_ARGS='31 1024 1024 10 0 0' 2>&1 | tee log/1M-1IO-latency.log
   artifacts:
     paths:
       - log/
@@ -157,7 +157,7 @@ build:
   stage: test
   script:
       - mkdir -p log
-      - nice -n 0 make test_lat TEST_ARGS='31 1024 1024 10 3 3' 2&>1 | tee log/1M-8IOs-latency.log
+      - nice -n 0 make test_lat TEST_ARGS='31 1024 1024 10 3 3' 2>&1 | tee log/1M-8IOs-latency.log
   artifacts:
     paths:
       - log/
@@ -167,7 +167,7 @@ build:
   stage: test
   script:
       - mkdir -p log
-      - nice -n 0 make test_lat TEST_ARGS='31 1024 1024 10 6 6' 2&>1 | tee log/1M-64IOs-latency.log
+      - nice -n 0 make test_lat TEST_ARGS='31 1024 1024 10 6 6' 2>&1 | tee log/1M-64IOs-latency.log
   artifacts:
     paths:
       - log/
