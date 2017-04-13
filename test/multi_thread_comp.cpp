@@ -67,10 +67,10 @@ int main(int argc, char* argv[])
 
     string testname[] = {"Blocking IO", "Blocking IO (O_DIRECT | O_SYNC)", "Async IO", "LibAIO", "TAI"};
     string wlname[] = {"read", "write", "read&write"};
-    auto begin = high_resolution_clock::now();
 
     tai::Log::log(testname[testType]);
     vector<thread> threads;
+    auto begin = high_resolution_clock::now();
     switch (testType)
     {
     case 0:

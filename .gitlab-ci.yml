@@ -1,8 +1,8 @@
 stages:
   - build
   - pre-test
-  - test_mt
   - test_lat
+  - test_mt
   - analysis
 
 build:
@@ -88,91 +88,12 @@ pre-test:
       - log/
     expire_in: 1 day
 
-4K-1IO-latency:
+latency:
   stage: test_lat
   script:
-    - nice -n 0 make test_lat TEST_ARGS='31 4 4 10 0 0' 2>&1 | tee log/test_lat/4K-1IO-latency.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-  artifacts:
-    paths:
-      - log/
-    expire_in: 1 day
-
-4K-8IOs-latency:
-  stage: test_lat
-  script:
-    - nice -n 0 make test_lat TEST_ARGS='31 4 4 10 3 3' 2>&1 | tee log/test_lat/4K-8IOs-latency.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-  artifacts:
-    paths:
-      - log/
-    expire_in: 1 day
-
-4K-64IOs-latency:
-  stage: test_lat
-  script:
-    - nice -n 0 make test_lat TEST_ARGS='31 4 4 10 6 6' 2>&1 | tee log/test_lat/4K-64IOs-latency.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-  artifacts:
-    paths:
-      - log/
-    expire_in: 1 day
-
-64K-1IO-latency:
-  stage: test_lat
-  script:
-    - nice -n 0 make test_lat TEST_ARGS='31 64 64 10 0 0' 2>&1 | tee log/test_lat/64K-1IO-latency.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-  artifacts:
-    paths:
-      - log/
-    expire_in: 1 day
-
-64K-8IOs-latency:
-  stage: test_lat
-  script:
-    - nice -n 0 make test_lat TEST_ARGS='31 64 64 10 3 3' 2>&1 | tee log/test_lat/64K-8IOs-latency.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-  artifacts:
-    paths:
-      - log/
-    expire_in: 1 day
-
-64K-64IOs-latency:
-  stage: test_lat
-  script:
-    - nice -n 0 make test_lat TEST_ARGS='31 64 64 10 6 6' 2>&1 | tee log/test_lat/64K-64IOs-latency.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-  artifacts:
-    paths:
-      - log/
-    expire_in: 1 day
-
-1M-1IO-latency:
-  stage: test_lat
-  script:
-    - nice -n 0 make test_lat TEST_ARGS='31 1024 1024 10 0 0' 2>&1 | tee log/test_lat/1M-1IO-latency.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-  artifacts:
-    paths:
-      - log/
-    expire_in: 1 day
-
-1M-8IOs-latency:
-  stage: test_lat
-  script:
-    - nice -n 0 make test_lat TEST_ARGS='31 1024 1024 10 3 3' 2>&1 | tee log/test_lat/1M-8IOs-latency.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-  artifacts:
-    paths:
-      - log/
-    expire_in: 1 day
-
-1M-64IOs-latency:
-  stage: test_lat
-  script:
-    - nice -n 0 make test_lat TEST_ARGS='31 1024 1024 10 6 6' 2>&1 | tee log/test_lat/1M-64IOs-latency.log
-    - head -n11 log/test_mt/*.log | tail -n+2
+    - for k in `seq 2 12 | sed 's/\([0-9]*\)/2^\1/g' | bc`; do for l in `seq 0 6`; do \
+          nice -n 0 make test_lat TEST_ARGS="31 $k $k 10 $l $l" 2>&1 | tee 'log/test_lat/latency-'$k'KB-'$l'Round.log' && head -n11 'log/test_lat/latency-'$k'KB-'$l'Round.log' | tail -n+2 \
+      done done 
   artifacts:
     paths:
       - log/

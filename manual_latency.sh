@@ -4,10 +4,12 @@ make -j
 
 mkdir -p log/latency
 
-/mnt/ssd/flsm/lock_server.sh hao_tongliang
-if [ `cat /mnt/ssd/flsm/lock` != "hao_tongliang" ]; then
-    echo "Server lock acquiring failed: held by" `cat /mnt/ssd/flsm/lock`
-    exit 1
+if [ `hostname` == "erode-lom" ]; then
+    /mnt/ssd/flsm/lock_server.sh hao_tongliang
+    if [ `cat /mnt/ssd/flsm/lock` != "hao_tongliang" ]; then
+        echo "Server lock acquiring failed: held by" `cat /mnt/ssd/flsm/lock`
+        exit 1
+    fi
 fi
 
 echo "test type, X of IOs per round, size (KB), 20 percentile(issue), avg, med, 80, 20 (sync), avg, med, 80" > log/latency/latency.log
@@ -22,4 +24,6 @@ for k in 4 8 16 32 64 128 256 512 1024 2048 4096; do
         done
 done done
 
-/mnt/ssd/flsm/unlock_server.sh hao_tongliang
+if [ `hostname` == "erode-lom" ]; then
+    /mnt/ssd/flsm/unlock_server.sh hao_tongliang
+fi
