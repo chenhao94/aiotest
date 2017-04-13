@@ -23,12 +23,11 @@ export TESTEXES = $(patsubst $(TESTS_DIR)/%.cpp,$(TARGETS_DIR)/%,$(TESTS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
-# export TEST_LOAD ?= $(shell nproc --all)
-export TEST_LOAD ?= 1 # $(shell echo $$(nproc --all)-2 | bc)
+export TEST_LOAD ?= 1 # $(shell nproc --all)
 export TEST_ARGS ?= 31 64 64 16 8 10
-# For mt only
-# read size, write size (KB)
-# file size, io round, sync rate, wait rate (2^x)
+# For test_mt only:
+#     read size, write size (KB)
+#     file size, io round, sync rate, wait rate (2^x)
 
 # export LD=lld
 export CXX = clang++
@@ -108,14 +107,14 @@ test: all
 	$(CMP) tmp/sync tmp/tai || $(CMP) -l tmp/sync tmp/tai | wc -l
 	$(CMP) tmp/sync tmp/aio || $(CMP) -l tmp/sync tmp/aio | wc -l
 
-.PHONY: test_mt
-test_mt: all
+.PHONY: pre_test
+pre_test:
 	@echo
 	@echo '================================'
 	@echo 'Workload     = '$(TEST_LOAD)' thread(s)'
 	@echo 'File Size    = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^(\1-20)/' | bc -l`' MB'
-	@echo 'Read Size    = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^(\2-10)/' | bc`' KB'
-	@echo 'Write Size   = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^(\3-10)/' | bc`' KB'
+	@echo 'Read Size    = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/\2/' | bc`' KB'
+	@echo 'Write Size   = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/\3/' | bc`' KB'
 	@echo 'I/O Rounds   = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\4/' | bc`
 	@echo 'Sync Rate    = 1/'`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\5/' | bc`
 	@echo 'Wait Rate    = 1/'`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\6/' | bc`
@@ -126,6 +125,9 @@ test_mt: all
 	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
+
+.PHONY: test_mt
+test_mt: pre_test
 	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=1048576 count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; done
 	# for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do
 	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in $(TEST_LOAD); do for l in `seq 4`; do\
@@ -137,12 +139,7 @@ test_mt: all
 	done done done done
 
 .PHONY: test_lat
-test_lat: all
-	sudo sync
-	if [ $(OS) == Darwin ]; then sudo purge; fi
-	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	$(MKDIR) tmp
-	$(RM) tmp/*
+test_lat: pre_test
 	dd if=/dev/zero of=tmp/file bs=2G count=1
 	for i in `seq 0 4`; do\
 		sync;\
