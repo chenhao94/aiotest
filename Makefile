@@ -153,7 +153,9 @@ test_lat: pre_test
 
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),test_mt)
+ifneq ($(MAKECMDGOALS),test_lat)
 sinclude $(DEPS)
+endif
 endif
 endif
 
