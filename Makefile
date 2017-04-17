@@ -29,12 +29,12 @@ export TEST_ARGS ?= 31 64 64 14 8 10
 #     read size, write size (KB)
 #     file size, io round, sync rate, wait rate (2^x)
 
-# export LD=lld
+export LD=lld
 export CXX = clang++
 # export CXX = g++-6
 # export CXX = g++
-export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
-# export CXXFLAGS += -flto
+export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g -fuse-ld=lld
+export CXXFLAGS += -flto
 ifeq ($(mode), debug) 
 	CXXFLAGS += -DTAI_DEBUG
 endif

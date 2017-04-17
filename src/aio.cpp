@@ -95,7 +95,8 @@ namespace tai
             return false;
         }
 
-        auto tree = new BTree<34, 4, 4, 4, 4, 2, 12>(path);
+        auto tree = new BTree<34, 4, 4, 2, 2, 2, 2, 2, 12>(path);
+        // auto tree = new BTree<34, 4, 4, 4, 4, 2, 12>(path);
         // auto tree = new BTree<34, 5, 2, 1, 1, 2, 7, 12>(path);
         // auto tree = new BTreeTrivial(path);
         if (tree->failed())
