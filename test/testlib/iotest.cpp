@@ -249,9 +249,10 @@ void LibAIOWrite::writeop(off_t offset, char* data)
     cbs.emplace_back(new iocb);
     auto& cb = cbs.back();
     io_prep_pwrite(cb, fd, data, WRITE_SIZE, offset);
-    if (io_submit(io_cxt, 1, &cb) < 1)
+    auto err = io_submit(io_cxt, 1, &cb);
+    if (err < 1)
     {
-        cerr << "Error " << errno << ": " << strerror(errno) << " at libaio: write." << endl;
+        cerr << "Error " << -err << ": " << strerror(-err) << " at libaio: write." << endl;
         exit(-1);
     }
     #endif
@@ -264,9 +265,10 @@ void LibAIOWrite::readop(off_t offset, char* data)
     cbs.emplace_back(new iocb);
     auto& cb = cbs.back();
     io_prep_pread(cb, fd, data, READ_SIZE, offset);
-    if (io_submit(io_cxt, 1, &cb) < 1)
+    auto err = io_submit(io_cxt, 1, &cb);
+    if (err < 1)
     {
-        cerr << "Error " << errno << ": " << strerror(errno) << " at libaio: read." << endl;
+        cerr << "Error " << -err << ": " << strerror(-err) << " at libaio: read." << endl;
         exit(-1);
     }
     #endif
