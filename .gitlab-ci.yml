@@ -91,7 +91,7 @@ pre-test:
 latency:
   stage: test_lat
   script:
-    - for k in `seq 2 12 | sed 's/\([0-9]*\)/2^\1/g' | bc`; do for l in `seq 0 6`; do nice -n 0 make test_lat TEST_ARGS="31 $k $k 10 $l $l" 2>&1 | tee 'log/test_lat/latency-'$k'KB-'$l'Round.log' && head -n11 'log/test_lat/latency-'$k'KB-'$l'Round.log' | tail -n+2; done done 
+    - for k in `seq 2 12 | sed 's/\([0-9]*\)/2^\1/g' | bc`; do for l in `seq 0 6`; do nice -n 0 make test_lat TEST_LOAD=1 TEST_ARGS="31 $k $k 10 $l $l" 2>&1 | tee 'log/test_lat/latency-'$k'KB-'$l'Round.log' && head -n11 'log/test_lat/latency-'$k'KB-'$l'Round.log' | tail -n+2; done done 
   artifacts:
     paths:
       - log/

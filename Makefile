@@ -8,23 +8,23 @@ export DEPS_DIR = $(DIR)/dep
 export OBJS_DIR = $(DIR)/obj
 export TARGETS_DIR = $(DIR)/bin
 export TESTS_DIR = $(DIR)/test
-export TESTSLIB_DIR = $(DIR)/test/testlib
-export TESTOBJ_DIR = $(DIR)/testobj
+export TESTLIBS_DIR = $(DIR)/test/testlib
+export TESTOBJS_DIR = $(OBJS_DIR)/test
 
 export INCS = $(wildcard $(INCS_DIR)/*.hpp)
 export PCHS = $(patsubst %,%.gch,$(INCS))
 export SRCS = $(wildcard $(SRCS_DIR)/*.cpp)
 export TESTS = $(wildcard $(TESTS_DIR)/*.cpp)
-export TESTLIBS = $(wildcard $(TESTSLIB_DIR)/*.cpp)
+export TESTLIBS = $(wildcard $(TESTLIBS_DIR)/*.cpp)
 export DEPS = $(patsubst $(INCS_DIR)/%,$(DEPS_DIR)/%.d,$(INCS)) $(patsubst $(SRCS_DIR)/%,$(DEPS_DIR)/%.d,$(SRCS))
 export OBJS = $(patsubst $(SRCS_DIR)/%,$(OBJS_DIR)/%.o,$(SRCS))
-export TESTOBJS = $(patsubst $(TESTSLIB_DIR)/%.cpp,$(TESTOBJ_DIR)/%.o,$(TESTLIBS))
+export TESTOBJS = $(patsubst $(TESTLIBS_DIR)/%.cpp,$(TESTOBJS_DIR)/%.o,$(TESTLIBS))
 export TESTEXES = $(patsubst $(TESTS_DIR)/%.cpp,$(TARGETS_DIR)/%,$(TESTS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
-export TEST_LOAD ?= 1 # $(shell nproc --all)
-export TEST_ARGS ?= 31 64 64 16 8 10
+export TEST_LOAD ?= $(shell nproc --all)
+export TEST_ARGS ?= 31 64 64 14 8 10
 # For test_mt only:
 #     read size, write size (KB)
 #     file size, io round, sync rate, wait rate (2^x)
@@ -54,12 +54,12 @@ export RM = rm -rf
 .PHONY: all
 all: $(LIBTAI) $(TESTEXES)
 
-$(TESTEXES): $(TARGETS_DIR)/%: $(TESTS_DIR)/%.cpp  $(TESTOBJS) $(LIBTAI)
+$(TESTEXES): $(TARGETS_DIR)/%: $(TESTS_DIR)/%.cpp $(TESTOBJS) $(LIBTAI)
 	$(MKDIR) $(TARGETS_DIR)
 	$(CXX) $(CXXFLAGS) $< -L$(LIBS_DIR) $(TESTOBJS) -ltai -o $@
 
-$(TESTOBJS): $(TESTOBJ_DIR)/%.o: $(TESTSLIB_DIR)/%.cpp $(LIBTAI)
-	$(MKDIR) $(TESTOBJ_DIR)
+$(TESTOBJS): $(TESTOBJS_DIR)/%.o: $(TESTLIBS_DIR)/%.cpp $(LIBTAI)
+	$(MKDIR) $(TESTOBJS_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -L$(LIBS_DIR) -ltai -o $@
 
 $(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/% $(PCHS)
@@ -125,22 +125,20 @@ pre_test:
 	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
+	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=1048576 count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; done
 
 .PHONY: test_mt
 test_mt: pre_test
-	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=1048576 count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; done
-	# for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do
-	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in $(TEST_LOAD); do for l in `seq 4`; do\
+	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do \
 		if [ $(OS) == Darwin ]; then sudo purge; fi; \
 		if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
 		time (`if [ $(OS) == Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS)); \
 		time (sync tmp/*); \
 		time sync; \
-	done done done done
+	done done done
 
 .PHONY: test_lat
 test_lat: pre_test
-	dd if=/dev/zero of=tmp/file bs=2G count=1
 	for i in `seq 0 4`; do\
 		sync;\
 		if [ $(OS) == Darwin ]; then sudo purge; fi; \
@@ -152,13 +150,15 @@ test_lat: pre_test
 	
 
 ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),pre_test)
 ifneq ($(MAKECMDGOALS),test_mt)
 ifneq ($(MAKECMDGOALS),test_lat)
 sinclude $(DEPS)
 endif
 endif
 endif
+endif
 
 .PHONY: clean
 clean:
-	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(TESTOBJ_DIR) $(PCHS) tai tai.dSYM
+	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(PCHS) tai tai.dSYM

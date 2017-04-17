@@ -93,8 +93,8 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    rw->fd = open("tmp/file", rw->openflags); 
-    tai::register_fd(rw->fd, "tmp/file");
+    rw->fd = open("tmp/file0", rw->openflags); 
+    tai::register_fd(rw->fd, "tmp/file0");
 
     auto data = new(align_val_t(512)) char[WRITE_SIZE];
     memset(data, 'a', sizeof(WRITE_SIZE));
