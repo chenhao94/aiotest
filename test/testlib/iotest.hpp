@@ -72,6 +72,7 @@ public:
     virtual void readop(off_t offset, char* data) = 0;
     virtual void syncop() = 0;
     virtual void reset_cb() {}
+    virtual void reset_file() {}
     virtual void wait_cb() {}
     virtual void busywait_cb() {}
     virtual void cleanup() {}
@@ -83,10 +84,30 @@ public:
 
     BlockingWrite() {}
 
-    void writeop(off_t offset, char* data) override;
-    void readop(off_t offset, char* data) override;
-    void syncop() override;
+    virtual void writeop(off_t offset, char* data) override;
+    virtual void readop(off_t offset, char* data) override;
+    virtual void syncop() override;
+    static virtual void startEntry(size_t thread_id, int flags = 0);
+};
+
+class FstreamWrite : public BlockingWrite
+{
+    using namespace std;
+
+public: 
+
+    FstreamWrite() {}
+
+    void writeop(off_t offset, char* data) override {file.seekp(offset).write(data, WRITE_SIZE); }
+    void readop(off_t offset, char* data) override {file.seekg(offset).read(data, READ_SIZE); }
+    void syncop() override { file.flush(); BlockingWrite::syncop(); }
+    void reset_file() override { file = fstream("/dev/fd/" + to_string(fd), ios::binary | ios::in | ios::out); }
     static void startEntry(size_t thread_id, int flags = 0);
+
+private:
+
+    fstream file;
+
 };
 
 class AIOWrite : public RandomWrite

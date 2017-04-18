@@ -65,42 +65,44 @@ int main(int argc, char* argv[])
     srand(time(nullptr));
     system("sync");
 
-    string testname[] = {"Blocking IO", "Blocking IO (O_DIRECT | O_SYNC)", "Async IO", "LibAIO", "TAI"};
+    string testname[] = {"Blocking IO", "Blocking IO (O_DIRECT | O_SYNC)", "Async IO", "LibAIO", "TAI", "Fstream"};
     string wlname[] = {"read", "write", "read&write"};
 
     tai::Log::log(testname[testType]);
     vector<thread> threads;
     auto begin = high_resolution_clock::now();
-    switch (testType)
-    {
-    case 0:
-    case 1:
-        for (size_t i = 0; i < thread_num; ++i)
-            threads.emplace_back(thread(BlockingWrite::startEntry, i, -testType & (
-                            #ifdef __linux__
-                            O_DIRECT |
-                            #endif
-                            O_SYNC)));
-        break;
-    case 2:
-        for (size_t i = 0; i < thread_num; ++i)
-            threads.emplace_back(thread(AIOWrite::startEntry, i));
-        break;
-    case 3:
-        #ifdef __linux__
-        io_setup(1048576, &LibAIOWrite::io_cxt);
-        #endif
-        for (size_t i = 0; i < thread_num; ++i)
-            threads.emplace_back(thread(LibAIOWrite::startEntry, i));
-        break;
-    case 4:
-        tai::aio_init();
-        for (size_t i = 0; i < thread_num; ++i)
-            threads.emplace_back(thread(TAIWrite::startEntry, i));
-        break;
-    }
+    for (size_t i = 0; i < thread_num; ++i)
+        switch (testType)
+        {
+            case 0:
+            case 1:
+                threads.emplace_back(thread(BlockingWrite::startEntry, i, -testType & (
+                                #ifdef __linux__
+                                O_DIRECT |
+                                #endif
+                                O_SYNC)));
+                break;
+            case 2:
+                threads.emplace_back(thread(AIOWrite::startEntry, i));
+                break;
+            case 3:
+                #ifdef __linux__
+                if (!i)
+                    io_setup(1048576, &LibAIOWrite::io_cxt);
+                #endif
+                threads.emplace_back(thread(LibAIOWrite::startEntry, i));
+                break;
+            case 4:
+                if (!i)
+                    tai::aio_init();
+                threads.emplace_back(thread(TAIWrite::startEntry, i));
+                break;
+            case 5:
+                threads.emplace_back(thread(FstreamWrite::startEntry, i));
+                break;
+        }
     for (auto& t : threads)
-	t.join();
+        t.join();
 
     auto time = duration_cast<nanoseconds>(high_resolution_clock::now() - begin).count();
     if (testType == 4)

@@ -21,6 +21,7 @@ void RandomWrite::run_writeonly(size_t thread_id)
     //auto file = fopen(("tmp/file" + to_string(thread_id)).data(), "r+");
     fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); //fileno(file);
     tai::register_fd(fd, "tmp/file" + to_string(thread_id));
+    reset_file();
     //vector<char> data(WRITE_SIZE, 'a');
     auto data = new(align_val_t(512)) char[WRITE_SIZE];
     memset(data, 'a', sizeof(WRITE_SIZE));
@@ -51,6 +52,7 @@ void RandomWrite::run_readonly(size_t thread_id)
 {
     fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); 
     tai::register_fd(fd, "tmp/file" + to_string(thread_id));
+    reset_file();
     auto buf = new(align_val_t(512)) char[WRITE_SIZE * WAIT_RATE];
     reset_cb();
     for (size_t i = 0; i < IO_ROUND; ++i)
@@ -76,6 +78,7 @@ void RandomWrite::run_readwrite(size_t thread_id)
 {
     fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); 
     tai::register_fd(fd, "tmp/file" + to_string(thread_id));
+    reset_file();
     auto data = new(align_val_t(512)) char[WRITE_SIZE];
     auto buf = new(align_val_t(512)) char[WRITE_SIZE * WAIT_RATE];
     vector<size_t> offs;
@@ -161,6 +164,12 @@ void BlockingWrite::startEntry(size_t thread_id, int flags)
     BlockingWrite bw;
     bw.openflags |= flags;
     bw.run(thread_id);
+}
+
+void FstreamWrite::startEntry(size_t thread_id, int flags)
+{
+    FstreamWrite fw;
+    fw.run(thread_id);
 }
 
 void AIOWrite::cleanup() 
