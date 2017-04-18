@@ -87,13 +87,11 @@ public:
     virtual void writeop(off_t offset, char* data) override;
     virtual void readop(off_t offset, char* data) override;
     virtual void syncop() override;
-    static virtual void startEntry(size_t thread_id, int flags = 0);
+    static void startEntry(size_t thread_id, int flags = 0);
 };
 
 class FstreamWrite : public BlockingWrite
 {
-    using namespace std;
-
 public: 
 
     FstreamWrite() {}
@@ -101,12 +99,12 @@ public:
     void writeop(off_t offset, char* data) override {file.seekp(offset).write(data, WRITE_SIZE); }
     void readop(off_t offset, char* data) override {file.seekg(offset).read(data, READ_SIZE); }
     void syncop() override { file.flush(); BlockingWrite::syncop(); }
-    void reset_file() override { file = fstream("/dev/fd/" + to_string(fd), ios::binary | ios::in | ios::out); }
-    static void startEntry(size_t thread_id, int flags = 0);
+    void reset_file() override { file = std::fstream("/dev/fd/" + std::to_string(fd), std::ios::binary | std::ios::in | std::ios::out); }
+    static void startEntry(size_t thread_id);
 
 private:
 
-    fstream file;
+    std::fstream file;
 
 };
 

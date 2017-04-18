@@ -129,7 +129,7 @@ pre_test:
 
 .PHONY: test_mt
 test_mt: pre_test
-	for i in 4 `seq 0 4`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do \
+	for i in 4 `seq 0 5`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do \
 		if [ $(OS) == Darwin ]; then sudo purge; fi; \
 		if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
 		time (`if [ $(OS) == Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS)); \

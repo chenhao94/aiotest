@@ -166,7 +166,7 @@ void BlockingWrite::startEntry(size_t thread_id, int flags)
     bw.run(thread_id);
 }
 
-void FstreamWrite::startEntry(size_t thread_id, int flags)
+void FstreamWrite::startEntry(size_t thread_id)
 {
     FstreamWrite fw;
     fw.run(thread_id);
