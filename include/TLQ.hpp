@@ -10,6 +10,7 @@
 
 #include <boost/lockfree/queue.hpp>
 
+#include "Decl.hpp"
 #include "BTreeNodeBase.hpp"
 
 namespace tai

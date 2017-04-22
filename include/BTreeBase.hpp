@@ -6,8 +6,10 @@
 
 #include <boost/lockfree/queue.hpp>
 
+#include "Decl.hpp"
 #include "BTreeNodeBase.hpp"
 #include "Controller.hpp"
+#include "IOEngine.hpp"
 #include "IOCtrl.hpp"
 
 namespace tai
@@ -28,7 +30,7 @@ namespace tai
         // Configuration.
         BTreeConfig& conf;
 
-        BTreeBase(const std::string& path) : conf(*new BTreeConfig(path))
+        BTreeBase(IOEngine* io) : conf(*new BTreeConfig(io))
         {
             confPool.push(&conf);
         }
@@ -49,6 +51,6 @@ namespace tai
         virtual IOCtrl* syncCache(Controller& ctrl) = 0;
         virtual IOCtrl* sync(Controller& ctrl) = 0;
         virtual IOCtrl* detach(Controller& ctrl) = 0;
-        virtual void close() = 0;
+        // virtual void close() = 0;
     };
 }

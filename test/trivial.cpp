@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
     decltype(high_resolution_clock::now()) start;
 
-    BTree<32,12,9,9,2> bt("tmp/tai");
+    BTree<32,12,9,9,2> bt(new STLEngine("tmp/tai"));
     Controller ctrl(1 << 28, 1 << 30);
 
     vector<string> ss;

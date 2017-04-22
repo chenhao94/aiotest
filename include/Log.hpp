@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <atomic>
 
+#include "Decl.hpp"
+
 namespace tai::Log
 {
     template<typename T>

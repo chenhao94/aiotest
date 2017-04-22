@@ -8,6 +8,7 @@
 
 #include <boost/lockfree/queue.hpp>
 
+#include "Decl.hpp"
 #include "BTreeNodeBase.hpp"
 #include "TLQ.hpp"
 #include "State.hpp"
@@ -15,8 +16,6 @@
 
 namespace tai
 {
-    class Worker;
-
     class Controller
     {
     public:

@@ -2,7 +2,6 @@
 
 #include <cstring>
 #include <string>
-#include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -10,27 +9,21 @@
 #include <vector>
 #include <atomic>
 #include <functional>
-// #include <filesystem>
 
+#include "Decl.hpp"
 #include "Log.hpp"
+#include "IOEngine.hpp"
 #include "IOCtrl.hpp"
 
 namespace tai
 {
-    class BTreeNodeBase;
-
     class BTreeConfig
     {
     public:
-        // const std::filesystem::path path;
-        const std::string path;
-        std::vector<std::unique_ptr<std::fstream>> files;
-        std::atomic_flag mtxFiles = ATOMIC_FLAG_INIT;
+        std::unique_ptr<IOEngine> io;
         std::atomic<bool> failed = { false };
-        size_t size = 0;
 
-        // BTreeConfig(const std::filesystem::path& path) : path(path)
-        BTreeConfig(const std::string& path) : path(path)
+        explicit BTreeConfig(IOEngine* io) : io(io)
         {
         }
 
@@ -137,9 +130,6 @@ namespace tai
         // Dirty flag for cache.
         // Set to false when there's no cache.
         bool dirty = false;
-
-        // Get an opened file.
-        std::fstream& getFile();
 
         // Read/write file.
         bool fread(char* buf, size_t pos, size_t len, IOCtrl* io = nullptr);

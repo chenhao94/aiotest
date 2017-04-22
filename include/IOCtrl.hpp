@@ -6,6 +6,8 @@
 #include <memory>
 #include <chrono>
 
+#include "Decl.hpp"
+
 namespace tai
 {
     class IOCtrl

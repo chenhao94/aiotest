@@ -96,7 +96,11 @@ int main(int argc, char *argv[])
     rw->fd = open("tmp/file0", rw->openflags); 
     tai::register_fd(rw->fd, "tmp/file0");
 
-    auto data = new(align_val_t(512)) char[WRITE_SIZE];
+    auto data = new
+        #ifdef __linux__
+        (align_val_t(512))
+        #endif
+        char[WRITE_SIZE];
     memset(data, 'a', sizeof(WRITE_SIZE));
 
     auto sum_issue = 0ull, sum_sync = 0ull; 

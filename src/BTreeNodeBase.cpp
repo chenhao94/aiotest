@@ -11,6 +11,7 @@
 #include "TLQ.hpp"
 #include "Controller.hpp"
 #include "Worker.hpp"
+#include "IOEngine.hpp"
 #include "IOCtrl.hpp"
 
 namespace tai
@@ -24,14 +25,12 @@ namespace tai
         {
             Controller::ctrl->used.fetch_sub(size, std::memory_order_relaxed);
             delete[] node->data;
-            //std::free(node->data);
             node->data = nullptr;
         }
         else
         {
             Controller::ctrl->used.fetch_add(size, std::memory_order_relaxed);
             Controller::ctrl->cache.push(node);
-            //node->data = (char *)std::aligned_alloc(512, size * sizeof(char)); 
             node->data = new char[size];
         }
     }
@@ -51,21 +50,9 @@ namespace tai
         return effective >= len;
     }
 
-    std::fstream& BTreeNodeBase::getFile()
-    {
-        auto& file = Worker::getTL(conf.files, conf.mtxFiles);
-        if (file && file.is_open())
-            file.close();
-        if (!file.is_open())
-            file.open(conf.path, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-        if (!file.is_open())
-            file.open(conf.path, std::ios_base::in | std::ios_base::binary);
-        return file;
-    }
-
     bool BTreeNodeBase::fread(char* buf, size_t pos, size_t len, IOCtrl* io)
     {
-        if (getFile().seekg(pos).read(buf, len))
+        if (conf.io->read(buf, pos, len))
             return true;
         io ? io->fail() : fail();
         return false;
@@ -74,9 +61,9 @@ namespace tai
     bool BTreeNodeBase::fwrite(const char* buf, size_t pos, size_t len, IOCtrl* io)
     {
         Log::debug("Write ", len, " byte(s) of data at ", (size_t)buf, " to position ", pos, ".");
-        if (getFile().seekp(pos).write(buf, len).flush())
+        if (conf.io->write(buf, pos, len))
             return true;
-        Log::debug("Fwrite failed! EOF: ", getFile().eof());
+        Log::debug("Fwrite failed!");
         io ? io->fail() : fail();
         return false;
     }

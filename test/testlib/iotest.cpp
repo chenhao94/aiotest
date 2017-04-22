@@ -23,7 +23,11 @@ void RandomWrite::run_writeonly(size_t thread_id)
     tai::register_fd(fd, "tmp/file" + to_string(thread_id));
     reset_file();
     //vector<char> data(WRITE_SIZE, 'a');
-    auto data = new(align_val_t(512)) char[WRITE_SIZE];
+    auto data = new
+        #ifdef __linux__
+        (align_val_t(512))
+        #endif
+        char[WRITE_SIZE];
     memset(data, 'a', sizeof(WRITE_SIZE));
     reset_cb();
     for (size_t i = 0; i < IO_ROUND; ++i)
@@ -45,7 +49,11 @@ void RandomWrite::run_writeonly(size_t thread_id)
     tai::deregister_fd(fd);
     //fclose(file);
     close(fd);
-    operator delete[](data, align_val_t(512));
+    operator delete[](data
+            #ifdef __linux__
+            , align_val_t(512)
+            #endif
+            );
 }
 
 void RandomWrite::run_readonly(size_t thread_id)
@@ -53,7 +61,11 @@ void RandomWrite::run_readonly(size_t thread_id)
     fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); 
     tai::register_fd(fd, "tmp/file" + to_string(thread_id));
     reset_file();
-    auto buf = new(align_val_t(512)) char[WRITE_SIZE * WAIT_RATE];
+    auto buf = new
+        #ifdef __linux__
+        (align_val_t(512))
+        #endif
+        char[WRITE_SIZE * WAIT_RATE];
     reset_cb();
     for (size_t i = 0; i < IO_ROUND; ++i)
     {
@@ -71,7 +83,11 @@ void RandomWrite::run_readonly(size_t thread_id)
     cleanup();
     tai::deregister_fd(fd);
     close(fd);
-    operator delete[](buf, align_val_t(512));
+    operator delete[](buf
+            #ifdef __linux__
+            , align_val_t(512)
+            #endif
+            );
 }
 
 void RandomWrite::run_readwrite(size_t thread_id)
@@ -79,8 +95,16 @@ void RandomWrite::run_readwrite(size_t thread_id)
     fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); 
     tai::register_fd(fd, "tmp/file" + to_string(thread_id));
     reset_file();
-    auto data = new(align_val_t(512)) char[WRITE_SIZE];
-    auto buf = new(align_val_t(512)) char[WRITE_SIZE * WAIT_RATE];
+    auto data = new
+        #ifdef __linux__
+        (align_val_t(512))
+        #endif
+        char[WRITE_SIZE];
+    auto buf = new
+        #ifdef __linux__
+        (align_val_t(512))
+        #endif
+        char[WRITE_SIZE * WAIT_RATE];
     vector<size_t> offs;
     offs.reserve(IO_ROUND);
     memset(data, 'a', sizeof(WRITE_SIZE));
@@ -110,8 +134,16 @@ void RandomWrite::run_readwrite(size_t thread_id)
     cleanup();
     tai::deregister_fd(fd);
     close(fd);
-    operator delete[](data, align_val_t(512));
-    operator delete[](buf, align_val_t(512));
+    operator delete[](data
+            #ifdef __linux__
+            , align_val_t(512)
+            #endif
+            );
+    operator delete[](buf
+            #ifdef __linux__
+            , align_val_t(512)
+            #endif
+            );
 }
 
 void RandomWrite::run(size_t thread_id)

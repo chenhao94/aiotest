@@ -13,7 +13,9 @@
 
 #include <boost/lockfree/queue.hpp>
 
+#include "Decl.hpp"
 #include "Log.hpp"
+#include "IOEngine.hpp"
 #include "IOCtrl.hpp"
 #include "BTreeNodeBase.hpp"
 #include "BTreeBase.hpp"
@@ -158,16 +160,16 @@ namespace tai
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             Log::debug("read {", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
-            Log::debug("conf.size: ", conf.size);
-            if (!NM && end > conf.size)
+            Log::debug("conf.io->size: ", conf.io->size);
+            if (!NM && end > conf.io->size)
             {
-                if (!io->partial || begin >= conf.size)
+                if (!io->partial || begin >= conf.io->size)
                 {
                     io->fail();
                     unlock(io);
                     return;
                 }
-                end = conf.size;
+                end = conf.io->size;
             }
 
             if (NM && data)
@@ -225,15 +227,15 @@ namespace tai
         {
             Log::debug("write {", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
 
-            Log::debug("conf.size: ", conf.size);
-            if (!NM && end > conf.size)
+            Log::debug("conf.io->size: ", conf.io->size);
+            if (!NM && end > conf.io->size)
             {
                 if (!fwrite("\0", end - 1, 1, io))
                 {
                     unlock(io);
                     return;
                 }
-                conf.size = end;
+                conf.io->size = end;
             }
 
             if (NM && data)
@@ -386,15 +388,15 @@ namespace tai
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             Log::debug("read(leaf) {", offset, ", ", offset + N, " : ", begin, ", ", end, "}");
-            if (!N && end > conf.size)
+            if (!N && end > conf.io->size)
             {
-                if (!io->partial || begin >= conf.size)
+                if (!io->partial || begin >= conf.io->size)
                 {
                     io->fail();
                     unlock(io);
                     return;
                 }
-                end = conf.size;
+                end = conf.io->size;
             }
 
             if (!N || !data && Controller::ctrl->usage(N) == Controller::Full)
@@ -416,14 +418,14 @@ namespace tai
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
             Log::debug("write(leaf) {", offset, ", ", offset + N, " : ", begin, ", ", end, "}");
-            if (!N && end > conf.size)
+            if (!N && end > conf.io->size)
             {
                 if (!fwrite("0", end - 1, 1, io))
                 {
                     unlock(io);
                     return;
                 }
-                conf.size = end;
+                conf.io->size = end;
             }
 
             if (!N || !data && Controller::ctrl->usage(N) == Controller::Full)
@@ -500,32 +502,19 @@ namespace tai
         static constexpr std::array<size_t, level> bits = {n, rest...};
 
         // Bind to the file from given path.
-        explicit BTree(const std::string &path) : BTreeBase(path), root(new Root(conf, 0))
+        explicit BTree(IOEngine* io) : BTreeBase(io), root(new Root(conf, 0))
         {
-            Log::debug("Construct B-tree for \"", path, "\".");
+            Log::debug("Construct B-tree for ", conf.io->str(), ".");
             mtxUsedID.lock();
-            id = (IDCount++); //*3;
+            id = IDCount++;
             for (; usedID.count(id); id = rand());
             usedID.insert(id);
             mtxUsedID.unlock();
-
-            std::fstream file(path, std::ios_base::in | std::ios_base::binary);
-            if (file.is_open())
-                conf.size = file.seekg(0, std::ios_base::end).tellg();
-            else
-            {
-                Log::log("error!!1");
-                exit(0);
-                file.open(path, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
-            }
-
-            if (!file.is_open())
-                root->fail();
         }
 
         ~BTree() override
         {
-            Log::debug("Destruct B-tree for \"", conf.path, "\".");
+            Log::debug("Destruct B-tree for \"", conf.io->str(), "\".");
             if (root)
                 Log::debug("Memory leak for at ", (size_t)root, ". Please detach before destruction.");
             std::lock_guard<std::mutex> lck(mtxUsedID);
@@ -613,10 +602,10 @@ namespace tai
         }
 
         // Close the file.
-        void close() override
-        {
-            conf.files.clear();
-        }
+        // void close() override
+        // {
+        //     conf.files.clear();
+        // }
     };
 
     // Default hierarchy.

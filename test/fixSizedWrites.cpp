@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
 
         {
             Log::log("Creating B-tree...");
-            BTreeDefault bt("tmp/tai");
+            BTreeDefault bt(new STLEngine("tmp/tai"));
             // BTreeTrivial bt("tmp/tai");
 
             {
