@@ -90,7 +90,7 @@ namespace tai
         ~CEngine()
         {
             while (mtx.test_and_set(std::memory_order_acquire));
-            for (auto i : files)
+            for (auto& i : files)
                 if (*i)
                     fclose(*i);
             mtx.clear(std::memory_order_release);
