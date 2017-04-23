@@ -10,10 +10,10 @@ if [ `cat /mnt/ssd/flsm/lock` != "hao_tongliang" ]; then
     exit 1
 fi
 
-make test_mt TEST_ARGS='24 4 4 17 8 10' 2>&1 | tee log/4K-Overlay.log
+make test_mt TEST_ARGS='24 4 4 15 8 10' 2>&1 | tee log/4K-Overlay.log
 for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s\# -t; echo; echo; done
 
-make test_mt TEST_ARGS='30 4 4 13 8 10' 2>&1 | tee log/4K-Discrete.log
+make test_mt TEST_ARGS='30 4 4 12 8 10' 2>&1 | tee log/4K-Discrete.log
 for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s\# -t; echo; echo; done
 
 make test_mt TEST_ARGS='26 64 64 14 8 10' 2>&1 | tee log/64K-Overlay.log

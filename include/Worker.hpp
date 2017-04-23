@@ -98,11 +98,22 @@ namespace tai
         {
             while (mtx.test_and_set(std::memory_order_acquire));
             Log::debug("Fetching TL item for thread with global ID ", sgid);
-            if (sgid >= table.size())
-                table.resize(sgid + 1);
-            auto& ptr = table[sgid];
-            if (!ptr)
-                ptr.reset(new T);
+            if (sgid < table.size())
+            {
+                auto ptr = table[sgid].get();
+                if (ptr)
+                    mtx.clear(std::memory_order_relaxed);
+                else
+                {
+                    table[sgid].reset(ptr = new T);
+                    mtx.clear(std::memory_order_release);
+                }
+                return *ptr;
+            }
+
+            auto ptr = new T;
+            table.resize(sgid);
+            table.emplace_back(ptr);
             mtx.clear(std::memory_order_release);
             return *ptr;
         }

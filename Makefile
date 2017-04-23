@@ -98,7 +98,8 @@ pre_test:
 	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 	$(MKDIR) tmp
 	$(RM) tmp/*
-	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=1048576 count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; done
+	# for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=1048576 ibs=1048576 obs=1048576 cbs=1048576 status=progress count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; done
+	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1 status=progress; done
 	sync
 	if [ $(OS) == Darwin ]; then sudo purge; fi
 	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
@@ -120,7 +121,7 @@ test: pre_test
 
 .PHONY: test_mt
 test_mt: pre_test
-	for i in 4 `seq 0 5`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do \
+	for i in 4 5; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do \
 		if [ $(OS) == Darwin ]; then sudo purge; fi; \
 		if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
 		time (`if [ $(OS) == Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS)); \
