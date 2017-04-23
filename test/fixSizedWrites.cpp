@@ -38,8 +38,8 @@ int main(int argc, char* argv[])
     uniform_int_distribution<size_t> dist(0, size - bs);
 
     string data(bs, 0);
-    //for (auto& i : data)
-    //    i += rand();
+    for (auto& i : data)
+        i += rand();
 
     if (argc <= 1 || atoll(argv[1]) & 1)
     {
@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
 
         {
             Log::log("Creating B-tree...");
-            BTreeDefault bt(new STLEngine("tmp/tai"));
+            BTreeDefault bt(new CEngine("tmp/tai"));
 
             {
                 Log::log("Creating Controller...");

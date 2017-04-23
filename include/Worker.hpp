@@ -93,8 +93,8 @@ namespace tai
         }
 
         // Get the thread-local object via global thread ID.
-        template<typename T>
-        static auto& getTL(std::vector<std::unique_ptr<T>>& table, std::atomic_flag& mtx)
+        template<typename T, typename... Init>
+        static auto& getTL(std::vector<std::unique_ptr<T>>& table, std::atomic_flag& mtx, Init&&... init)
         {
             while (mtx.test_and_set(std::memory_order_acquire));
             Log::debug("Fetching TL item for thread with global ID ", sgid);
@@ -105,13 +105,13 @@ namespace tai
                     mtx.clear(std::memory_order_relaxed);
                 else
                 {
-                    table[sgid].reset(ptr = new T);
+                    table[sgid].reset(ptr = new T(std::forward<Init>(init)...));
                     mtx.clear(std::memory_order_release);
                 }
                 return *ptr;
             }
 
-            auto ptr = new T;
+            auto ptr = new T(std::forward<Init>(init)...);
             table.resize(sgid);
             table.emplace_back(ptr);
             mtx.clear(std::memory_order_release);

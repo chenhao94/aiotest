@@ -16,12 +16,12 @@ namespace tai
                 file.close();
             file.open(path, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
             if (file.is_open())
-                file.rdbuf()->pubsetbuf(nullptr, 0);
+                ;//file.rdbuf()->pubsetbuf(nullptr, 0);
             else
             {
                 file.open(path, std::ios_base::in | std::ios_base::binary);
                 if (file.is_open())
-                    file.rdbuf()->pubsetbuf(nullptr, 0);
+                    ;//file.rdbuf()->pubsetbuf(nullptr, 0);
             }
         }
         return file;
@@ -29,7 +29,7 @@ namespace tai
 
     FILE* CEngine::get()
     {
-        auto& file = Worker::getTL(files, mtx);
+        auto& file = Worker::getTL(files, mtx, nullptr);
         if (file)
         {
             if (!ferror(file) || freopen(nullptr, "r+b", file) || freopen(nullptr, "rb", file) || freopen(nullptr, "w+b", file))

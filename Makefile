@@ -99,16 +99,15 @@ pre_test:
 	$(MKDIR) tmp
 	$(RM) tmp/*
 	# for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=1048576 ibs=1048576 obs=1048576 cbs=1048576 status=progress count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; done
-	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1 status=progress; done
+	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1; done
 	sync
 	if [ $(OS) == Darwin ]; then sudo purge; fi
 	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 
 .PHONY: test
 test: pre_test
-	$(CP) tmp/file0 tmp/sync
-	$(CP) tmp/file0 tmp/aio
-	$(MV) tmp/file0 tmp/tai
+	$(MV) tmp/file0 tmp/sync
+	for i in aio tai; do dd if=tmp/sync of=tmp/$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1; done
 	sync
 	for i in 1 2 4; do 																											\
 		if [ $(OS) == Darwin ]; then sudo purge; fi; 																			\
