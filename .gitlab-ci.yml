@@ -2,8 +2,8 @@ stages:
   - build
   - pre-test
   - correctness
-  - test_lat
   - test_mt
+  - test_lat
   - analysis
 
 build:
