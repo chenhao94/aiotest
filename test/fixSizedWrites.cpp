@@ -83,15 +83,15 @@ int main(int argc, char* argv[])
             {
                 start = high_resolution_clock::now();
 
-                string* ss[1<<15];
+                string* ss[1 << 15];
 
-                for (auto i = n; i-- ;)
+                for (auto i = n; i--;)
                 {
                     for (size_t j = 0; j < data.size(); ++j)
                         data[j] = n - i >> ((j & 7) << 3) & 255;
                     cbs.emplace_back(aiocb());
                     cbs[n - i - 1].aio_fildes = fd;
-                    cbs[n - i - 1].aio_buf = (ss[i]=new string(data))->data();
+                    cbs[n - i - 1].aio_buf = (ss[i] = new string(data))->data();
                     cbs[n - i - 1].aio_nbytes = data.size();
                     cbs[n - i - 1].aio_offset = dist(rand) % size;
                     aio_write(&cbs[n - i - 1]);
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
                     while (aio_error(&cb) == EINPROGRESS);
                     if (aio_error(&cb) && aio_error(&cb) != EINPROGRESS)
                     {
-                        cerr << aio_error(&cb) <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
+                        cerr << aio_error(&cb) << " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
                         cerr << "reqprio: " << cb.aio_reqprio << ", offset: " << cb.aio_offset << " , nbytes: " << cb.aio_nbytes << endl; 
                         exit(-1);
                     }
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
                         Log::log("\t", i * 100 / cbs.size(), "% Performance: ", (size_t)round(i * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
                 }
 
-                for (auto i = n ; i--; delete ss[i]);
+                for (auto i = n; i--; delete ss[i]);
             }
         }
 
@@ -131,11 +131,9 @@ int main(int argc, char* argv[])
         {
             Log::log("Creating B-tree...");
             BTreeDefault bt(new STLEngine("tmp/tai"));
-            // BTreeTrivial bt("tmp/tai");
 
             {
                 Log::log("Creating Controller...");
-                // Controller ctrl(1 << 28, 1 << 30, 1);
                 Controller ctrl(1 << 28, 1 << 30);
 
                 Log::log("Writing...");

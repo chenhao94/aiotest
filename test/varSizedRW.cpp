@@ -16,9 +16,9 @@
 
 static const auto mod = 2038074161;
 
-inline int hashAdd(int x, int y)
+inline int hashAdd(long long x, int y)
 {
-    return ( 256ll * x + y ) % mod;
+    return ((x << 8) + y) % mod;
 }
 
 int main(int argc, char* argv[])
@@ -37,6 +37,7 @@ int main(int argc, char* argv[])
         n = atoll(argv[1]);
 
     default_random_engine rand;
+    rand.seed(1234321);
     uniform_int_distribution<size_t> dist(0, size - maxbs);
 
     string data(maxbs, 0);
@@ -47,7 +48,6 @@ int main(int argc, char* argv[])
 
     // sync IO
     {
-        rand.seed(1234321);
         decltype(high_resolution_clock::now()) start;
 
         {
@@ -88,7 +88,6 @@ int main(int argc, char* argv[])
 
     // TAI
     {
-        rand.seed(1234321);
         vector<unique_ptr<IOCtrl>> ws;
         vector<unique_ptr<IOCtrl>> rs;
         vector<int> bss;
@@ -103,19 +102,16 @@ int main(int argc, char* argv[])
         {
             Log::log("Creating B-tree...");
             BTreeDefault bt(new STLEngine("tmp/tai"));
-            //BTree<32,12,9,9,2> bt("tmp/tai");
-            // BTreeTrivial bt("tmp/tai");
 
             {
                 Log::log("Creating Controller...");
-                // Controller ctrl(1 << 28, 1 << 30, 1);
                 Controller ctrl(1 << 28, 1 << 30);
 
                 Log::log("Processing...");
 
                 start = high_resolution_clock::now();
 
-                string* ss[1<<16];
+                string* ss[1 << 16];
 
                 for (auto i = n; i--; )
                 {

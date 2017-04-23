@@ -40,7 +40,7 @@ void RandomWrite::run_writeonly(size_t thread_id)
         }
         auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
         writeop(offset, data);
-        if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
+        if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
             tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
     }
     syncop();
@@ -75,7 +75,7 @@ void RandomWrite::run_readonly(size_t thread_id)
         }
         auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
         readop(offset, buf + (i & ~-WAIT_RATE) * WRITE_SIZE);
-        if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
+        if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
             tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
     }
     //syncop();
@@ -124,7 +124,7 @@ void RandomWrite::run_readwrite(size_t thread_id)
         auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
         offs.push_back(offset);
         writeop(offset, data);
-        if (!i || i * 30 / IO_ROUND > (i - 1) * 30 / IO_ROUND)
+        if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
             tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
     }
     for (auto j = IO_ROUND - WAIT_RATE; j < IO_ROUND; ++j)

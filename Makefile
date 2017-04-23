@@ -24,7 +24,7 @@ export TESTEXES = $(patsubst $(TESTS_DIR)/%.cpp,$(TARGETS_DIR)/%,$(TESTS))
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
 export TEST_LOAD ?= $(shell nproc --all)
-export TEST_ARGS ?= 31 64 64 14 8 10
+export TEST_ARGS ?= 30 64 64 14 8 10
 # For test_mt only:
 #     read size, write size (KB)
 #     file size, io round, sync rate, wait rate (2^x)
@@ -49,6 +49,7 @@ export MKDIR = @mkdir -p
 export CMP = cmp -b
 
 export CP = cp -rf
+export MV = mv -f
 export INSTALL = install
 export RM = rm -rf
 
@@ -79,35 +80,6 @@ $(LIBTAI): $(OBJS)
 	$(RM) $@
 	$(AR) cr $@ $(OBJS)
 
-.PHONY: test
-test: all
-	sudo sync
-	if [ $(OS) == Darwin ]; then sudo purge; fi
-	if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	$(MKDIR) tmp
-	$(RM) tmp/*
-	dd if=/dev/zero of=tmp/sync bs=1G count=1
-	dd if=/dev/zero of=tmp/aio bs=1G count=1
-	dd if=/dev/zero of=tmp/tai bs=1G count=1
-	sync
-	if [ $(OS) == Darwin ]; then sudo purge; fi
-	if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	time (bin/fixSizedWrites 1 1024)
-	time (sync tmp/sync)
-	time sync
-	if [ $(OS) == Darwin ]; then sudo purge; fi
-	if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	time (bin/fixSizedWrites 2 1024)
-	time (sync tmp/aio)
-	time sync
-	if [ $(OS) == Darwin ]; then sudo purge; fi
-	if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	time (bin/fixSizedWrites 4 1024)
-	time (sync tmp/tai)
-	time sync
-	$(CMP) tmp/sync tmp/tai || $(CMP) -l tmp/sync tmp/tai | wc -l
-	$(CMP) tmp/sync tmp/aio || $(CMP) -l tmp/sync tmp/aio | wc -l
-
 .PHONY: pre_test
 pre_test:
 	@echo
@@ -127,6 +99,24 @@ pre_test:
 	$(MKDIR) tmp
 	$(RM) tmp/*
 	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do dd if=/dev/zero of=tmp/file$$i bs=1048576 count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; done
+	sync
+	if [ $(OS) == Darwin ]; then sudo purge; fi
+	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+
+.PHONY: test
+test: pre_test
+	$(CP) tmp/file0 tmp/sync
+	$(CP) tmp/file0 tmp/aio
+	$(MV) tmp/file0 tmp/tai
+	sync
+	for i in 1 2 4; do 																											\
+		if [ $(OS) == Darwin ]; then sudo purge; fi; 																			\
+		if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;											\
+		time (bin/fixSizedWrites $$i `xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\4/' | bc`);	\
+		time sync;																												\
+	done
+	$(CMP) tmp/sync tmp/tai || $(CMP) -l tmp/sync tmp/tai | wc -l
+	$(CMP) tmp/sync tmp/aio || $(CMP) -l tmp/sync tmp/aio | wc -l
 
 .PHONY: test_mt
 test_mt: pre_test

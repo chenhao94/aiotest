@@ -1,6 +1,7 @@
 stages:
   - build
   - pre-test
+  - correctness
   - test_lat
   - test_mt
   - analysis
@@ -21,6 +22,11 @@ pre-test:
     paths:
       - log/
     expire_in: 1 day
+
+Fixsized-Write:
+  stage: correctness
+  script:
+    - nice -n 0 make test TEST_LOAD=1 TEST_ARGS='30 1 1 10 0 0' 2>&1
 
 4K-Overlay:
   stage: test_mt
