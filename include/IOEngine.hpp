@@ -124,7 +124,7 @@ namespace tai
         virtual bool write(const char* dat, size_t pos, size_t len) override
         {
             auto file = get();
-            return !fseek(file, pos, SEEK_SET) && fwrite(dat, len, 1, file) == 1;
+            return !fseek(file, pos, SEEK_SET) && fwrite(dat, len, 1, file) == 1 && !fflush(file);
         }
 
         virtual std::string str() override
