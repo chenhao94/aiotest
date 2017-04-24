@@ -3,6 +3,7 @@
 #include <fstream>
 #include <functional>
 #include <cstdlib>
+#include <new>
 
 #include <boost/lockfree/queue.hpp>
 
@@ -31,7 +32,11 @@ namespace tai
         {
             Controller::ctrl->used.fetch_add(size, std::memory_order_relaxed);
             Controller::ctrl->cache.push(node);
-            node->data = new char[size];
+            node->data = new
+                #ifdef __linux__
+                (std::align_val_t(4096))
+                #endif
+                char[size];
         }
     }
 
