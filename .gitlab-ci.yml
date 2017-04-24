@@ -8,6 +8,8 @@ stages:
 
 build:
   stage: build
+  tags:
+    - docker
   script:
     - nice -n 19 make -j
   artifacts:
@@ -16,6 +18,8 @@ build:
 
 pre-test:
   stage: pre-test
+  tags:
+    - docker
   script:
     - mkdir -p log/test_{mt,lat}
   artifacts:
@@ -25,11 +29,19 @@ pre-test:
 
 Fixsized-Write:
   stage: correctness
+  tags:
+    - docker
+    - exclusive
   script:
     - nice -n 0 make test TEST_LOAD=1 TEST_ARGS='30 1 1 10 0 0' 2>&1
 
 4K-Overlay:
   stage: test_mt
+  tags:
+    - docker
+    - exclusive
+  only:
+    - benchmark
   script:
     - nice -n 0 make test_mt TEST_ARGS='24 4 4 15 8 10' 2>&1 | tee log/test_mt/4K-Overlay.log
     - head -n11 log/test_mt/*.log | tail -n+2
@@ -41,6 +53,11 @@ Fixsized-Write:
 
 4K-Discrete:
   stage: test_mt
+  tags:
+    - docker
+    - exclusive
+  only:
+    - benchmark
   script:
     - nice -n 0 make test_mt TEST_ARGS='30 4 4 10 7 9' 2>&1 | tee log/test_mt/4K-Discrete.log
     - head -n11 log/test_mt/*.log | tail -n+2
@@ -52,6 +69,11 @@ Fixsized-Write:
 
 64K-Overlay:
   stage: test_mt
+  tags:
+    - docker
+    - exclusive
+  only:
+    - benchmark
   script:
     - nice -n 0 make test_mt TEST_ARGS='25 64 64 14 9 11' 2>&1 | tee log/test_mt/64K-Overlay.log
     - head -n11 log/test_mt/*.log | tail -n+2
@@ -63,6 +85,11 @@ Fixsized-Write:
 
 64K-Discrete:
   stage: test_mt
+  tags:
+    - docker
+    - exclusive
+  only:
+    - benchmark
   script:
     - nice -n 0 make test_mt TEST_ARGS='30 64 64 10 6 8' 2>&1 | tee log/test_mt/64K-Discrete.log
     - head -n11 log/test_mt/*.log | tail -n+2
@@ -74,6 +101,11 @@ Fixsized-Write:
 
 1M-Overlay:
   stage: test_mt
+  tags:
+    - docker
+    - exclusive
+  only:
+    - benchmark
   script:
     - nice -n 0 make test_mt TEST_ARGS='26 1024 1024 10 5 7' 2>&1 | tee log/test_mt/1M-Overlay.log
     - head -n11 log/test_mt/*.log | tail -n+2
@@ -85,6 +117,11 @@ Fixsized-Write:
 
 1M-Discrete:
   stage: test_mt
+  tags:
+    - docker
+    - exclusive
+  only:
+    - benchmark
   script:
     - nice -n 0 make test_mt TEST_ARGS='31 1024 1024 8 4 6' 2>&1 | tee log/test_mt/1M-Discrete.log
     - head -n11 log/test_mt/*.log | tail -n+2
@@ -96,6 +133,11 @@ Fixsized-Write:
 
 latency:
   stage: test_lat
+  tags:
+    - docker
+    - exclusive
+  only:
+    - benchmark
   script:
     - for k in `seq 2 12 | sed 's/\([0-9]*\)/2^\1/g' | bc`; do for l in `seq 0 6`; do nice -n 0 make test_lat TEST_LOAD=1 TEST_ARGS="31 $k $k 10 $l $l" 2>&1 | tee 'log/test_lat/latency-'$k'KB-'$l'Round.log'; done done 
   artifacts:
@@ -105,6 +147,10 @@ latency:
 
 analysis:
   stage: analysis
+  tags:
+    - docker
+  only:
+    - benchmark
   script:
     - for i in `ls log/test_mt/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t; echo; echo; done
     - for i in `ls log/test_lat/*.log`; do echo $i; head -n11 $i | tail -n+2; sed -n '/^[^,]*,[\.,0-9[:space:]]*$/p' $i | tee -a log/test_lat/summary.csv; echo; echo; done
