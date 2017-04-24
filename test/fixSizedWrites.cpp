@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
 
         {
             Log::log("Creating B-tree...");
-            BTreeDefault bt(new CEngine("tmp/tai"));
+            BTreeDefault bt(new POSIXEngine("tmp/tai"));
 
             {
                 Log::log("Creating Controller...");
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
 
                 start = high_resolution_clock::now();
 
-                string* ss[1<<15];
+                string* ss[1 << 15];
 
                 for (auto i = n; i--; ios.emplace_back(bt.write(ctrl, dist(rand) % size, data.size(), (ss[i]=(new string(data)))->data())))
                     for (size_t j = 0; j < data.size(); ++j)
