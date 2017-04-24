@@ -7,6 +7,7 @@
 #include <vector>
 #include <atomic>
 #include <memory>
+#include <limits>
 
 #ifdef __unix__
 #include <unistd.h>
@@ -134,7 +135,7 @@ namespace tai
     };
 
 #ifdef _POSIX_VERSION
-    class POSIXEngine : public IOEngine, public TLTable<int>
+    class POSIXEngine : public IOEngine
     {
         std::string path;
         int fd = -1;
@@ -188,4 +189,29 @@ namespace tai
         }
     };
 #endif
+
+    class NullEngine : public IOEngine
+    {
+    public:
+        template<typename... Args>
+        explicit NullEngine(Args... args)
+        {
+            size = std::numeric_limits<decltype(size)>::max();
+        }
+
+        virtual bool read(char* dat, size_t pos, size_t len) override
+        {
+            return true;
+        }
+
+        virtual bool write(const char* dat, size_t pos, size_t len) override
+        {
+            return true;
+        }
+
+        virtual std::string str() override
+        {
+            return "[NullEngine]";
+        }
+    };
 }
