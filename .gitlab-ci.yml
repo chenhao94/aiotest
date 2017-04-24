@@ -10,6 +10,7 @@ build:
   stage: build
   tags:
     - docker
+    - exclusive
   script:
     - nice -n 19 make -j
   artifacts:
@@ -20,6 +21,7 @@ pre-test:
   stage: pre-test
   tags:
     - docker
+    - exclusive
   script:
     - mkdir -p log/test_{mt,lat}
   artifacts:
@@ -149,6 +151,7 @@ analysis:
   stage: analysis
   tags:
     - docker
+    - exclusive
   only:
     - benchmark
   script:
