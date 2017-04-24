@@ -110,7 +110,7 @@ pre_test:
 .PHONY: test
 test: pre_test
 	$(MV) tmp/file0 tmp/sync
-	for i in aio tai; do dd if=tmp/sync of=tmp/$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1; done
+	for i in aio tai; do if [ $(OS) == Darwin ]; then dd if=tmp/sync of=tmp/$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1; else $(CP) tmp/sync tmp/$$i; fi; done
 	sync
 	for i in 1 2 4; do                                                                                                          \
 	    if [ $(OS) == Darwin ]; then sudo purge; fi;                                                                            \
@@ -145,9 +145,11 @@ test_lat: pre_test
 
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),pre_test)
+ifneq ($(MAKECMDGOALS),test)
 ifneq ($(MAKECMDGOALS),test_mt)
 ifneq ($(MAKECMDGOALS),test_lat)
 sinclude $(DEPS)
+endif
 endif
 endif
 endif
