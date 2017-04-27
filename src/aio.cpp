@@ -85,12 +85,12 @@ namespace tai
     bool register_fd(int fd, const std::string path)
     {
         Log::debug("Registering fd = ", fd, ".");
-        if (!_AIO_INIT_.load(std::memory_order_consume))
+        if (!_AIO_INIT_.load(std::memory_order_acquire))
         {
             Log::debug("Not initialized aio wrapper.");
             return false;
         }
-        if (auto current = aiocb::bts[fd].load(std::memory_order_consume))
+        if (auto current = aiocb::bts[fd].load(std::memory_order_acquire))
         {
             Log::debug("Failed to register fd = ", fd, " due to the conflict with ", (size_t)current, ".");
             return false;
@@ -120,13 +120,15 @@ namespace tai
 
     void deregister_fd(int fd)
     {
-        if (!_AIO_INIT_.load(std::memory_order_consume))
+        if (!_AIO_INIT_.load(std::memory_order_acquire))
             return;
         Log::debug("Deregistering fd = ", fd, ".");
 
-        auto victim = aiocb::bts[fd].load(std::memory_order_consume);
-        delete victim;
+        auto victim = aiocb::bts[fd].load(std::memory_order_acquire);
         aiocb::bts[fd].store(nullptr, std::memory_order_release);
+        auto io = victim->detach(*aiocb::ctrl);
+        delete victim;
+        io->wait();
 
         Log::debug("Deregistered fd = ", fd, " with victim ", (size_t)victim, ".");
     }

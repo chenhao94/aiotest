@@ -64,7 +64,7 @@ namespace tai
             {
                 std::vector<std::unique_ptr<IOCtrl>> ios; 
                 for (auto &i: bts)
-                    if (auto bt = i.load(std::memory_order_consume))
+                    if (auto bt = i.load(std::memory_order_acquire))
                     {
                         ios.emplace_back(bt->detach(*ctrl));
                         delete bt;
@@ -77,23 +77,23 @@ namespace tai
 
             void read()
             {
-                io.reset(bts[aio_fildes].load(std::memory_order_consume)->readsome(*ctrl, aio_offset, aio_nbytes, (char *)aio_buf));
+                io = bts[aio_fildes].load(std::memory_order_acquire)->readsome(*ctrl, aio_offset, aio_nbytes, (char *)aio_buf);
             }
 
             void write()
             {
-                io.reset(bts[aio_fildes].load(std::memory_order_consume)->write(*ctrl, aio_offset, aio_nbytes, (const char *)aio_buf));
+                io = bts[aio_fildes].load(std::memory_order_acquire)->write(*ctrl, aio_offset, aio_nbytes, (const char *)aio_buf);
             }
 
             void fsync()
             {
-                io.reset(bts[aio_fildes].load(std::memory_order_consume)->sync(*ctrl));
+                io = bts[aio_fildes].load(std::memory_order_acquire)->sync(*ctrl);
             }
 
             int status(); 
 
         private:
-            std::unique_ptr<IOCtrl> io;
+            IOCtrlHandle io;
 
             static std::array<std::atomic<BTreeBase*>, 65536> bts;
             static std::unique_ptr<Controller> ctrl;

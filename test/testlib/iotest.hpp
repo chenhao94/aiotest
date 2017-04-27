@@ -238,8 +238,18 @@ public:
     void writeop(off_t offset, char* data) override;
     void readop(off_t offset, char* data) override;
     void syncop() override;
-    virtual void openfile(const std::string& filename) override { RandomWrite::openfile(filename); tai::register_fd(fd, filename); }
-    virtual void closefile() override { tai::deregister_fd(fd); }
+
+    virtual void openfile(const std::string& filename) override
+    {
+        RandomWrite::openfile(filename);
+        tai::register_fd(fd, filename);
+    }
+
+    virtual void closefile() override
+    {
+        tai::deregister_fd(fd);
+    }
+
     static void startEntry(size_t thread_id);
 };
 
@@ -284,7 +294,7 @@ public:
 private:
 
     std::unique_ptr<tai::BTreeBase> bt;
-    std::vector<std::unique_ptr<tai::IOCtrl>> ios;
+    std::vector<tai::IOCtrlHandle> ios;
     static std::unique_ptr<tai::Controller> ctrl;
     static std::atomic<bool> ctrlFlag, ctrlConstructedFlag;
 };

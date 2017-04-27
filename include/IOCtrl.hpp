@@ -123,6 +123,8 @@ namespace tai
         }
     };
 
+    using IOCtrlHandle = std::unique_ptr<IOCtrl>;
+
     const char* to_cstring(IOCtrl::State _);
     const char* to_cstring(IOCtrl::Method _);
     std::string to_string(IOCtrl::State _);

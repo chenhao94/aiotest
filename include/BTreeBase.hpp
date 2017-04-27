@@ -45,15 +45,15 @@ namespace tai
             return conf.failed.load(std::memory_order_relaxed);
         }
 
-        virtual IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
-        virtual IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
-        virtual IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr) = 0;
-        virtual IOCtrl* hook(Controller& ctrl, std::function<void()> task) = 0;
+        virtual IOCtrlHandle read(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
+        virtual IOCtrlHandle readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
+        virtual IOCtrlHandle write(Controller& ctrl, size_t pos, size_t len, const char* ptr) = 0;
+        virtual IOCtrlHandle hook(Controller& ctrl, std::function<void()> task) = 0;
         virtual bool inject(Controller& ctrl, std::function<void()> task) = 0;
-        virtual IOCtrl* syncTree(Controller& ctrl) = 0;
-        virtual IOCtrl* syncCache(Controller& ctrl) = 0;
-        virtual IOCtrl* sync(Controller& ctrl) = 0;
-        virtual IOCtrl* detach(Controller& ctrl) = 0;
+        virtual IOCtrlHandle syncTree(Controller& ctrl) = 0;
+        virtual IOCtrlHandle syncCache(Controller& ctrl) = 0;
+        virtual IOCtrlHandle sync(Controller& ctrl) = 0;
+        virtual IOCtrlHandle detach(Controller& ctrl) = 0;
         // virtual void close() = 0;
     };
 }
