@@ -1,11 +1,15 @@
+#include <cstdlib>
 #include <string>
 #include <memory>
 #include <fstream>
 #include <functional>
-#include <cstdlib>
 #include <new>
 
 #include <boost/lockfree/queue.hpp>
+
+#ifdef TAI_JEMALLOC
+#include <jemalloc/jemalloc.h>
+#endif
 
 #include "Log.hpp"
 #include "BTreeNodeBase.hpp"
@@ -25,18 +29,18 @@ namespace tai
         if (node->data)
         {
             Controller::ctrl->used.fetch_sub(size, std::memory_order_relaxed);
-            delete[] node->data;
+            free(node->data);
             node->data = nullptr;
         }
         else
         {
             Controller::ctrl->used.fetch_add(size, std::memory_order_relaxed);
             Controller::ctrl->cache.push(node);
-            node->data = new
-                #ifdef __linux__
-                (std::align_val_t(4096))
-                #endif
-                char[size];
+            #ifdef TAI_JEMALLOC
+            node->data = (char*)aligned_alloc(4096, size);
+            #else
+            node->data = (char*)malloc(size);
+            #endif
         }
     }
 

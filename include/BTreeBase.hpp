@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <unordered_set>
 #include <mutex>
 #include <random>
@@ -47,6 +48,8 @@ namespace tai
         virtual IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
         virtual IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
         virtual IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr) = 0;
+        virtual IOCtrl* hook(Controller& ctrl, std::function<void()> task) = 0;
+        virtual bool inject(Controller& ctrl, std::function<void()> task) = 0;
         virtual IOCtrl* syncTree(Controller& ctrl) = 0;
         virtual IOCtrl* syncCache(Controller& ctrl) = 0;
         virtual IOCtrl* sync(Controller& ctrl) = 0;

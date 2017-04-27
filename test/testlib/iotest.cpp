@@ -21,7 +21,7 @@ atomic<bool> TAIWrite::ctrlFlag, TAIWrite::ctrlConstructedFlag;
 
 void RandomWrite::run_writeonly(size_t thread_id)
 {
-    openfile(("tmp/file" + to_string(thread_id)).data());
+    openfile("tmp/file" + to_string(thread_id));
     //vector<char> data(WRITE_SIZE, 'a');
     auto data = new
         #ifdef __linux__
@@ -56,7 +56,7 @@ void RandomWrite::run_writeonly(size_t thread_id)
 
 void RandomWrite::run_readonly(size_t thread_id)
 {
-    openfile(("tmp/file" + to_string(thread_id)).data());
+    openfile("tmp/file" + to_string(thread_id));
     auto buf = new
         #ifdef __linux__
         (align_val_t(512))
@@ -87,7 +87,7 @@ void RandomWrite::run_readonly(size_t thread_id)
 
 void RandomWrite::run_readwrite(size_t thread_id)
 {
-    openfile(("tmp/file" + to_string(thread_id)).data());
+    openfile("tmp/file" + to_string(thread_id));
     auto data = new
         #ifdef __linux__
         (align_val_t(512))
@@ -141,10 +141,10 @@ void RandomWrite::run_readwrite(size_t thread_id)
 void RandomWrite::run(size_t thread_id)
 {
     array<function<void(size_t)>, 3>{
-    [this](auto _){ run_readonly(_); },
-    [this](auto _){ run_writeonly(_); },
-    [this](auto _){ run_readwrite(_); }
-}[workload](thread_id);
+        [this](auto _){ run_readonly(_); },
+        [this](auto _){ run_writeonly(_); },
+        [this](auto _){ run_readwrite(_); }
+    }[workload](thread_id);
 }
 
 void BlockingWrite::writeop(off_t offset, char* data){

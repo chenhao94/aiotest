@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <string>
 #include <memory>
 #include <fstream>
@@ -12,6 +13,10 @@
 #include <chrono>
 
 #include <boost/lockfree/queue.hpp>
+
+#ifdef TAI_JEMALLOC
+#include <jemalloc/jemalloc.h>
+#endif
 
 #include "Decl.hpp"
 #include "Log.hpp"
@@ -85,6 +90,26 @@ namespace tai
         {
             Log::debug("Destruct B-tree node [", offset, ", ", offset + NM, "].");
             evict(true);
+        }
+
+        static void* operator new(size_t size)
+        {
+            return malloc(sizeof(Self));
+        }
+
+        static void* operator new[](size_t size)
+        {
+            return malloc(size);
+        }
+
+        static void operator delete(void* ptr)
+        {
+            free(ptr);
+        }
+
+        static void operator delete[](void* ptr)
+        {
+            free(ptr);
         }
 
         void merge(BTreeNodeBase* node, IOCtrl* io = nullptr) override
@@ -355,6 +380,26 @@ namespace tai
             evict(true);
         }
 
+        static void* operator new(size_t size)
+        {
+            return malloc(sizeof(Self));
+        }
+
+        static void* operator new[](size_t size)
+        {
+            return malloc(size);
+        }
+
+        static void operator delete(void* ptr)
+        {
+            free(ptr);
+        }
+
+        static void operator delete[](void* ptr)
+        {
+            free(ptr);
+        }
+
         void merge(BTreeNodeBase* node, IOCtrl* io = nullptr) override
         {
             if (data)
@@ -516,7 +561,7 @@ namespace tai
         {
             Log::debug("Destruct B-tree for \"", conf.io->str(), "\".");
             if (root)
-                Log::debug("Memory leak for at ", (size_t)root, ". Please detach before destruction.");
+                Log::log("Memory leak for at ", (size_t)root, ". Please detach before destruction.");
             std::lock_guard<std::mutex> lck(mtxUsedID);
             usedID.erase(id);
         }
@@ -529,8 +574,12 @@ namespace tai
             auto io = new IOCtrl;
             if (len < 1)
                 io->state.store(IOCtrl::Done, std::memory_order_relaxed);
-            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
-                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            else
+            {
+                auto capture = root;
+                if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                    io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            }
             return io;
         }
 
@@ -542,8 +591,12 @@ namespace tai
             auto io = new IOCtrl(true);
             if (len < 1)
                 io->state.store(IOCtrl::Done, std::memory_order_relaxed);
-            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
-                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            else
+            {
+                auto capture = root;
+                if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                    io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            }
             return io;
         }
 
@@ -554,7 +607,28 @@ namespace tai
             auto io = new IOCtrl;
             if (len < 1)
                 io->state.store(IOCtrl::Done, std::memory_order_relaxed);
-            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->write(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            else
+            {
+                auto capture = root;
+                if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->write(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                    io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            }
+            return io;
+        }
+
+        // Inject a task to pending list.
+        bool inject(Controller& ctrl, std::function<void()> task) override
+        {
+            Log::debug("Issued inject");
+            return ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(task); });
+        }
+
+        // Inject a task and track for completion.
+        IOCtrl* hook(Controller& ctrl, std::function<void()> task) override
+        {
+            Log::debug("Issued hook");
+            auto io = new IOCtrl;
+            if (!inject(ctrl, task) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
@@ -566,7 +640,8 @@ namespace tai
             Log::debug("Issued recursive sync");
             auto io = new IOCtrl;
             auto task = [](){};
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->flush(io); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(task, io); }))
+            auto capture = root;
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->flush(io); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(task, io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             return io;
         }
@@ -576,11 +651,7 @@ namespace tai
         IOCtrl* syncCache(Controller& ctrl) override
         {
             Log::debug("Issued linear sync");
-            auto io = new IOCtrl;
-            auto task = [&](){ ctrl.flush(); };
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->sync(task); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
-                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
-            return io;
+            return hook(ctrl, [&](){ ctrl.flush(); });
         }
 
         IOCtrl* sync(Controller& ctrl) override
@@ -594,7 +665,8 @@ namespace tai
         {
             Log::debug("Issued detach");
             auto io = new IOCtrl;
-            if (!root || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ root->detach(false); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            auto capture = root;
+            if (!root || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->detach(false); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             else
                 root = nullptr;

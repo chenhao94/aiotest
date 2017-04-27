@@ -37,6 +37,22 @@ Fixsized-Write:
   script:
     - nice -n 0 make test TEST_LOAD=1 TEST_ARGS='30 1 1 10 0 0' 2>&1
 
+Try-test_mt:
+  stage: correctness
+  tags:
+    - docker
+    - exclusive
+  script:
+    - nice -n 0 make test_mt TEST_ARGS='20 4 4 8 6 6' 2>&1
+
+Try-test_lat:
+  stage: correctness
+  tags:
+    - docker
+    - exclusive
+  script:
+    - nice -n 0 make test_lat TEST_LOAD=1 TEST_ARGS="20 4 4 10 1 1" 2>&1
+
 4K-Overlay:
   stage: test_mt
   tags:
