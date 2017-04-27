@@ -35,72 +35,17 @@ using namespace this_thread;
 
 int main(int argc, char* argv[])
 {
-    if (argc != 10)
-    {
-        cerr << "Need arguments for thread number, type of IO to test and workload type" << endl;
-        exit(-1);
-    }
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 1])); }({
-            &thread_num,
-            &testType,
-            &workload,
-            });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 4])); }({
-            &FILE_SIZE,
-            });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 5])); }({
-            &READ_SIZE,
-            &WRITE_SIZE,
-            });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 7])); }({
-            &IO_ROUND,
-            &SYNC_RATE,
-            &WAIT_RATE
-            });
-
-    READ_SIZE = READ_SIZE << 10;
-    WRITE_SIZE = WRITE_SIZE << 10;
-
-    tai::Log::log("thread number: ", thread_num);
+    processArgs(argc, argv);
     srand(time(nullptr));
     system("sync");
 
-    string testname[] = {"Blocking IO", "Blocking IO (O_DIRECT | O_SYNC)", "Async IO", "LibAIO", "TAI", "Fstream"};
-    string wlname[] = {"read", "write", "read&write"};
-
-    tai::Log::log(testname[testType]);
     vector<thread> threads;
     auto begin = high_resolution_clock::now();
     for (size_t i = 0; i < thread_num; ++i)
-        switch (testType)
-        {
-            case 0:
-            case 1:
-                threads.emplace_back(thread(BlockingWrite::startEntry, i, -testType & (
-                                #ifdef __linux__
-                                O_DIRECT |
-                                #endif
-                                O_SYNC)));
-                break;
-            case 2:
-                threads.emplace_back(thread(AIOWrite::startEntry, i));
-                break;
-            case 3:
-                #ifdef __linux__
-                if (!i)
-                    io_setup(1048576, &LibAIOWrite::io_cxt);
-                #endif
-                threads.emplace_back(thread(LibAIOWrite::startEntry, i));
-                break;
-            case 4:
-                if (!i)
-                    tai::aio_init();
-                threads.emplace_back(thread(TAIWrite::startEntry, i));
-                break;
-            case 5:
-                threads.emplace_back(thread(FstreamWrite::startEntry, i));
-                break;
-        }
+    {
+        auto rw = getInstance(testType);
+        threads.emplace_back(thread([&](){rw->run(i);}));
+    }
     for (auto& t : threads)
         t.join();
 

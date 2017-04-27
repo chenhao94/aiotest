@@ -1,4 +1,5 @@
 #include "iotest.hpp"
+#include <atomic>
 
 using namespace std;
 
@@ -15,13 +16,12 @@ size_t WAIT_RATE = 1;
 #ifdef __linux__
 io_context_t LibAIOWrite::io_cxt;
 #endif
+unique_ptr<tai::Controller> TAIWrite::ctrl;
+atomic<bool> TAIWrite::ctrlFlag, TAIWrite::ctrlConstructedFlag;
 
 void RandomWrite::run_writeonly(size_t thread_id)
 {
-    //auto file = fopen(("tmp/file" + to_string(thread_id)).data(), "r+");
-    fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); //fileno(file);
-    tai::register_fd(fd, "tmp/file" + to_string(thread_id));
-    reset_file();
+    openfile(("tmp/file" + to_string(thread_id)).data());
     //vector<char> data(WRITE_SIZE, 'a');
     auto data = new
         #ifdef __linux__
@@ -46,9 +46,7 @@ void RandomWrite::run_writeonly(size_t thread_id)
     syncop();
     wait_cb();
     cleanup();
-    tai::deregister_fd(fd);
-    //fclose(file);
-    close(fd);
+    closefile();
     operator delete[](data
             #ifdef __linux__
             , align_val_t(512)
@@ -58,9 +56,7 @@ void RandomWrite::run_writeonly(size_t thread_id)
 
 void RandomWrite::run_readonly(size_t thread_id)
 {
-    fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); 
-    tai::register_fd(fd, "tmp/file" + to_string(thread_id));
-    reset_file();
+    openfile(("tmp/file" + to_string(thread_id)).data());
     auto buf = new
         #ifdef __linux__
         (align_val_t(512))
@@ -81,8 +77,7 @@ void RandomWrite::run_readonly(size_t thread_id)
     //syncop();
     wait_cb();
     cleanup();
-    tai::deregister_fd(fd);
-    close(fd);
+    closefile();
     operator delete[](buf
             #ifdef __linux__
             , align_val_t(512)
@@ -92,9 +87,7 @@ void RandomWrite::run_readonly(size_t thread_id)
 
 void RandomWrite::run_readwrite(size_t thread_id)
 {
-    fd = open(("tmp/file" + to_string(thread_id)).data(), openflags); 
-    tai::register_fd(fd, "tmp/file" + to_string(thread_id));
-    reset_file();
+    openfile(("tmp/file" + to_string(thread_id)).data());
     auto data = new
         #ifdef __linux__
         (align_val_t(512))
@@ -132,8 +125,7 @@ void RandomWrite::run_readwrite(size_t thread_id)
     syncop();
     wait_cb();
     cleanup();
-    tai::deregister_fd(fd);
-    close(fd);
+    closefile();
     operator delete[](data
             #ifdef __linux__
             , align_val_t(512)
@@ -326,7 +318,7 @@ void LibAIOWrite::startEntry(size_t thread_id)
     lw.run(thread_id);
 }
 
-void TAIWrite::cleanup() 
+void TAIAIOWrite::cleanup() 
 {
     for (auto &i : cbs)
         if (unlikely(tai::aio_error(&i) && tai::aio_error(&i) != EINPROGRESS))
@@ -344,7 +336,7 @@ void TAIWrite::cleanup()
     }
 }
 
-void TAIWrite::writeop(off_t offset, char* data) 
+void TAIAIOWrite::writeop(off_t offset, char* data) 
 {
     cbs.emplace_back(fd, offset, data, WRITE_SIZE);
     if (tai::aio_write(&cbs.back()))
@@ -354,7 +346,7 @@ void TAIWrite::writeop(off_t offset, char* data)
     }
 }
 
-void TAIWrite::readop(off_t offset, char* data) 
+void TAIAIOWrite::readop(off_t offset, char* data) 
 {
     cbs.emplace_back(fd, offset, data, READ_SIZE);
     if (tai::aio_read(&cbs.back()))
@@ -364,7 +356,7 @@ void TAIWrite::readop(off_t offset, char* data)
     }
 }
 
-void TAIWrite::syncop()
+void TAIAIOWrite::syncop()
 {
     cbs.emplace_back(fd);
     if (tai::aio_fsync(O_SYNC, &cbs.back()))
@@ -374,9 +366,58 @@ void TAIWrite::syncop()
     }
 }
 
-void TAIWrite::startEntry(size_t thread_id)
+void TAIAIOWrite::startEntry(size_t thread_id)
 {
-    TAIWrite tw;
+    TAIAIOWrite tw;
     tw.run(thread_id);
+}
+
+TAIWrite::TAIWrite()
+{
+    using namespace tai;
+    bool expect = false;
+    if (ctrlFlag.compare_exchange_strong(expect, true))
+    {
+        ctrl.reset(new Controller(1ll << 30, 1ll << 32, thread::hardware_concurrency()));
+        ctrlConstructedFlag.store(true, memory_order_release);
+    }
+    else
+        while (!ctrlConstructedFlag.load(memory_order_acquire));
+}
+
+void TAIWrite::writeop(off_t offset, char* data) 
+{
+    using namespace tai;
+    ios.emplace_back(bt->write(*ctrl, offset, WRITE_SIZE, data));
+    auto status = (*ios.back())();
+    if (status && status != IOCtrl::Running)
+    {
+        cerr << "Error at TAI write." << endl;
+        exit(-1);
+    }
+}
+
+void TAIWrite::readop(off_t offset, char* data) 
+{
+    using namespace tai;
+    ios.emplace_back(bt->read(*ctrl, offset, READ_SIZE, data));
+    auto status = (*ios.back())();
+    if (status && status != IOCtrl::Running)
+    {
+        cerr << "Error at TAI read." << endl;
+        exit(-1);
+    }
+}
+
+void TAIWrite::syncop()
+{
+    using namespace tai;
+    ios.emplace_back(bt->sync(*ctrl));
+    auto status = (*ios.back())();
+    if (status && status != IOCtrl::Running)
+    {
+        cerr << "Error at TAI sync." << endl;
+        exit(-1);
+    }
 }
 

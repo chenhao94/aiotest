@@ -6,6 +6,8 @@
 #include <numeric>
 #include <functional>
 #include <new>
+#include <string>
+#include <memory>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -37,6 +39,11 @@ extern size_t IO_ROUND;
 extern size_t SYNC_RATE;
 extern size_t WAIT_RATE;
 
+extern std::string testname[];
+extern std::string wlname[];
+
+void processArgs(int argc, char* argv[]);
+
 inline auto randgen(size_t align = 0)
 {
     static const auto size = FILE_SIZE - (READ_SIZE > WRITE_SIZE ? READ_SIZE : WRITE_SIZE) + 1;
@@ -46,7 +53,9 @@ inline auto randgen(size_t align = 0)
 class RandomWrite;
 class AIOWrite;
 class BlockingWrite;
-class TAIWrite;
+class TAIAIOWrite;
+
+std::unique_ptr<RandomWrite> getInstance(int testType);
 
 class RandomWrite
 {
@@ -68,6 +77,8 @@ public:
     void run_readwrite(size_t thread_id);
     void run(size_t thread_id);
 
+    virtual void openfile(const char* filename) { fd = open(filename, openflags); }
+    virtual void closefile() { close(fd); }
     virtual void writeop(off_t offset, char* data) = 0;
     virtual void readop(off_t offset, char* data) = 0;
     virtual void syncop() = 0;
@@ -100,6 +111,7 @@ public:
     void readop(off_t offset, char* data) override {file.seekg(offset).read(data, READ_SIZE); }
     void syncop() override { file.flush(); BlockingWrite::syncop(); }
     void reset_file() override { file = std::fstream("/dev/fd/" + std::to_string(fd), std::ios::binary | std::ios::in | std::ios::out); }
+    virtual void openfile(const char* filename) override { RandomWrite::openfile(filename); reset_file(); }
     static void startEntry(size_t thread_id);
 
 private:
@@ -170,11 +182,11 @@ public:
     #endif
 };
 
-class TAIWrite : public RandomWrite
+class TAIAIOWrite : public RandomWrite
 {
 public: 
 
-    TAIWrite() { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); }
+    TAIAIOWrite() { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); }
 
     std::vector<tai::aiocb> cbs;
 
@@ -196,5 +208,41 @@ public:
     void writeop(off_t offset, char* data) override;
     void readop(off_t offset, char* data) override;
     void syncop() override;
+    virtual void openfile(const char* filename) override { RandomWrite::openfile(filename); tai::register_fd(fd, filename); }
+    virtual void closefile() override { tai::deregister_fd(fd); }
     static void startEntry(size_t thread_id);
+};
+
+class TAIWrite : public RandomWrite
+{
+public: 
+    
+    TAIWrite();
+
+    virtual void openfile(const char* filename) override 
+        { bt.reset(new tai::BTreeDefault(new tai::STLEngine(filename))); 
+          ios.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); }
+    virtual void closefile() override { auto io = bt->detach(*ctrl); bt.reset(nullptr); io->wait(); }
+    inline void reset_cb() override { ios.clear(); }
+
+    inline void wait_cb() override
+    {
+        ios.back()->wait();
+    }
+
+    inline void busywait_cb() override
+    {
+        while ((*ios.back())() == tai::IOCtrl::Running);
+    }
+
+    void writeop(off_t offset, char* data) override;
+    void readop(off_t offset, char* data) override;
+    void syncop() override;
+
+private:
+
+    std::unique_ptr<tai::BTreeBase> bt;
+    std::vector<std::unique_ptr<tai::IOCtrl>> ios;
+    static std::unique_ptr<tai::Controller> ctrl;
+    static std::atomic<bool> ctrlFlag, ctrlConstructedFlag;
 };

@@ -36,65 +36,10 @@ using namespace this_thread;
 
 int main(int argc, char *argv[])
 {
-    if (argc != 10)
-    {
-        cerr << "[Same CL options as MT]Need arguments for type of IO to test, write size and number of IOs issuing once." << endl;
-        exit(-1);
-    }
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 1])); }({
-            &thread_num,
-            &testType,
-            &workload,
-            });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 4])); }({
-            &FILE_SIZE,
-            });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 5])); }({
-            &READ_SIZE,
-            &WRITE_SIZE,
-            });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 7])); }({
-            &IO_ROUND,
-            &SYNC_RATE,
-            &WAIT_RATE
-            });
+    processArgs(argc, argv);
 
-    READ_SIZE = READ_SIZE << 10;
-    WRITE_SIZE = WRITE_SIZE << 10;
-
-    RandomWrite *rw;
-
-    switch (testType)
-    {
-    case 0:
-    case 1:
-        rw = new BlockingWrite();
-        rw->openflags |= -testType & (
-                            #ifdef __linux__
-                            O_DIRECT |
-                            #endif
-                            O_SYNC);
-        break;
-    case 2:
-        rw = new AIOWrite();
-        break;
-    case 3:
-        #ifdef __linux__
-        io_setup(1048576, &LibAIOWrite::io_cxt);
-        #endif
-        rw = new LibAIOWrite();
-        break;
-    case 4:
-        tai::aio_init();
-        rw = new TAIWrite();
-        break;
-    default:
-        cerr << "Illegal IO-type! Exit..." << endl;
-        return 0;
-    }
-
-    rw->fd = open("tmp/file0", rw->openflags); 
-    tai::register_fd(rw->fd, "tmp/file0");
+    auto rw = getInstance(testType);
+    rw->openfile("tmp/file0");
 
     auto data = new
         #ifdef __linux__
@@ -140,12 +85,11 @@ int main(int argc, char *argv[])
     if (testType == 4)
         tai::aio_end();
 
-    string testname[] = {"BIO", "DIO", "PAIO", "LAIO", "TAI"};
     tai::Log::log( testname[testType], " ", 
             "testType, X of IO, size per IO(KB), 20 percentile of issuing(us), average, median, 80 percentile, ",
             "20 percentile of syncing, average, median, 80 percentile");
     cout << testname[testType] << ", " << SYNC_RATE << ", " << (WRITE_SIZE >> 10) << ", " << pcnt20_issue << ", " << avg_issue << ", " << mid_issue << ", " <<pcnt80_issue;
     cout << ", " << pcnt20_sync << ", " << avg_sync << ", " << mid_sync << ", " <<pcnt80_sync << endl;
-    close(rw->fd);
+    rw->closefile();
     return 0;
 }
