@@ -43,8 +43,8 @@ int main(int argc, char* argv[])
     auto begin = high_resolution_clock::now();
     for (size_t i = 0; i < thread_num; ++i)
     {
-        auto rw = getInstance(testType);
-        threads.emplace_back(thread([&](){ rw->run(i); }));
+        auto inst = getInstance(testType);
+        threads.emplace_back(thread([rw = std::move(inst), i](){ rw->run(i); }));
     }
     for (auto& t : threads)
         t.join();

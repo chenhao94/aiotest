@@ -127,7 +127,7 @@ test_mt: pre_test
 	for i in `seq 0 5`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do                                               \
 	    if [ $(OS) == Darwin ]; then sudo purge; fi;                                                                            \
 	    if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;                                         \
-	    time (`if [ $(OS) == Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS));  \
+	    time (`if [ $(OS) == _Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS));  \
 	    time (sync tmp/*);                                                                                                      \
 	    time sync;                                                                                                              \
 	done done done
