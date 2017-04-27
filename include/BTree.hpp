@@ -681,7 +681,7 @@ namespace tai
     };
 
     // Default hierarchy.
-    using BTreeDefault = BTree<32, 2, 9, 9, 12>;
+    using BTreeDefault = BTree<40, 3, 2, 3, 4, 12>;
     using BTreeTrivial = BTree<64>;
     using BTreeBinary = BTree<1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>;
 }

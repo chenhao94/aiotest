@@ -43,7 +43,7 @@ Try-test_mt:
     - docker
     - exclusive
   script:
-    - nice -n 0 make test_mt TEST_ARGS='20 4 4 8 6 6' 2>&1
+    - nice -n 0 make test_mt TEST_LOAD=1 TEST_ARGS='20 4 4 8 6 6' 2>&1
 
 Try-test_lat:
   stage: correctness

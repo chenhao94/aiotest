@@ -156,7 +156,6 @@ int main(int argc, char* argv[])
                     Log::log("\t", i * 100 / ios.size(), "% Performance: ", (size_t)round(i * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
             }
             for (auto i = n ; i--; delete ss[i]);
-            // unique_ptr<IOCtrl>(bt.detach(ctrl))->wait();
         }
 
         Log::log("Performance: ", (size_t)round(n * 1e9 / (duration_cast<nanoseconds>(high_resolution_clock::now() - start).count() + 1)), " iops.");
