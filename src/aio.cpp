@@ -124,12 +124,10 @@ namespace tai
             return;
         Log::debug("Deregistering fd = ", fd, ".");
 
-        auto victim = aiocb::bts[fd].load(std::memory_order_acquire);
+        auto io = aiocb::bts[fd].load(std::memory_order_acquire)->detach(*aiocb::ctrl);
         aiocb::bts[fd].store(nullptr, std::memory_order_release);
-        auto io = victim->detach(*aiocb::ctrl);
-        delete victim;
         io->wait();
 
-        Log::debug("Deregistered fd = ", fd, " with victim ", (size_t)victim, ".");
+        Log::debug("Deregistered fd = ", fd, ".");
     }
 }
