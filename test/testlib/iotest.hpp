@@ -268,7 +268,7 @@ public:
 
     virtual void openfile(const std::string& filename) override 
     {
-        bt.reset(new tai::BTreeDefault(new tai::STLEngine(filename))); 
+        bt.reset(new tai::BTreeDefault(new tai::POSIXEngine(filename))); 
         ios.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
     }
 

@@ -64,7 +64,7 @@ $(TESTEXES): $(TARGETS_DIR)/%: $(TESTS_DIR)/%.cpp $(TESTOBJS) $(LIBTAI)
 
 $(TESTOBJS): $(TESTOBJS_DIR)/%.o: $(TESTLIBS_DIR)/%.cpp $(LIBTAI)
 	$(MKDIR) $(TESTOBJS_DIR)
-	$(CXX) $(CXXFLAGS) -c $< -L$(LIBS_DIR) -ltai -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/% $(PCHS)
 	$(MKDIR) $(OBJS_DIR)
