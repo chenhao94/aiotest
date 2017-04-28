@@ -25,43 +25,45 @@
 
 #include "tai.hpp"
 #include "aio.hpp"
-#include "./testlib/iotest.hpp"
+#include "testlib/iotest.hpp"
 
 #define unlikely(x)     __builtin_expect((x),0)
 
-using namespace std;
-using namespace chrono;
-using namespace this_thread;
-
 int main(int argc, char* argv[])
 {
+    using namespace std;
+    using namespace chrono;
+    using namespace tai;
+
     processArgs(argc, argv);
     srand(time(nullptr));
-    system("sync");
 
     vector<thread> threads;
-    auto begin = high_resolution_clock::now();
+    auto epoch = high_resolution_clock::now();
     for (size_t i = 0; i < thread_num; ++i)
-    {
-        auto rw = getInstance(testType);
-        threads.emplace_back(thread([rw = std::move(rw), i](){ rw->run(i); }));
-    }
+        threads.emplace_back([=](){ RandomWrite::getInstance(testType)->run(i); });
     for (auto& t : threads)
         t.join();
 
-    auto time = duration_cast<nanoseconds>(high_resolution_clock::now() - begin).count();
+    auto time = duration_cast<nanoseconds>(high_resolution_clock::now() - epoch).count();
+
     if (testType == 4)
-        tai::aio_end();
-    tai::Log::log(testname[testType], " random ", wlname[workload], ": ", time / 1e9, " s in total, ",
+        aio_end();
+
+    Log::log(testname[testType], " random ", wlname[workload], ": ",
+            time / 1e9, " s in total, ",
             IO_ROUND * (int(workload == 2) + 1), " ops/thread, ",
-            READ_SIZE >> 10, " KB/read, " , WRITE_SIZE >> 10, " KB/write, ", 
-            thread_num, " threads, ", 1e9 * IO_ROUND * (int(workload == 2) + 1) * thread_num / time, " iops");
+            READ_SIZE >> 10, " KB/read, " ,
+            WRITE_SIZE >> 10, " KB/write, ", 
+            thread_num, " threads, ",
+            1e9 * IO_ROUND * (int(workload == 2) + 1) * thread_num / time, " iops");
+
     if (testType == 4)
     {
-        auto rt = tai::Log::run_time.load() / 1e9;
-        auto st = tai::Log::steal_time.load() / 1e9;
-        auto bt = tai::Log::barrier_time.load() / 1e9;
-        tai::Log::log("Total run time: " , rt, " s, steal time: ", st, " s, barrier time: ", bt, " s");
+        auto rt = Log::run_time.load() / 1e9;
+        auto st = Log::steal_time.load() / 1e9;
+        auto bt = Log::barrier_time.load() / 1e9;
+        Log::log("Total run time: " , rt, " s, steal time: ", st, " s, barrier time: ", bt, " s");
     }
 
     return 0;

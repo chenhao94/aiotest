@@ -2,7 +2,7 @@
 
 using namespace std;
 
-string testname[] = {"BIO", "DIO", "PAIO", "LAIO", "TAIAIO", "Fstream", "TAI"};
+string testname[] = {"Posix", "DIO", "PosixAIO", "LibAIO", "TaiAIO", "STL", "Tai"};
 string wlname[] = {"read", "write", "read&write"};
 
 void processArgs(int argc, char* argv[])
@@ -37,7 +37,7 @@ void processArgs(int argc, char* argv[])
     tai::Log::log(testname[testType]);
 }
 
-unique_ptr<RandomWrite> getInstance(int testType)
+unique_ptr<RandomWrite> RandomWrite::getInstance(int testType)
 {
     unique_ptr<RandomWrite> rw;
     switch (testType)
@@ -74,5 +74,6 @@ unique_ptr<RandomWrite> getInstance(int testType)
         cerr << "Illegal IO-type! Exit..." << endl;
         exit(-1);
     }
+
     return rw;
 }

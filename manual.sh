@@ -10,7 +10,7 @@ if [ `hostname` == erode-lom ]; then
     fi
 fi
 
-make test_mt TEST_ARGS='12 4 4 16 13 13' 2>&1 | tee log/4K-Overlay.log
+make test_mt TEST_ARGS='23 4 4 16 13 13' 2>&1 | tee log/4K-Overlay.log
 for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s\# -t; echo; echo; done
 
 make test_mt TEST_ARGS='31 4 4 16 13 13' 2>&1 | tee log/4K-Discrete.log

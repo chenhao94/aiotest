@@ -7,6 +7,7 @@
 #include <chrono>
 
 #include "Decl.hpp"
+#include "Log.hpp"
 
 namespace tai
 {

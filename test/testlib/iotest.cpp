@@ -1,5 +1,12 @@
-#include "iotest.hpp"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <thread>
 #include <atomic>
+#include <string>
+#include <memory>
+
+#include "iotest.hpp"
 
 using namespace std;
 
@@ -334,6 +341,7 @@ void TAIAIOWrite::cleanup()
         cerr << "Error " << errno << ": " << strerror(errno) << " at fsync." << endl;
         exit(-1);
     }
+    cerr << "Clean up" << endl;
 }
 
 void TAIAIOWrite::writeop(off_t offset, char* data) 
@@ -341,7 +349,7 @@ void TAIAIOWrite::writeop(off_t offset, char* data)
     cbs.emplace_back(fd, offset, data, WRITE_SIZE);
     if (tai::aio_write(&cbs.back()))
     {
-        cerr << "Error " << errno << ": " << strerror(errno) << " at aio_write." << endl;
+        cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_write." << endl;
         exit(-1);
     }
 }
@@ -351,7 +359,7 @@ void TAIAIOWrite::readop(off_t offset, char* data)
     cbs.emplace_back(fd, offset, data, READ_SIZE);
     if (tai::aio_read(&cbs.back()))
     {
-        cerr << "Error " << errno << ": " << strerror(errno) << " at aio_read." << endl;
+        cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_read." << endl;
         exit(-1);
     }
 }
@@ -361,7 +369,7 @@ void TAIAIOWrite::syncop()
     cbs.emplace_back(fd);
     if (tai::aio_fsync(O_SYNC, &cbs.back()))
     {
-        cerr << "Error " << errno << ": " << strerror(errno) << " at aio_fsync." << endl;
+        cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_fsync." << endl;
         exit(-1);
     }
 }
@@ -375,10 +383,11 @@ void TAIAIOWrite::startEntry(size_t thread_id)
 TAIWrite::TAIWrite()
 {
     using namespace tai;
+
     bool expect = false;
     if (ctrlFlag.compare_exchange_strong(expect, true))
     {
-        ctrl.reset(new Controller(1ll << 30, 1ll << 32, thread::hardware_concurrency()));
+        ctrl.reset(new Controller(1ll << 28, 1ll << 30));
         ctrlConstructedFlag.store(true, memory_order_release);
     }
     else
@@ -388,6 +397,7 @@ TAIWrite::TAIWrite()
 void TAIWrite::writeop(off_t offset, char* data) 
 {
     using namespace tai;
+
     ios.emplace_back(bt->write(*ctrl, offset, WRITE_SIZE, data));
     auto status = (*ios.back())();
     if (status && status != IOCtrl::Running)
@@ -400,6 +410,7 @@ void TAIWrite::writeop(off_t offset, char* data)
 void TAIWrite::readop(off_t offset, char* data) 
 {
     using namespace tai;
+
     ios.emplace_back(bt->read(*ctrl, offset, READ_SIZE, data));
     auto status = (*ios.back())();
     if (status && status != IOCtrl::Running)
@@ -412,6 +423,7 @@ void TAIWrite::readop(off_t offset, char* data)
 void TAIWrite::syncop()
 {
     using namespace tai;
+
     ios.emplace_back(bt->sync(*ctrl));
     auto status = (*ios.back())();
     if (status && status != IOCtrl::Running)

@@ -50,46 +50,54 @@ namespace tai
         _AIO_INIT_.store(false, std::memory_order_seq_cst);
     }
 
-    int aio_read(aiocb* aiocbp)
+    int aio_read(aiocb* cbp)
     {
-        aiocbp->read();
-        auto status = aiocbp->status();
+        cbp->read();
+        auto status = cbp->status();
         return status != EINPROGRESS && status;
     }
 
-    int aio_write(aiocb* aiocbp)
+    int aio_write(aiocb* cbp)
     {
-        aiocbp->write();
-        auto status = aiocbp->status();
+        cbp->write();
+        auto status = cbp->status();
         return status != EINPROGRESS && status;
     }
 
-    int aio_fsync(int op, aiocb* aiocbp)
+    int aio_fsync(int op, aiocb* cbp)
     {
         // ignore op
-        aiocbp->fsync();
-        auto status = aiocbp->status();
+        cbp->fsync();
+        auto status = cbp->status();
         return status != EINPROGRESS && status;
     }
 
-    int aio_error(aiocb* aiocbp)
+    int aio_error(aiocb* cbp)
     {
-        return aiocbp->status();
+        return cbp->status();
     }
 
-    int aio_return(aiocb* aiocbp)
+    int aio_return(aiocb* cbp)
     {
-        return aio_error(aiocbp);
+        return aio_error(cbp);
+    }
+
+    int aio_wait(aiocb* cbp)
+    {
+        cbp->wait();
+        return aio_error(cbp);
     }
 
     bool register_fd(int fd, const std::string path)
     {
         Log::debug("Registering fd = ", fd, ".");
+
         if (!_AIO_INIT_.load(std::memory_order_acquire))
         {
             Log::debug("Not initialized aio wrapper.");
             return false;
         }
+
         if (auto current = aiocb::bts[fd].load(std::memory_order_acquire))
         {
             Log::debug("Failed to register fd = ", fd, " due to the conflict with ", (size_t)current, ".");
@@ -124,9 +132,9 @@ namespace tai
             return;
         Log::debug("Deregistering fd = ", fd, ".");
 
-        auto io = aiocb::bts[fd].load(std::memory_order_acquire)->detach(*aiocb::ctrl);
+        std::unique_ptr<BTreeBase> victim(aiocb::bts[fd].load(std::memory_order_acquire));
         aiocb::bts[fd].store(nullptr, std::memory_order_release);
-        io->wait();
+        victim->detach(*aiocb::ctrl)->wait();
 
         Log::debug("Deregistered fd = ", fd, ".");
     }

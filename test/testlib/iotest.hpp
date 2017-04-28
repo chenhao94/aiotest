@@ -56,8 +56,6 @@ class AIOWrite;
 class BlockingWrite;
 class TAIAIOWrite;
 
-std::unique_ptr<RandomWrite> getInstance(int testType);
-
 class RandomWrite
 {
 public:
@@ -95,12 +93,13 @@ public:
     virtual void wait_cb() {}
     virtual void busywait_cb() {}
     virtual void cleanup() {}
+
+    static std::unique_ptr<RandomWrite> getInstance(int testType);
 };
 
 class BlockingWrite : public RandomWrite
 {
 public: 
-
     BlockingWrite() {}
 
     virtual void writeop(off_t offset, char* data) override;
@@ -112,7 +111,6 @@ public:
 class FstreamWrite : public BlockingWrite
 {
 public: 
-
     FstreamWrite() {}
 
     void writeop(off_t offset, char* data) override
@@ -142,19 +140,23 @@ public:
     static void startEntry(size_t thread_id);
 
 private:
-
     std::fstream file;
 };
 
 class AIOWrite : public RandomWrite
 {
 public:
-
-    AIOWrite() { cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1); }
+    AIOWrite()
+    {
+        cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+    }
 
     std::vector<aiocb> cbs;
 
-    inline void reset_cb() override { cbs.clear(); }
+    inline void reset_cb() override
+    {
+        cbs.clear();
+    }
 
     inline void wait_cb() override
     {
@@ -178,7 +180,6 @@ public:
 class LibAIOWrite : public RandomWrite
 {
 public:
-
     LibAIOWrite()
     {
         #ifdef __linux__
@@ -209,7 +210,6 @@ public:
 class TAIAIOWrite : public RandomWrite
 {
 public: 
-
     TAIAIOWrite()
     {
         cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
@@ -224,14 +224,22 @@ public:
 
     inline void wait_cb() override
     {
-        using namespace std::chrono_literals;
-
-        for (; tai::aio_error(&(cbs.back())) == EINPROGRESS; std::this_thread::sleep_for(1ms));
+        if (tai::aio_fsync(O_SYNC, &cbs.emplace_back(fd)))
+        {
+            std::cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_fsync." << std::endl;
+            exit(-1);
+        }
+        tai::aio_wait(&cbs.back());
     }
 
     inline void busywait_cb() override
     {
-        while (tai::aio_error(&(cbs.back())) == EINPROGRESS);
+        if (tai::aio_fsync(O_SYNC, &cbs.emplace_back(fd)))
+        {
+            std::cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_fsync." << std::endl;
+            exit(-1);
+        }
+        while (tai::aio_error(&cbs.back()) == EINPROGRESS);
     }
 
     void cleanup() override;
@@ -256,7 +264,6 @@ public:
 class TAIWrite : public RandomWrite
 {
 public: 
-    
     TAIWrite();
 
     virtual void openfile(const std::string& filename) override 
@@ -292,10 +299,11 @@ public:
     void syncop() override;
 
 private:
-
     std::unique_ptr<tai::BTreeBase> bt;
     std::vector<tai::IOCtrlHandle> ios;
+
     static std::unique_ptr<tai::Controller> ctrl;
-    static std::atomic<bool> ctrlFlag, ctrlConstructedFlag;
+    static std::atomic<bool> ctrlFlag;
+    static std::atomic<bool> ctrlConstructedFlag;
 };
 

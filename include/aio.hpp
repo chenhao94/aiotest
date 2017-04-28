@@ -28,6 +28,7 @@ namespace tai
     int aio_fsync(int op, aiocb* aiocbp);
     int aio_error(aiocb* aiocbp);
     int aio_return(aiocb* aiocbp);
+    int aio_wait(aiocb* aiocbp);
     bool register_fd(int fd, const std::string path);
     void deregister_fd(int fd);
 
@@ -91,6 +92,11 @@ namespace tai
             }
 
             int status(); 
+
+            void wait()
+            {
+                io->wait();
+            }
 
         private:
             IOCtrlHandle io;

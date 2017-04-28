@@ -26,19 +26,20 @@
 
 #include "tai.hpp"
 #include "aio.hpp"
-#include "./testlib/iotest.hpp"
+#include "testlib/iotest.hpp"
 
 #define unlikely(x)     __builtin_expect((x),0)
 
-using namespace std;
-using namespace chrono;
-using namespace this_thread;
-
 int main(int argc, char *argv[])
 {
+    using namespace std;
+    using namespace chrono;
+
+    using namespace tai;
+
     processArgs(argc, argv);
 
-    auto rw = getInstance(testType);
+    auto rw = RandomWrite::getInstance(testType);
     rw->openfile("tmp/file0");
 
     auto data = new
@@ -81,13 +82,14 @@ int main(int argc, char *argv[])
     double avg_sync = accumulate(avg_st_sync,  avg_en_sync, 0.) / (avg_en_sync - avg_st_sync);
 
     rw->cleanup();
-    tai::deregister_fd(rw->fd);
+    deregister_fd(rw->fd);
     if (testType == 4)
-        tai::aio_end();
+        aio_end();
 
-    tai::Log::log( testname[testType], " ", 
-            "testType, X of IO, size per IO(KB), 20 percentile of issuing(us), average, median, 80 percentile, ",
-            "20 percentile of syncing, average, median, 80 percentile");
+    Log::log(testname[testType],
+            " testType, X of IO, size per IO(KB),",
+            " 20 percentile of issuing(us), average, median, 80 percentile,",
+            " 20 percentile of syncing, average, median, 80 percentile");
     cout << testname[testType] << ", " << SYNC_RATE << ", " << (WRITE_SIZE >> 10) << ", " << pcnt20_issue << ", " << avg_issue << ", " << mid_issue << ", " <<pcnt80_issue;
     cout << ", " << pcnt20_sync << ", " << avg_sync << ", " << mid_sync << ", " <<pcnt80_sync << endl;
     rw->closefile();
