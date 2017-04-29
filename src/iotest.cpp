@@ -75,9 +75,7 @@ void RandomWrite::run_readonly(size_t thread_id)
     for (size_t i = 0; i < IO_ROUND; ++i)
     {
         if (i && !(i & ~-WAIT_RATE))
-        {
             wait_cb();
-        }
         auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
         readop(offset, buf + (i & ~-WAIT_RATE) * WRITE_SIZE);
         if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
@@ -386,7 +384,8 @@ void TAIAIOWrite::cleanup()
         }
         else
             tai::aio_return(&i);
-    #ifndef _POSIX_VERSION
+    cbs.clear();
+    #ifdef _POSIX_VERSION
     if (fsync(fd))
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at fsync." << endl;
@@ -397,8 +396,7 @@ void TAIAIOWrite::cleanup()
 
 void TAIAIOWrite::writeop(off_t offset, char* data) 
 {
-    cbs.emplace_back(fd, offset, data, WRITE_SIZE);
-    if (tai::aio_write(&cbs.back()))
+    if (tai::aio_write(&cbs.emplace_back(fd, offset, data, WRITE_SIZE)))
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_write." << endl;
         exit(-1);
@@ -407,8 +405,7 @@ void TAIAIOWrite::writeop(off_t offset, char* data)
 
 void TAIAIOWrite::readop(off_t offset, char* data) 
 {
-    cbs.emplace_back(fd, offset, data, READ_SIZE);
-    if (tai::aio_read(&cbs.back()))
+    if (tai::aio_read(&cbs.emplace_back(fd, offset, data, READ_SIZE)))
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_read." << endl;
         exit(-1);
@@ -420,8 +417,7 @@ void TAIAIOWrite::syncop()
     #ifndef _POSIX_VERSION
     auto O_SYNC = 0;
     #endif
-    cbs.emplace_back(fd);
-    if (tai::aio_fsync(O_SYNC, &cbs.back()))
+    if (tai::aio_fsync(O_SYNC, &cbs.emplace_back(fd)))
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_fsync." << endl;
         exit(-1);

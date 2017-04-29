@@ -21,7 +21,10 @@ int main(int argc, char* argv[])
     vector<thread> threads;
     auto epoch = high_resolution_clock::now();
     for (size_t i = 0; i < thread_num; ++i)
-        threads.emplace_back([=](){ RandomWrite::getInstance(testType)->run(i); });
+    {
+        auto rw = RandomWrite::getInstance(testType);
+        threads.emplace_back([rw(move(rw)), i](){ rw->run(i); });
+    }
     for (auto& t : threads)
         t.join();
 

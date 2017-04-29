@@ -19,7 +19,7 @@
 namespace tai
 {
     std::array<std::atomic<BTreeBase*>, 65536> aiocb::bts;
-    std::unique_ptr<Controller> aiocb::ctrl(new Controller(1ll << 30, 1ll << 32));
+    std::unique_ptr<Controller> aiocb::ctrl(nullptr);
     std::atomic<bool> _AIO_INIT_(false);
 
     int aiocb::status()
@@ -40,6 +40,7 @@ namespace tai
 
     void aio_init()
     {
+        aiocb::ctrl.reset(new Controller(1ll << 30, 1ll << 32));
         _AIO_INIT_.store(true, std::memory_order_seq_cst);
     }
 

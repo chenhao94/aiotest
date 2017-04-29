@@ -259,22 +259,14 @@ public:
 
     inline void wait_cb() override
     {
-        if (tai::aio_fsync(O_SYNC, &cbs.emplace_back(fd)))
-        {
-            std::cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_fsync." << std::endl;
-            exit(-1);
-        }
-        tai::aio_wait(&cbs.back());
+        for (auto& i : cbs)
+            tai::aio_wait(&i);
     }
 
     inline void busywait_cb() override
     {
-        if (tai::aio_fsync(O_SYNC, &cbs.emplace_back(fd)))
-        {
-            std::cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_fsync." << std::endl;
-            exit(-1);
-        }
-        while (tai::aio_error(&cbs.back()) == EINPROGRESS);
+        for (auto& i : cbs)
+            while (tai::aio_error(&i) == EINPROGRESS);
     }
 
     void cleanup() override;
