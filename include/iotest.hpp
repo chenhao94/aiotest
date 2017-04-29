@@ -10,13 +10,18 @@
 #include <string>
 #include <memory>
 
-#include <fcntl.h>
+#if defined(__unix__) || defined(__MACH__)
 #include <unistd.h>
-#include <sys/wait.h>
+#endif
+
+#ifdef _POSIX_VERSION
+#include <fcntl.h>
 #include <errno.h>
 #include <aio.h>
+#endif
 
 #ifdef __linux__
+#include <sys/wait.h>
 #include <libaio.h>
 #endif
 
@@ -60,10 +65,14 @@ class RandomWrite
 {
 public:
     int fd = -1;
-    int openflags = O_RDWR;
+    int openflags;
 
     RandomWrite()
     {
+        #ifdef _POSIX_VERSION
+        openflags = O_RDWR;
+        #endif
+
         if (RAND_MAX < std::numeric_limits<int>::max())
         {
             std::cerr << "RAND_MAX smaller than expected." << std::endl;
@@ -78,12 +87,20 @@ public:
 
     virtual void openfile(const std::string& filename)
     {
+        #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags);
+        #else
+        std::cerr << "RandomWrite::openfile() needs POSIX support." << std::endl;
+        #endif
     }
 
     virtual void closefile()
     {
+        #ifdef _POSIX_VERSION
         close(fd);
+        #else
+        std::cerr << "RandomWrite::closefile() needs POSIX support." << std::endl;
+        #endif
     }
 
     virtual void writeop(off_t offset, char* data) = 0;
@@ -148,26 +165,44 @@ class AIOWrite : public RandomWrite
 public:
     AIOWrite()
     {
+        #ifdef _POSIX_VERSION
         cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        #else
+        std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+        #endif
     }
 
+    #ifdef _POSIX_VERSION
     std::vector<aiocb> cbs;
+    #endif
 
     inline void reset_cb() override
     {
+        #ifdef _POSIX_VERSION
         cbs.clear();
+        #else
+        std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+        #endif
     }
 
     inline void wait_cb() override
     {
         using namespace std::chrono_literals;
-        while (aio_error(&(cbs.back())) == EINPROGRESS)
-            std::this_thread::sleep_for(1ms);
+
+        #ifdef _POSIX_VERSION
+        for (; aio_error(&(cbs.back())) == EINPROGRESS; std::this_thread::sleep_for(1ms));
+        #else
+        std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+        #endif
     }
 
     inline void busywait_cb() override
     {
+        #ifdef _POSIX_VERSION
         while (aio_error(&(cbs.back())) == EINPROGRESS);
+        #else
+        std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+        #endif
     }
 
     void cleanup() override;

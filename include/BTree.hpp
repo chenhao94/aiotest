@@ -577,8 +577,21 @@ namespace tai
             else
             {
                 auto capture = root;
-                if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->read(pos, pos + len, ptr, io); }))
+                {
+                    Log::log("Read is rejected by pending queue.");
                     io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+                }
+                else if (io->method != IOCtrl::Timing)
+                {
+                    Log::log("Read is rejected due to unsupported I/O method.");
+                    io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+                }
+                else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                {
+                    Log::log("Read is rejected by pending queue while submitting the timing task.");
+                    io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+                }
             }
             return IOCtrlHandle(io);
         }
@@ -594,8 +607,21 @@ namespace tai
             else
             {
                 auto capture = root;
-                if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->read(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->read(pos, pos + len, ptr, io); }))
+                {
+                    Log::log("Readsome is rejected by pending queue.");
                     io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+                }
+                else if (io->method != IOCtrl::Timing)
+                {
+                    Log::log("Readsome is rejected due to unsupported I/O method.");
+                    io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+                }
+                else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                {
+                    Log::log("Readsome is rejected by pending queue while submitting the timing task.");
+                    io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+                }
             }
             return IOCtrlHandle(io);
         }
@@ -610,8 +636,21 @@ namespace tai
             else
             {
                 auto capture = root;
-                if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->write(pos, pos + len, ptr, io); }) || io->method != IOCtrl::Timing || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->write(pos, pos + len, ptr, io); }))
+                {
+                    Log::log("Write is rejected by pending queue.");
                     io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+                }
+                else if (io->method != IOCtrl::Timing)
+                {
+                    Log::log("Write is rejected due to unsupported I/O method.");
+                    io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+                }
+                else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+                {
+                    Log::log("Write is rejected by pending queue while submitting the timing task.");
+                    io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+                }
             }
             return IOCtrlHandle(io);
         }
@@ -628,8 +667,16 @@ namespace tai
         {
             Log::debug("Issued hook");
             auto io = new IOCtrl;
-            if (!inject(ctrl, task) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            if (!inject(ctrl, task))
+            {
+                Log::log("Sync(tree) is rejected while injecting the task.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            }
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            {
+                Log::log("Hook is rejected by pending queue while submitting the timing task.");
+                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            }
             return IOCtrlHandle(io);
         }
 
@@ -641,8 +688,16 @@ namespace tai
             auto io = new IOCtrl;
             auto task = [](){};
             auto capture = root;
-            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->flush(io); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(task, io); }))
+            if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->flush(io); }))
+            {
+                Log::log("Sync(tree) is rejected by pending queue.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            }
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(task, io); }))
+            {
+                Log::log("Sync(tree) is rejected by pending queue while submitting the timing task.");
+                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            }
             return IOCtrlHandle(io);
         }
 
@@ -666,8 +721,21 @@ namespace tai
             Log::debug("Issued detach");
             auto io = new IOCtrl;
             auto capture = root;
-            if (!root || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->detach(false); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            if (!root)
+            {
+                Log::log("Detach is rejected due to double free.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            }
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->detach(false); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            {
+                Log::log("Detach is rejected by pending queue.");
+                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            }
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            {
+                Log::log("Detach is rejected by pending queue while submitting the timing task.");
+                io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
+            }
             else
                 root = nullptr;
             return IOCtrlHandle(io);

@@ -5,6 +5,7 @@
 #include <atomic>
 #include <string>
 #include <memory>
+#include <new>
 
 #include "iotest.hpp"
 
@@ -23,6 +24,7 @@ size_t WAIT_RATE = 1;
 #ifdef __linux__
 io_context_t LibAIOWrite::io_cxt;
 #endif
+
 unique_ptr<tai::Controller> TAIWrite::ctrl;
 atomic<bool> TAIWrite::ctrlFlag, TAIWrite::ctrlConstructedFlag;
 
@@ -154,7 +156,9 @@ void RandomWrite::run(size_t thread_id)
     }[workload](thread_id);
 }
 
-void BlockingWrite::writeop(off_t offset, char* data){
+void BlockingWrite::writeop(off_t offset, char* data)
+{
+    #ifdef _POSIX_VERSION
     if (lseek(fd, offset, SEEK_SET) < 0)
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at lseek." << endl;
@@ -165,10 +169,14 @@ void BlockingWrite::writeop(off_t offset, char* data){
         cerr << "Error " << errno << ": " << strerror(errno) << " at write." << endl;
         exit(-1);
     }
+    #else
+    std::cerr << "Warning: BlockingWrite needs POSIX support." << std::endl;
+    #endif
 }
 
 void BlockingWrite::readop(off_t offset, char* data)
 {
+    #ifdef _POSIX_VERSION
     if (lseek(fd, offset, SEEK_SET) < 0)
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at lseek." << endl;
@@ -179,22 +187,33 @@ void BlockingWrite::readop(off_t offset, char* data)
         cerr << "Error " << errno << ": " << strerror(errno) << " at read." << endl;
         exit(-1);
     }
+    #else
+    std::cerr << "Warning: BlockingWrite needs POSIX support." << std::endl;
+    #endif
 }
 
 void BlockingWrite::syncop()
 {
+    #ifdef _POSIX_VERSION
     if (fsync(fd))
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at fsync." << endl;
         exit(-1);
     }
+    #else
+    std::cerr << "Warning: BlockingWrite needs POSIX support." << std::endl;
+    #endif
 }
 
 void BlockingWrite::startEntry(size_t thread_id, int flags)
 {
+    #ifdef _POSIX_VERSION
     BlockingWrite bw;
     bw.openflags |= flags;
     bw.run(thread_id);
+    #else
+    std::cerr << "Warning: BlockingWrite needs POSIX support." << std::endl;
+    #endif
 }
 
 void FstreamWrite::startEntry(size_t thread_id)
@@ -205,6 +224,7 @@ void FstreamWrite::startEntry(size_t thread_id)
 
 void AIOWrite::cleanup() 
 {
+    #ifdef _POSIX_VERSION
     for (auto &i : cbs)
         if (unlikely(aio_error(&i) && aio_error(&i) != EINPROGRESS))
         {
@@ -214,10 +234,14 @@ void AIOWrite::cleanup()
         }
         else
             aio_return(&i);
+    #else
+    std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+    #endif
 }
 
 void AIOWrite::writeop(off_t offset, char* data)
 {
+    #ifdef _POSIX_VERSION
     cbs.emplace_back();
     auto& cb = cbs.back();
     memset(&cb, 0, sizeof(aiocb));
@@ -230,10 +254,14 @@ void AIOWrite::writeop(off_t offset, char* data)
         cerr << "Error " << errno << ": " << strerror(errno) << " at aio_write." << endl;
         exit(-1);
     }
+    #else
+    std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+    #endif
 }
 
 void AIOWrite::readop(off_t offset, char* data) 
 {
+    #ifdef _POSIX_VERSION
     cbs.emplace_back();
     auto& cb = cbs.back();
     memset(&cb, 0, sizeof(aiocb));
@@ -246,10 +274,14 @@ void AIOWrite::readop(off_t offset, char* data)
         cerr << "Error " << errno << ": " << strerror(errno) << " at aio_read." << endl;
         exit(-1);
     }
+    #else
+    std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+    #endif
 }
 
 void AIOWrite::syncop() 
 {
+    #ifdef _POSIX_VERSION
     cbs.emplace_back();
     auto& cb = cbs.back();
     memset(&cb, 0, sizeof(aiocb));
@@ -259,19 +291,27 @@ void AIOWrite::syncop()
         cerr << "Error " << errno << ": " << strerror(errno) << " at aio_fsync." << endl;
         exit(-1);
     }
-
+    #else
+    std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+    #endif
 }
 
 void AIOWrite::startEntry(size_t thread_id)
 {
+    #ifdef _POSIX_VERSION
     AIOWrite aw;
     aw.run(thread_id);
+    #else
+    std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+    #endif
 }
 
 void LibAIOWrite::reset_cb() 
 {
     #ifdef __linux__
     cbs.clear();
+    #else
+    std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
     #endif
 }
 
@@ -279,6 +319,8 @@ void LibAIOWrite::wait_cb()
 {
     #ifdef __linux__
     io_getevents(io_cxt, cnt, cnt, events, NULL);
+    #else
+    std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
     #endif
     cnt = 0;
 }
@@ -295,6 +337,8 @@ void LibAIOWrite::writeop(off_t offset, char* data)
         cerr << "Error " << -err << ": " << strerror(-err) << " at libaio: write." << endl;
         exit(-1);
     }
+    #else
+    std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
     #endif
     ++cnt;
 }
@@ -311,6 +355,8 @@ void LibAIOWrite::readop(off_t offset, char* data)
         cerr << "Error " << -err << ": " << strerror(-err) << " at libaio: read." << endl;
         exit(-1);
     }
+    #else
+    std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
     #endif
     ++cnt;
 }
@@ -321,8 +367,12 @@ void LibAIOWrite::syncop()
 
 void LibAIOWrite::startEntry(size_t thread_id)
 {
+    #ifdef __linux__
     LibAIOWrite lw;
     lw.run(thread_id);
+    #else
+    std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
+    #endif
 }
 
 void TAIAIOWrite::cleanup() 
@@ -366,6 +416,9 @@ void TAIAIOWrite::readop(off_t offset, char* data)
 
 void TAIAIOWrite::syncop()
 {
+    #ifndef _POSIX_VERSION
+    auto O_SYNC = 0;
+    #endif
     cbs.emplace_back(fd);
     if (tai::aio_fsync(O_SYNC, &cbs.back()))
     {

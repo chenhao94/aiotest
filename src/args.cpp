@@ -1,12 +1,16 @@
+#include <vector>
+#include <string>
+#include <memory>
+
 #include "iotest.hpp"
 
-using namespace std;
-
-string testname[] = {"Posix", "DIO", "PosixAIO", "LibAIO", "TaiAIO", "STL", "Tai"};
-string wlname[] = {"read", "write", "read&write"};
+std::string testname[] = {"Posix", "DIO", "PosixAIO", "LibAIO", "TaiAIO", "STL", "Tai"};
+std::string wlname[] = {"read", "write", "read&write"};
 
 void processArgs(int argc, char* argv[])
 {
+    using namespace std;
+
     if (argc < 10)
     {
         cerr << "Need arguments for thread number, type of IO to test and workload type" << endl;
@@ -37,9 +41,9 @@ void processArgs(int argc, char* argv[])
     tai::Log::log(testname[testType]);
 }
 
-unique_ptr<RandomWrite> RandomWrite::getInstance(int testType)
+std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType)
 {
-    unique_ptr<RandomWrite> rw;
+    std::unique_ptr<RandomWrite> rw;
     switch (testType)
     {
     case 0:
@@ -71,9 +75,10 @@ unique_ptr<RandomWrite> RandomWrite::getInstance(int testType)
         rw.reset(new TAIWrite());
         break;
     default:
-        cerr << "Illegal IO-type! Exit..." << endl;
+        std::cerr << "Illegal IO-type! Exit..." << std::endl;
         exit(-1);
     }
 
     return rw;
 }
+

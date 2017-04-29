@@ -8,17 +8,14 @@ export DEPS_DIR = $(DIR)/dep
 export OBJS_DIR = $(DIR)/obj
 export TARGETS_DIR = $(DIR)/bin
 export TESTS_DIR = $(DIR)/test
-export TESTLIBS_DIR = $(DIR)/test/testlib
-export TESTOBJS_DIR = $(OBJS_DIR)/test
 
 export INCS = $(wildcard $(INCS_DIR)/*.hpp)
 export PCHS = $(patsubst %,%.gch,$(INCS))
 export SRCS = $(wildcard $(SRCS_DIR)/*.cpp)
 export TESTS = $(wildcard $(TESTS_DIR)/*.cpp)
-export TESTLIBS = $(wildcard $(TESTLIBS_DIR)/*.cpp)
 export DEPS = $(patsubst $(INCS_DIR)/%,$(DEPS_DIR)/%.d,$(INCS)) $(patsubst $(SRCS_DIR)/%,$(DEPS_DIR)/%.d,$(SRCS))
 export OBJS = $(patsubst $(SRCS_DIR)/%,$(OBJS_DIR)/%.o,$(SRCS))
-export TESTOBJS = $(patsubst $(TESTLIBS_DIR)/%.cpp,$(TESTOBJS_DIR)/%.o,$(TESTLIBS))
+export TESTOBJS = $(patsubst $(TESTS_DIR)/%,$(OBJS_DIR)/%.o,$(TESTS))
 export TESTEXES = $(patsubst $(TESTS_DIR)/%.cpp,$(TARGETS_DIR)/%,$(TESTS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
@@ -33,7 +30,7 @@ export LD = lld
 export CXX = clang++
 # export CXX = g++-6
 # export CXX = g++
-export CXXFLAGS = -std=c++1z -m64 -Wall -O0 -g
+export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-fuse-ld=lld'; fi)
 export CXXFLAGS += -flto -fwhole-program-vtables
 export CXXFLAGS += -D_FILE_OFFSET_BITS=64
@@ -42,10 +39,10 @@ ifeq ($(mode), debug)
 endif
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
-# export CXXFLAGS += -DTAI_JEMALLOC -ljemalloc
+export CXXFLAGS += -DTAI_JEMALLOC -ljemalloc
 export CXXFLAGS += -lm -lpthread
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-lrt -laio'; fi)
-# export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
+export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
 export AR = llvm-ar
 export MKDIR = @mkdir -p
 export CMP = cmp -b
@@ -58,12 +55,12 @@ export RM = rm -rf
 .PHONY: all
 all: $(LIBTAI) $(TESTEXES)
 
-$(TESTEXES): $(TARGETS_DIR)/%: $(TESTS_DIR)/%.cpp $(TESTOBJS) $(LIBTAI)
+$(TESTEXES): $(TARGETS_DIR)/%: $(OBJS_DIR)/%.cpp.o $(LIBTAI)
 	$(MKDIR) $(TARGETS_DIR)
-	$(CXX) $(CXXFLAGS) $< -L$(LIBS_DIR) $(TESTOBJS) -ltai -o $@
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
-$(TESTOBJS): $(TESTOBJS_DIR)/%.o: $(TESTLIBS_DIR)/%.cpp $(LIBTAI)
-	$(MKDIR) $(TESTOBJS_DIR)
+$(TESTOBJS): $(OBJS_DIR)/%.o: $(TESTS_DIR)/%
+	$(MKDIR) $(OBJS_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/% $(PCHS)

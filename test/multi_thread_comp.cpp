@@ -1,33 +1,13 @@
-#include <iostream>
-#include <sstream>
-#include <iomanip>
 #include <cstdlib>
-#include <cstring>
-#include <string>
 #include <ctime>
+#include <iostream>
+#include <iomanip>
+#include <string>
 #include <chrono>
 #include <thread>
 #include <vector>
-#include <limits>
-#include <numeric>
-#include <functional>
-#include <new>
 
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <errno.h>
-#include <aio.h>
-
-#ifdef __linux__
-#include <libaio.h>
-#endif
-
-#include "tai.hpp"
-#include "aio.hpp"
-#include "testlib/iotest.hpp"
-
-#define unlikely(x)     __builtin_expect((x),0)
+#include "iotest.hpp"
 
 int main(int argc, char* argv[])
 {
