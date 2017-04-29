@@ -55,24 +55,14 @@ namespace tai
 
             explicit aiocb(int fildes = 0, off_t offset = 0, volatile void* buf = nullptr, size_t nbytes = 0) : aio_fildes(fildes), aio_offset(offset), aio_buf(buf), aio_nbytes(nbytes) {}
 
-            static void init()
+            ~aiocb()
             {
-                ctrl.reset(new Controller(1ll << 30, 1ll << 32, std::thread::hardware_concurrency()));
-                // ctrl.reset(new Controller(1 << 28, 1 << 30, 2));
+                delete io;
             }
 
             static void end()
             {
-                std::vector<std::unique_ptr<IOCtrl>> ios; 
-                for (auto &i: bts)
-                    if (auto bt = i.load(std::memory_order_acquire))
-                    {
-                        ios.emplace_back(bt->detach(*ctrl));
-                        delete bt;
-                        i.store(nullptr, std::memory_order_release);
-                    }
-                for (auto& i: ios)
-                    i->wait();
+                for (auto i = bts.size(); i--; deregister_fd(i));
                 ctrl = nullptr;
             }
 
@@ -99,7 +89,7 @@ namespace tai
             }
 
         private:
-            IOCtrlHandle io;
+            IOCtrl* io = nullptr;
 
             static std::array<std::atomic<BTreeBase*>, 65536> bts;
             static std::unique_ptr<Controller> ctrl;

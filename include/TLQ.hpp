@@ -25,7 +25,7 @@ namespace tai
         std::default_random_engine rand;
 
         // Pending queue.
-        boost::lockfree::queue<Task*> pending;
+        boost::lockfree::queue<Task*, boost::lockfree::fixed_sized<false>> pending;
 
         // Task LIFO queue.
         std::vector<Task> wait;
@@ -45,6 +45,8 @@ namespace tai
             ready(),
             done()
         {
+            if (!pending.is_lock_free())
+                Log::log("Warning: Pending queue is not lock-free.");
         }
 
         // Pull and clear todo counter;
@@ -92,6 +94,7 @@ namespace tai
         // Push a task into "pending" queue.
         void pushPending(Task task)
         {
+            // for (auto ptr = new Task(task); !pending.push(ptr); Log::log("Internal Error: Pending task fails. Retry..."));
             pending.push(new Task(task));
         }
     };

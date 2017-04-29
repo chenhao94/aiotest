@@ -7,6 +7,7 @@ namespace tai
 
     Controller::Controller(size_t lower, size_t upper, size_t concurrency) : concurrency(concurrency), lower(lower), upper(upper), cache(131072)
     {
+        Log::debug("Constructing controller...");
         workers.reserve(concurrency);
         for (size_t i = 0; i < concurrency; workers.emplace_back(*this, i++));
         for (auto& i : workers)
@@ -15,10 +16,13 @@ namespace tai
 
     Controller::~Controller()
     {
+        Log::debug("Destructing controller...");
         for (auto& i : workers)
             i.reject.store(true, std::memory_order_relaxed);
+        Log::debug("    All workers now rejected new requests.");
         ready.store(false, std::memory_order_relaxed);
         wait(Quit, std::memory_order_relaxed);
+        Log::debug("    Controller destructed.");
     }
 
     Controller::Usage Controller::usage(size_t alloc)

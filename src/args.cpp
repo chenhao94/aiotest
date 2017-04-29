@@ -43,6 +43,8 @@ void processArgs(int argc, char* argv[])
 
 std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType)
 {
+    static size_t cnt = 0;
+
     std::unique_ptr<RandomWrite> rw;
     switch (testType)
     {
@@ -60,12 +62,14 @@ std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType)
         break;
     case 3:
         #ifdef __linux__
-        io_setup(1048576, &LibAIOWrite::io_cxt);
+        if (!cnt)
+            io_setup(1048576, &LibAIOWrite::io_cxt);
         #endif
         rw.reset(new LibAIOWrite());
         break;
     case 4:
-        tai::aio_init();
+        if (!cnt)
+            tai::aio_init();
         rw.reset(new TAIAIOWrite());
         break;
     case 5:
@@ -78,6 +82,7 @@ std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType)
         std::cerr << "Illegal IO-type! Exit..." << std::endl;
         exit(-1);
     }
+    ++cnt;
 
     return rw;
 }

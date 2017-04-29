@@ -335,7 +335,7 @@ public:
 
 private:
     std::unique_ptr<tai::BTreeBase> bt;
-    std::vector<tai::IOCtrlHandle> ios;
+    tai::IOCtrlVec ios;
 
     static std::unique_ptr<tai::Controller> ctrl;
     static std::atomic<bool> ctrlFlag;

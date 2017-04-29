@@ -19,7 +19,7 @@
 namespace tai
 {
     std::array<std::atomic<BTreeBase*>, 65536> aiocb::bts;
-    std::unique_ptr<Controller> aiocb::ctrl;
+    std::unique_ptr<Controller> aiocb::ctrl(new Controller(1ll << 30, 1ll << 32));
     std::atomic<bool> _AIO_INIT_(false);
 
     int aiocb::status()
@@ -40,7 +40,6 @@ namespace tai
 
     void aio_init()
     {
-        aiocb::init();
         _AIO_INIT_.store(true, std::memory_order_seq_cst);
     }
 
@@ -79,7 +78,10 @@ namespace tai
 
     int aio_return(aiocb* cbp)
     {
-        return aio_error(cbp);
+        auto err = aio_error(cbp);
+        delete cbp->io;
+        cbp->io = nullptr;
+        return err;
     }
 
     int aio_wait(aiocb* cbp)
@@ -94,7 +96,7 @@ namespace tai
 
         if (!_AIO_INIT_.load(std::memory_order_acquire))
         {
-            Log::debug("Not initialized aio wrapper.");
+            Log::debug("No initialized aio wrapper.");
             return false;
         }
 
@@ -133,8 +135,13 @@ namespace tai
         Log::debug("Deregistering fd = ", fd, ".");
 
         std::unique_ptr<BTreeBase> victim(aiocb::bts[fd].load(std::memory_order_acquire));
-        aiocb::bts[fd].store(nullptr, std::memory_order_release);
-        victim->detach(*aiocb::ctrl)->wait();
+        if (victim)
+        {
+            aiocb::bts[fd].store(nullptr, std::memory_order_release);
+            IOCtrlVec ios;
+            ios.emplace_back(victim->sync(*aiocb::ctrl));
+            ios.emplace_back(victim->detach(*aiocb::ctrl))->wait();
+        }
 
         Log::debug("Deregistered fd = ", fd, ".");
     }

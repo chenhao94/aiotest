@@ -568,7 +568,7 @@ namespace tai
 
         // Issue a read request to this file to the given controller.
         // Do not allow partial read.
-        IOCtrlHandle read(Controller& ctrl, size_t pos, size_t len, char* ptr) override
+        IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr) override
         {
             Log::debug("Issued read: ", pos, ", " , len);
             auto io = new IOCtrl;
@@ -593,12 +593,12 @@ namespace tai
                     io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
                 }
             }
-            return IOCtrlHandle(io);
+            return io;
         }
 
         // Issue a read request to this file to the given controller.
         // Allow partial read.
-        IOCtrlHandle readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) override
+        IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) override
         {
             Log::debug("Issued readsome: ", pos, ", " , len);
             auto io = new IOCtrl(true);
@@ -623,11 +623,11 @@ namespace tai
                     io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
                 }
             }
-            return IOCtrlHandle(io);
+            return io;
         }
 
         // Issue a write request to this file to the given controller.
-        IOCtrlHandle write(Controller& ctrl, size_t pos, size_t len, const char* ptr) override
+        IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr) override
         {
             Log::debug("Issued write: ", pos, ", " , len);
             auto io = new IOCtrl;
@@ -652,7 +652,7 @@ namespace tai
                     io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
                 }
             }
-            return IOCtrlHandle(io);
+            return io;
         }
 
         // Inject a task to pending list.
@@ -663,7 +663,7 @@ namespace tai
         }
 
         // Inject a task and track for completion.
-        IOCtrlHandle hook(Controller& ctrl, std::function<void()> task) override
+        IOCtrl* hook(Controller& ctrl, std::function<void()> task) override
         {
             Log::debug("Issued hook");
             auto io = new IOCtrl;
@@ -677,12 +677,12 @@ namespace tai
                 Log::log("Hook is rejected by pending queue while submitting the timing task.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             }
-            return IOCtrlHandle(io);
+            return io;
         }
 
         // Issue a sync request to this file to the given controller.
         // Sync by recursively scan the B-tree.
-        IOCtrlHandle syncTree(Controller& ctrl) override
+        IOCtrl* syncTree(Controller& ctrl) override
         {
             Log::debug("Issued recursive sync");
             auto io = new IOCtrl;
@@ -698,25 +698,25 @@ namespace tai
                 Log::log("Sync(tree) is rejected by pending queue while submitting the timing task.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             }
-            return IOCtrlHandle(io);
+            return io;
         }
 
         // Issue a sync request to this file to the given controller.
         // Sync by scanning controller's cache list.
-        IOCtrlHandle syncCache(Controller& ctrl) override
+        IOCtrl* syncCache(Controller& ctrl) override
         {
             Log::debug("Issued linear sync");
             return hook(ctrl, [&](){ ctrl.flush(); });
         }
 
-        IOCtrlHandle sync(Controller& ctrl) override
+        IOCtrl* sync(Controller& ctrl) override
         {
             // return syncTree(ctrl);
             return syncCache(ctrl);
         }
 
         // Issue a sync request to this file to the given controller.
-        IOCtrlHandle detach(Controller& ctrl) override
+        IOCtrl* detach(Controller& ctrl) override
         {
             Log::debug("Issued detach");
             auto io = new IOCtrl;
@@ -738,7 +738,7 @@ namespace tai
             }
             else
                 root = nullptr;
-            return IOCtrlHandle(io);
+            return io;
         }
 
         // Close the file.

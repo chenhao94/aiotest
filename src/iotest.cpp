@@ -386,12 +386,13 @@ void TAIAIOWrite::cleanup()
         }
         else
             tai::aio_return(&i);
+    #ifndef _POSIX_VERSION
     if (fsync(fd))
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at fsync." << endl;
         exit(-1);
     }
-    cerr << "Clean up" << endl;
+    #endif
 }
 
 void TAIAIOWrite::writeop(off_t offset, char* data) 

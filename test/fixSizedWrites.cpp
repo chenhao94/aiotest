@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
 
     if (argc <= 1 || atoll(argv[1]) & 4)
     {
-        vector<IOCtrlHandle> ios;
+        IOCtrlVec ios;
         ios.reserve(n + 1);
 
         decltype(high_resolution_clock::now()) start;
