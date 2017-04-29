@@ -250,7 +250,7 @@ public:
         cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
     }
 
-    std::vector<tai::aiocb> cbs;
+    std::vector<tai::aiocb, tai::Alloc<tai::aiocb>> cbs;
 
     inline void reset_cb() override
     {

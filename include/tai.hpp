@@ -2,6 +2,7 @@
 
 #include "Decl.hpp"
 #include "Log.hpp"
+#include "Alloc.hpp"
 #include "BTreeNodeBase.hpp"
 #include "BTreeBase.hpp"
 #include "State.hpp"

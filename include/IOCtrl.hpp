@@ -6,8 +6,13 @@
 #include <memory>
 #include <chrono>
 
+#ifdef TAI_JEMALLOC
+#include <jemalloc/jemalloc.h>
+#endif
+
 #include "Decl.hpp"
 #include "Log.hpp"
+#include "Alloc.hpp"
 
 namespace tai
 {
@@ -40,6 +45,27 @@ namespace tai
         const Method method = Timing;
 
         const bool partial = false;
+
+        static void* operator new(size_t size)
+        {
+            return malloc(sizeof(IOCtrl));
+        }
+
+        static void* operator new[](size_t size)
+        {
+            return malloc(size);
+        }
+
+        static void operator delete(void* ptr)
+        {
+            free(ptr);
+        }
+
+        static void operator delete[](void* ptr)
+        {
+            free(ptr);
+        }
+
 
         // Lock for certain times.
         size_t lock(size_t num = 1)
@@ -125,7 +151,7 @@ namespace tai
     };
 
     using IOCtrlHandle = std::unique_ptr<IOCtrl>;
-    using IOCtrlVec = std::vector<IOCtrlHandle>;
+    using IOCtrlVec = std::vector<IOCtrlHandle, Alloc<IOCtrlHandle>>;
 
     const char* to_cstring(IOCtrl::State _);
     const char* to_cstring(IOCtrl::Method _);

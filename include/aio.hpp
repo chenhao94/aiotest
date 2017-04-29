@@ -9,8 +9,8 @@
 #include <memory>
 #include <atomic>
 #include <thread>
-
-#include <signal.h>
+#include <chrono>
+#include <csignal>
 
 #include "BTreeBase.hpp"
 #include "IOCtrl.hpp"
@@ -85,7 +85,9 @@ namespace tai
 
             void wait()
             {
-                io->wait();
+                using namespace std::chrono_literals;
+
+                io->wait(32ms);
             }
 
         private:

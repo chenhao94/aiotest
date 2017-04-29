@@ -107,7 +107,7 @@ namespace tai
             return false;
         }
 
-        auto tree = new BTree<45, 3, 16>(new POSIXEngine(path));
+        auto tree = new BTree<45, 3, 4, 12>(new POSIXEngine(path));
         // auto tree = new BTree<45, 3, 16>(new POSIXEngine(path, O_RDWR | O_CREAT
         //             #ifdef __linux__
         //             | O_DIRECT

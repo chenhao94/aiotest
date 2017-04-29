@@ -46,7 +46,7 @@ namespace tai
         static constexpr auto nm = n + m;
         static constexpr auto NM = N << m;
 
-        std::vector<Child*> child;
+        std::vector<Child*, Alloc<Child*>> child;
 
     private:
         // Convert file address into child indices.
