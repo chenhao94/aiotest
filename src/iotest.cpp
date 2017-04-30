@@ -449,9 +449,7 @@ void TAIWrite::writeop(off_t offset, char* data)
 {
     using namespace tai;
 
-    ios.emplace_back(bt->write(*ctrl, offset, WRITE_SIZE, data));
-    auto status = (*ios.back())();
-    if (status && status != IOCtrl::Running)
+    if (unlikely((*ios.emplace_back(bt->write(*ctrl, offset, READ_SIZE, data)))() == IOCtrl::Rejected))
     {
         cerr << "Error at TAI write." << endl;
         exit(-1);
@@ -462,9 +460,7 @@ void TAIWrite::readop(off_t offset, char* data)
 {
     using namespace tai;
 
-    ios.emplace_back(bt->readsome(*ctrl, offset, READ_SIZE, data));
-    auto status = (*ios.back())();
-    if (status && status != IOCtrl::Running)
+    if (unlikely((*ios.emplace_back(bt->readsome(*ctrl, offset, READ_SIZE, data)))() == IOCtrl::Rejected))
     {
         cerr << "Error at TAI read." << endl;
         exit(-1);
@@ -475,9 +471,7 @@ void TAIWrite::syncop()
 {
     using namespace tai;
 
-    ios.emplace_back(bt->sync(*ctrl));
-    auto status = (*ios.back())();
-    if (status && status != IOCtrl::Running)
+    if (unlikely((*ios.emplace_back(bt->sync(*ctrl)))() == IOCtrl::Rejected))
     {
         cerr << "Error at TAI sync." << endl;
         exit(-1);

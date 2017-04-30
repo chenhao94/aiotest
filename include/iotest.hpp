@@ -295,7 +295,9 @@ public:
 
     virtual void openfile(const std::string& filename) override 
     {
-        bt.reset(new tai::BTree<45, 3 ,4, 12>(new tai::POSIXEngine(filename))); 
+        using namespace tai;
+
+        bt.reset(new BTree<45, 3 ,4, 12>(new POSIXEngine(filename))); 
         ios.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
     }
 
@@ -314,14 +316,17 @@ public:
     inline void wait_cb() override
     {
         using namespace std::chrono_literals;
+
         for (auto& i : ios)
             i->wait(32ms);
     }
 
     inline void busywait_cb() override
     {
+        using namespace tai;
+
         for (auto& i : ios)
-            while ((*i)() == tai::IOCtrl::Running);
+            while ((*i)() == IOCtrl::Running);
     }
 
     void writeop(off_t offset, char* data) override;
