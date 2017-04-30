@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
         (align_val_t(512))
         #endif
         char[WRITE_SIZE];
-    memset(data, 'a', sizeof(WRITE_SIZE));
+    memset(data, 'a', WRITE_SIZE);
 
     auto sum_issue = 0ull, sum_sync = 0ull; 
     auto tot_rnd = IO_ROUND / SYNC_RATE;

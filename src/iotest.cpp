@@ -438,7 +438,7 @@ TAIWrite::TAIWrite()
     bool expect = false;
     if (ctrlFlag.compare_exchange_strong(expect, true))
     {
-        ctrl.reset(new Controller(1ll << 28, 1ll << 30));
+        ctrl.reset(new Controller(1ll << 30, 1ll << 32));
         ctrlConstructedFlag.store(true, memory_order_release);
     }
     else
