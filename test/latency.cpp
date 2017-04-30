@@ -68,8 +68,7 @@ int main(int argc, char *argv[])
     if (testType == 4)
         aio_end();
 
-    Log::log(testname[testType],
-            " testType, X of IO, size per IO(KB),",
+    Log::log("testType, X of IO, size per IO(KB),",
             " 20 percentile of issuing(us), average, median, 80 percentile,",
             " 20 percentile of syncing, average, median, 80 percentile");
     cout << testname[testType] << ", " << SYNC_RATE << ", " << (WRITE_SIZE >> 10) << ", " << pcnt20_issue << ", " << avg_issue << ", " << mid_issue << ", " <<pcnt80_issue;

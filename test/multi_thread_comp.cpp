@@ -19,6 +19,7 @@ int main(int argc, char* argv[])
     srand(time(nullptr));
 
     vector<thread> threads;
+
     auto epoch = high_resolution_clock::now();
     for (size_t i = 0; i < thread_num; ++i)
     {

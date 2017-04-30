@@ -6,6 +6,7 @@
 #include <string>
 #include <memory>
 #include <new>
+#include <chrono>
 
 #include "iotest.hpp"
 
@@ -461,7 +462,7 @@ void TAIWrite::readop(off_t offset, char* data)
 {
     using namespace tai;
 
-    ios.emplace_back(bt->read(*ctrl, offset, READ_SIZE, data));
+    ios.emplace_back(bt->readsome(*ctrl, offset, READ_SIZE, data));
     auto status = (*ios.back())();
     if (status && status != IOCtrl::Running)
     {
@@ -483,3 +484,18 @@ void TAIWrite::syncop()
     }
 }
 
+void TAIWrite::cleanup() 
+{
+    using namespace tai;
+
+    for (auto &i : ios)
+    {
+        i->wait();
+        if (unlikely((*i)() != IOCtrl::Done))
+        {
+            cerr << "Error at TAI cleanup" << endl;
+            exit(-1);
+        }
+    }
+    ios.clear();
+}

@@ -295,15 +295,15 @@ public:
 
     virtual void openfile(const std::string& filename) override 
     {
-        bt.reset(new tai::BTreeDefault(new tai::POSIXEngine(filename))); 
+        bt.reset(new tai::BTree<45, 3 ,4, 12>(new tai::POSIXEngine(filename))); 
         ios.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
     }
 
     virtual void closefile() override
     {
-        auto io = bt->detach(*ctrl);
+        syncop();
+        bt->detach(*ctrl)->wait();
         bt.reset(nullptr);
-        io->wait();
     }
 
     inline void reset_cb() override
@@ -313,17 +313,21 @@ public:
 
     inline void wait_cb() override
     {
-        ios.back()->wait();
+        using namespace std::chrono_literals;
+        for (auto& i : ios)
+            i->wait(32ms);
     }
 
     inline void busywait_cb() override
     {
-        while ((*ios.back())() == tai::IOCtrl::Running);
+        for (auto& i : ios)
+            while ((*i)() == tai::IOCtrl::Running);
     }
 
     void writeop(off_t offset, char* data) override;
     void readop(off_t offset, char* data) override;
     void syncop() override;
+    void cleanup() override;
 
 private:
     std::unique_ptr<tai::BTreeBase> bt;
