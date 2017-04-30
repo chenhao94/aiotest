@@ -339,7 +339,5 @@ private:
     tai::IOCtrlVec ios;
 
     static std::unique_ptr<tai::Controller> ctrl;
-    static std::atomic<bool> ctrlFlag;
-    static std::atomic<bool> ctrlConstructedFlag;
 };
 
