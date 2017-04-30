@@ -27,7 +27,6 @@ io_context_t LibAIOWrite::io_cxt;
 #endif
 
 unique_ptr<tai::Controller> TAIWrite::ctrl;
-atomic<bool> TAIWrite::ctrlFlag, TAIWrite::ctrlConstructedFlag;
 
 void RandomWrite::run_writeonly(size_t thread_id)
 {
@@ -435,8 +434,10 @@ TAIWrite::TAIWrite()
 {
     using namespace tai;
 
-    bool expect = false;
-    if (ctrlFlag.compare_exchange_strong(expect, true))
+    static atomic_flag ctrlFlag = ATOMIC_FLAG_INIT;
+    static atomic<bool> ctrlConstructedFlag(false);
+
+    if (!ctrlFlag.test_and_set(memory_order_acq_rel))
     {
         ctrl.reset(new Controller(1ll << 30, 1ll << 32));
         ctrlConstructedFlag.store(true, memory_order_release);
@@ -483,13 +484,10 @@ void TAIWrite::cleanup()
     using namespace tai;
 
     for (auto &i : ios)
-    {
-        i->wait();
-        if (unlikely((*i)() != IOCtrl::Done))
+        if (unlikely(i->wait() != IOCtrl::Done))
         {
             cerr << "Error at TAI cleanup" << endl;
             exit(-1);
         }
-    }
     ios.clear();
 }
