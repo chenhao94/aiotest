@@ -424,16 +424,15 @@ TAIWrite::TAIWrite()
 {
     using namespace tai;
 
-    static atomic_flag ctrlFlag = ATOMIC_FLAG_INIT;
-    static atomic<bool> ctrlConstructedFlag(false);
+    static atomic_flag master = ATOMIC_FLAG_INIT;
+    static atomic<bool> slave(false);
 
-    if (!ctrlFlag.test_and_set(memory_order_acq_rel))
+    if (!master.test_and_set(memory_order_acq_rel))
     {
         ctrl.reset(new Controller(1ll << 30, 1ll << 32));
-        ctrlConstructedFlag.store(true, memory_order_release);
+        slave.store(true, memory_order_release);
     }
-    else
-        while (!ctrlConstructedFlag.load(memory_order_acquire));
+    while (!slave.load(memory_order_acquire));
 }
 
 void TAIWrite::writeop(off_t offset, char* data) 
