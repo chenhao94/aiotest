@@ -3,6 +3,7 @@ stages:
   - pre-test
   - correctness
   - test_mt
+  - collect
   - test_lat
   - analysis
 
@@ -148,6 +149,19 @@ Try-test_lat:
     paths:
       - log/
     expire_in: 1 day
+
+collect:
+  stage: collect
+  tags:
+    - docker
+    - exclusive
+  only:
+    - benchmark
+  script:
+    - mkdir -p log/test_mt
+  artifacts:
+    paths:
+      - log/
 
 latency:
   stage: test_lat
