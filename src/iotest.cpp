@@ -157,14 +157,9 @@ void RandomWrite::run(size_t thread_id)
 void BlockingWrite::writeop(off_t offset, char* data)
 {
     #ifdef _POSIX_VERSION
-    if (lseek(fd, offset, SEEK_SET) < 0)
+    if (pwrite(fd, data, WRITE_SIZE, offset) < 0)
     {
-        cerr << "Error " << errno << ": " << strerror(errno) << " at lseek." << endl;
-        exit(-1);
-    }
-    if (write(fd, data, WRITE_SIZE) < 0)
-    {
-        cerr << "Error " << errno << ": " << strerror(errno) << " at write." << endl;
+        cerr << "Error " << errno << ": " << strerror(errno) << " at pwrite." << endl;
         exit(-1);
     }
     #else
@@ -175,14 +170,9 @@ void BlockingWrite::writeop(off_t offset, char* data)
 void BlockingWrite::readop(off_t offset, char* data)
 {
     #ifdef _POSIX_VERSION
-    if (lseek(fd, offset, SEEK_SET) < 0)
+    if (pread(fd, data, READ_SIZE, offset) < 0)
     {
-        cerr << "Error " << errno << ": " << strerror(errno) << " at lseek." << endl;
-        exit(-1);
-    }
-    if (read(fd, data, READ_SIZE) < 0)
-    {
-        cerr << "Error " << errno << ": " << strerror(errno) << " at read." << endl;
+        cerr << "Error " << errno << ": " << strerror(errno) << " at pread." << endl;
         exit(-1);
     }
     #else
