@@ -162,6 +162,6 @@ int main(int argc, char* argv[])
     }
 
     Log::log("hashSync: ", hashSync, "; hashTAI: ", hashTAI);
-    Log::log((hashSync == hashTAI)?"Passed!":"Failed!");
+    Log::log(hashSync == hashTAI ? "Passed!" : "Failed!");
     return 0;
 }

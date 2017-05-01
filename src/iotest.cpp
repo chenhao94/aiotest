@@ -461,7 +461,7 @@ void TAIWrite::syncop()
 {
     using namespace tai;
 
-    if (unlikely((*ios.emplace_back(bt->sync(*ctrl)))() == IOCtrl::Rejected))
+    if (unlikely((*ios.emplace_back(bt->fsync(*ctrl)))() == IOCtrl::Rejected))
     {
         cerr << "Error at TAI sync." << endl;
         exit(-1);

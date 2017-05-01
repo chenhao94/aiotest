@@ -78,7 +78,7 @@ namespace tai
 
             void fsync()
             {
-                io = bts[aio_fildes].load(std::memory_order_acquire)->sync(*ctrl);
+                io = bts[aio_fildes].load(std::memory_order_acquire)->fsync(*ctrl);
             }
 
             int status(); 

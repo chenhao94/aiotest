@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
             for (auto i = n; i--; ios.emplace_back(bt.write(ctrl, dist(rand) % size, data.size(), (ss[i]=(new string(data)))->data())))
                 for (size_t j = 0; j < data.size(); ++j)
                     data[j] = n - i >> ((j & 7) << 3) & 255;
-            ios.emplace_back(bt.sync(ctrl));
+            ios.emplace_back(bt.fsync(ctrl));
             ios.emplace_back(bt.detach(ctrl));
 
             for (size_t i = 0; i < ios.size(); ++i)

@@ -568,10 +568,13 @@ namespace tai
 
         // Issue a read request to this file to the given controller.
         // Do not allow partial read.
-        IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr) override
+        IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr, IOCtrl* io = nullptr) override
         {
             Log::debug("Issued read: ", pos, ", " , len);
-            auto io = new IOCtrl;
+            if (!io)
+                io = new IOCtrl;
+            else if ((*io)() == IOCtrl::Rejected)
+                return io;
             if (len < 1)
                 io->state.store(IOCtrl::Done, std::memory_order_relaxed);
             else
@@ -598,10 +601,13 @@ namespace tai
 
         // Issue a read request to this file to the given controller.
         // Allow partial read.
-        IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) override
+        IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr, IOCtrl* io = nullptr) override
         {
             Log::debug("Issued readsome: ", pos, ", " , len);
-            auto io = new IOCtrl(true);
+            if (!io)
+                io = new IOCtrl;
+            else if ((*io)() == IOCtrl::Rejected)
+                return io;
             if (len < 1)
                 io->state.store(IOCtrl::Done, std::memory_order_relaxed);
             else
@@ -627,10 +633,13 @@ namespace tai
         }
 
         // Issue a write request to this file to the given controller.
-        IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr) override
+        IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr, IOCtrl* io = nullptr) override
         {
             Log::debug("Issued write: ", pos, ", " , len);
-            auto io = new IOCtrl;
+            if (!io)
+                io = new IOCtrl;
+            else if ((*io)() == IOCtrl::Rejected)
+                return io;
             if (len < 1)
                 io->state.store(IOCtrl::Done, std::memory_order_relaxed);
             else
@@ -663,10 +672,13 @@ namespace tai
         }
 
         // Inject a task and track for completion.
-        IOCtrl* hook(Controller& ctrl, std::function<void()> task) override
+        IOCtrl* hook(Controller& ctrl, std::function<void()> task, IOCtrl* io = nullptr) override
         {
             Log::debug("Issued hook");
-            auto io = new IOCtrl;
+            if (!io)
+                io = new IOCtrl;
+            else if ((*io)() == IOCtrl::Rejected)
+                return io;
             if (!inject(ctrl, task))
             {
                 Log::log("Sync(tree) is rejected while injecting the task.");
@@ -682,18 +694,20 @@ namespace tai
 
         // Issue a sync request to this file to the given controller.
         // Sync by recursively scan the B-tree.
-        IOCtrl* syncTree(Controller& ctrl) override
+        IOCtrl* syncTree(Controller& ctrl, IOCtrl* io = nullptr) override
         {
             Log::debug("Issued recursive sync");
-            auto io = new IOCtrl;
-            auto task = [](){};
+            if (!io)
+                io = new IOCtrl;
+            else if ((*io)() == IOCtrl::Rejected)
+                return io;
             auto capture = root;
             if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->flush(io); }))
             {
                 Log::log("Sync(tree) is rejected by pending queue.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             }
-            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(task, io); }))
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
             {
                 Log::log("Sync(tree) is rejected by pending queue while submitting the timing task.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
@@ -703,23 +717,25 @@ namespace tai
 
         // Issue a sync request to this file to the given controller.
         // Sync by scanning controller's cache list.
-        IOCtrl* syncCache(Controller& ctrl) override
+        IOCtrl* syncCache(Controller& ctrl, IOCtrl* io = nullptr) override
         {
             Log::debug("Issued linear sync");
-            return hook(ctrl, [&](){ ctrl.flush(); });
+            return hook(ctrl, [&](){ ctrl.flush(); }, io);
         }
 
-        IOCtrl* sync(Controller& ctrl) override
+        IOCtrl* sync(Controller& ctrl, IOCtrl* io = nullptr) override
         {
-            // return syncTree(ctrl);
-            return syncCache(ctrl);
+            return syncCache(ctrl, io);
         }
 
         // Issue a sync request to this file to the given controller.
-        IOCtrl* detach(Controller& ctrl) override
+        IOCtrl* detach(Controller& ctrl, IOCtrl* io = nullptr) override
         {
             Log::debug("Issued detach");
-            auto io = new IOCtrl;
+            if (!io)
+                io = new IOCtrl;
+            else if ((*io)() == IOCtrl::Rejected)
+                return io;
             auto capture = root;
             if (!root)
             {
@@ -741,11 +757,13 @@ namespace tai
             return io;
         }
 
-        // Close the file.
-        // void close() override
-        // {
-        //     conf.files.clear();
-        // }
+        // Issed a POSIX fsync().
+        // This function can only be used with POSIXEngine.
+        IOCtrl* fsync(Controller& ctrl, IOCtrl* io = nullptr) override
+        {
+            Log::debug("Issued fsync");
+            return hook(ctrl, [io(conf.io.get())](){ io->fsync(); }, sync(ctrl, io));
+        }
     };
 
     // Default hierarchy.

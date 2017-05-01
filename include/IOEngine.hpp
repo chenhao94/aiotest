@@ -40,10 +40,25 @@ namespace tai
     public:
         size_t size = 0;
 
-        virtual bool read(char* dat, size_t pos, size_t len) = 0;
-        virtual bool write(const char* dat, size_t pos, size_t len) = 0;
-
         virtual std::string str() = 0;
+
+        virtual bool read(char* dat, size_t pos, size_t len)
+        {
+            Log::log("Warning: ", str()," does not support read(dat, pos, len)");
+            return false;
+        }
+
+        virtual bool write(const char* dat, size_t pos, size_t len)
+        {
+            Log::log("Warning: ", str()," does not support write(dat, pos, len)");
+            return false;
+        }
+
+        virtual bool fsync()
+        {
+            Log::log("Warning: ", str()," does not support fsync()");
+            return false;
+        }
     };
 
     class STLEngine : public IOEngine, public TLTable<std::fstream>
@@ -67,6 +82,11 @@ namespace tai
             file.rdbuf()->pubsetbuf(nullptr, 0);
         }
 
+        virtual std::string str() override
+        {
+            return "[STLEngine: \"" + path + "\"]";
+        }
+
         virtual bool read(char* dat, size_t pos, size_t len) override
         {
             return bool(get().seekg(pos).read(dat, len));
@@ -75,11 +95,6 @@ namespace tai
         virtual bool write(const char* dat, size_t pos, size_t len) override
         {
             return bool(get().seekp(pos).write(dat, len));
-        }
-
-        virtual std::string str() override
-        {
-            return "[STLEngine: \"" + path + "\"]";
         }
     };
 
@@ -116,6 +131,11 @@ namespace tai
             mtx.clear(std::memory_order_release);
         }
 
+        virtual std::string str() override
+        {
+            return "[CEngine: \"" + path + "\"]";
+        }
+
         virtual bool read(char* dat, size_t pos, size_t len) override
         {
             auto file = get();
@@ -126,11 +146,6 @@ namespace tai
         {
             auto file = get();
             return !fseek(file, pos, SEEK_SET) && fwrite(dat, len, 1, file) == 1 && !fflush(file);
-        }
-
-        virtual std::string str() override
-        {
-            return "[CEngine: \"" + path + "\"]";
         }
     };
 
@@ -173,6 +188,11 @@ namespace tai
                 close(fd);
         }
 
+        virtual std::string str() override
+        {
+            return "[POSIXEngine(fd = " + std::to_string(fd) + "): \"" + path + "\"]";
+        }
+
         virtual bool read(char* dat, size_t pos, size_t len) override
         {
             return pread(fd, dat, len, pos) == len;
@@ -183,9 +203,9 @@ namespace tai
             return pwrite(fd, dat, len, pos) == len;
         }
 
-        virtual std::string str() override
+        virtual bool fsync() override
         {
-            return "[POSIXEngine(fd = " + std::to_string(fd) + "): \"" + path + "\"]";
+            return !::fsync(fd);
         }
     };
 #endif
@@ -199,6 +219,11 @@ namespace tai
             size = std::numeric_limits<decltype(size)>::max();
         }
 
+        virtual std::string str() override
+        {
+            return "[NullEngine]";
+        }
+
         virtual bool read(char* dat, size_t pos, size_t len) override
         {
             return true;
@@ -207,11 +232,6 @@ namespace tai
         virtual bool write(const char* dat, size_t pos, size_t len) override
         {
             return true;
-        }
-
-        virtual std::string str() override
-        {
-            return "[NullEngine]";
         }
     };
 }
