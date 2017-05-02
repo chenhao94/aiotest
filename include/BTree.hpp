@@ -756,7 +756,7 @@ namespace tai
         TAI_INLINE
         IOCtrl* sync(Controller& ctrl) override
         {
-            return syncTree(ctrl);
+            return syncCache(ctrl);
         }
 
         // Issue a sync request to this file to the given controller.
