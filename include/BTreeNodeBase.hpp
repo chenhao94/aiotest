@@ -23,6 +23,7 @@ namespace tai
         std::unique_ptr<IOEngine> io;
         std::atomic<bool> failed = { false };
 
+        TAI_INLINE
         explicit BTreeConfig(IOEngine* io) : io(io)
         {
         }
@@ -59,12 +60,14 @@ namespace tai
         virtual void evict(bool release) = 0;
 
         // Check if this subtree is still connected to the root.
+        TAI_INLINE
         bool valid()
         {
             return parent;
         }
 
         // Recycle the cache.
+        TAI_INLINE
         void gc()
         {
             if (valid())
@@ -79,26 +82,44 @@ namespace tai
 
         // Set failed flag for this btree.
         // Used when no IOCtrl is responsible for the failure.
+        TAI_INLINE
         void fail()
         {
             conf.failed.store(true, std::memory_order_relaxed);
         }
 
         // Delete this node.
+        TAI_INLINE
         void suicide()
         {
             delete this;
         }
 
         // Prefetch no less than the given length into cache.
-        bool prefetch(size_t len, IOCtrl* io = nullptr);
+        TAI_INLINE
+        bool prefetch(size_t len, IOCtrl* io = nullptr)
+        {
+            if (len > effective && data)
+            {
+                Log::debug("prefetch from file: ", offset + effective, ", ", len - effective, ", len: ", len);
+                if (fread(data + effective, offset + effective, len - effective, io))
+                    effective = len;
+                else
+                    fail();
+            }
+            else
+                Log::debug("prefetch: len <= effective");
+            return effective >= len;
+        }
 
+        TAI_INLINE
         BTreeNodeBase(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : conf(conf), offset(offset), parent(parent)
         {
         }
 
         BTreeNodeBase(const BTreeNodeBase &) = delete;
 
+        TAI_INLINE
         virtual ~BTreeNodeBase()
         {
         }
@@ -131,13 +152,32 @@ namespace tai
         // Set to false when there's no cache.
         bool dirty = false;
 
-        // Read/write file.
-        bool fread(char* buf, size_t pos, size_t len, IOCtrl* io = nullptr);
-        bool fwrite(const char* buf, size_t pos, size_t len, IOCtrl* io = nullptr);
+        // Read file.
+        TAI_INLINE
+        bool fread(char* buf, size_t pos, size_t len, IOCtrl* io = nullptr)
+        {
+            if (conf.io->read(buf, pos, len))
+                return true;
+            io ? io->fail() : fail();
+            return false;
+        }
+
+        // Write file
+        TAI_INLINE
+        bool fwrite(const char* buf, size_t pos, size_t len, IOCtrl* io = nullptr)
+        {
+            Log::debug("Write ", len, " byte(s) of data at ", (size_t)buf, " to position ", pos, ".");
+            if (conf.io->write(buf, pos, len))
+                return true;
+            Log::debug("Fwrite failed!");
+            io ? io->fail() : fail();
+            return false;
+        }
 
         // Read via cache.
         // Bypass the cache if caching is too expensive.
         template<size_t N>
+        TAI_INLINE
         bool cachedRead(size_t begin, size_t end, char* ptr, IOCtrl* io = nullptr)
         {
             const auto base = begin & N - 1;
@@ -156,6 +196,7 @@ namespace tai
         // Write via cache.
         // Bypass the cache if caching is too expensive.
         template<size_t N>
+        TAI_INLINE
         bool cachedWrite(size_t begin, size_t end, const char* ptr, IOCtrl* io = nullptr)
         {
             const auto base = begin & N - 1;
@@ -198,12 +239,14 @@ namespace tai
         // A subtree is locked if any read/write is in progress.
         // In this case new read/write should respect them instead of simply drop their cache.
         // Dirty cache will also lock the the subtree until it is flushed.
+        TAI_INLINE
         auto locked()
         {
             return lck.load(std::memory_order_relaxed);
         }
 
         // Lock this subtree.
+        TAI_INLINE
         void lock(size_t num = 1)
         {
             lck.fetch_add(num, std::memory_order_relaxed);
@@ -214,6 +257,11 @@ namespace tai
 
         // Unlock the subtree, including its parents if necessary.
         // Also unlock the given IOCtrl.
-        void unlock(IOCtrl* const io);
+        TAI_INLINE
+        void unlock(IOCtrl* const io)
+        {
+            unlock();
+            io->unlock();
+        }
     };
 }

@@ -31,6 +31,9 @@
 
 #define unlikely(x)     __builtin_expect((x),0)
 
+static const std::string testname[] = {"Posix", "DIO", "PosixAIO", "LibAIO", "TaiAIO", "STL", "Tai"};
+static const std::string wlname[] = {"read", "write", "read&write"};
+
 extern size_t testType;
 extern size_t FILE_SIZE;
 extern size_t WRITE_SIZE;
@@ -48,12 +51,45 @@ extern size_t WAIT_RATE;
 
 extern bool SINGLE_FILE;
 
-extern std::string testname[];
-extern std::string wlname[];
+TAI_INLINE
+static void processArgs(int argc, char* argv[])
+{
+    using namespace std;
 
-void processArgs(int argc, char* argv[]);
+    if (argc < 10)
+    {
+        cerr << "Need arguments for thread number, type of IO to test and workload type" << endl;
+        exit(-1);
+    }
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 1])); }({
+            &thread_num,
+            &testType,
+            &workload,
+            });
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 4])); }({
+            &FILE_SIZE,
+            });
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 5])); }({
+            &READ_SIZE,
+            &WRITE_SIZE,
+            });
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 7])); }({
+            &IO_ROUND,
+            &SYNC_RATE,
+            &WAIT_RATE
+            });
+    if (argc > 10)
+        SINGLE_FILE = (stoll(argv[10])>0);
 
-inline auto randgen(size_t align = 0)
+    READ_SIZE = READ_SIZE << 10;
+    WRITE_SIZE = WRITE_SIZE << 10;
+
+    tai::Log::log("thread number: ", thread_num);
+    tai::Log::log(testname[testType], SINGLE_FILE?" on single file":" on multiple files");
+}
+
+TAI_INLINE
+static auto randgen(size_t align = 0)
 {
     static const auto size = FILE_SIZE - (READ_SIZE > WRITE_SIZE ? READ_SIZE : WRITE_SIZE) + 1;
     return rand() % size & -align;

@@ -6,6 +6,18 @@
 #include <array>
 #include <functional>
 
+#if defined(__unix__) || defined(__MACH__)
+#include <unistd.h>
+#endif
+
+#ifdef _POSIX_VERSION
+#include <errno.h>
+#endif
+
+#ifdef _POSIX_THREADS
+#include <pthread.h>
+#endif
+
 #include <boost/lockfree/queue.hpp>
 
 #include "Decl.hpp"
@@ -58,6 +70,7 @@ namespace tai
         // Construct as the id-th worker of the controller.
         Worker(Controller& ctrl, size_t id);
 
+        TAI_INLINE
         Worker(Worker&& _) noexcept :
             ctrl(_.ctrl),
             gid(_.gid),
@@ -70,6 +83,7 @@ namespace tai
         {
         }
 
+        TAI_INLINE
         ~Worker()
         {
             if (handle)
@@ -77,9 +91,30 @@ namespace tai
             pool.push(gid);
         }
 
-        void go();
+        TAI_INLINE
+        void go()
+        {
+            using namespace std;
+
+            handle.reset(new thread([this](){ run(); }));
+
+            #ifdef _POSIX_THREADS
+            #ifndef __APPLE__
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            if (ctrl.affinity)
+                CPU_SET(getGID() % thread::hardware_concurrency(), &cpuset);
+            else
+                for (auto i = thread::hardware_concurrency(); i--; CPU_SET(i, &cpuset));
+
+            if (auto err = pthread_setaffinity_np(handle->native_handle(), sizeof(cpu_set_t), &cpuset))
+                Log::log("Warning: Failed to set thread affinity (Error: ", err, " ", strerror(err), ").");
+            #endif
+            #endif
+        }
 
         // Get global thread ID;
+        TAI_INLINE
         auto getGID() const
         {
             return gid;
@@ -87,6 +122,7 @@ namespace tai
 
         // Get global thread ID;
         // This can only be called directly from the worker thread.
+        TAI_INLINE
         static auto getSGID()
         {
             return sgid;
@@ -94,6 +130,7 @@ namespace tai
 
         // Get the thread-local object via global thread ID.
         template<typename T, typename... Init>
+        TAI_INLINE
         static auto& getTL(std::vector<std::unique_ptr<T>>& table, std::atomic_flag& mtx, Init&&... init)
         {
             while (mtx.test_and_set(std::memory_order_acquire));

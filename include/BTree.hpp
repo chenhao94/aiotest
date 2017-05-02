@@ -50,12 +50,14 @@ namespace tai
 
     private:
         // Convert file address into child indices.
+        TAI_INLINE
         auto getRange(size_t begin, size_t end) const
         {
             return std::pair<size_t, size_t>{begin >> m & N - 1, end - 1 >> m & N - 1};
         }
 
         // Touch a child node to make sure it exists.
+        TAI_INLINE
         auto touch(size_t i)
         {
             if (child.size() <= i)
@@ -69,6 +71,7 @@ namespace tai
 
         // Touch a child node to make sure it exists.
         // Use offset hint to reduce redundant computation.
+        TAI_INLINE
         auto touch(size_t i, size_t offset)
         {
             if (child.size() <= i)
@@ -81,37 +84,44 @@ namespace tai
         }
 
     public:
+        TAI_INLINE
         BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : BTreeNodeBase(conf, offset, parent), child(1)
         {
             Log::debug("Construct B-tree node [", offset, ", ", offset + NM, "].");
         }
 
+        TAI_INLINE
         ~BTreeNode() override
         {
             Log::debug("Destruct B-tree node [", offset, ", ", offset + NM, "].");
             evict(true);
         }
 
+        TAI_INLINE
         static void* operator new(size_t size)
         {
             return malloc(sizeof(Self));
         }
 
+        TAI_INLINE
         static void* operator new[](size_t size)
         {
             return malloc(size);
         }
 
+        TAI_INLINE
         static void operator delete(void* ptr)
         {
             free(ptr);
         }
 
+        TAI_INLINE
         static void operator delete[](void* ptr)
         {
             free(ptr);
         }
 
+        TAI_INLINE
         void merge(BTreeNodeBase* node, IOCtrl* io = nullptr) override
         {
             if (data)
@@ -131,6 +141,7 @@ namespace tai
             }
         }
 
+        TAI_INLINE
         void drop(bool force) override
         {
             if (data)
@@ -144,6 +155,7 @@ namespace tai
             }
         }
 
+        TAI_INLINE
         void dropChild(bool force) override
         {
             for (auto& i : child)
@@ -152,6 +164,7 @@ namespace tai
             child.clear();
         }
 
+        TAI_INLINE
         void detach(bool force) override
         {
             if (data)
@@ -168,6 +181,7 @@ namespace tai
 
     private:
         // Merge subtree cache into node cache.
+        TAI_INLINE
         bool merge(IOCtrl* io = nullptr)
         {
             if (Controller::ctrl->usage(NM) == Controller::Full)
@@ -182,6 +196,7 @@ namespace tai
         }
 
     public:
+        TAI_INLINE
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             Log::debug("read {", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
@@ -248,6 +263,7 @@ namespace tai
             }
         }
 
+        TAI_INLINE
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
             Log::debug("write {", offset, ", ", offset + NM, " : ", begin, ", ", end, "}");
@@ -319,16 +335,19 @@ namespace tai
             }
         }
 
+        TAI_INLINE
         static void sync(IOCtrl* io)
         {
             Worker::pushWait([=](){ Child::sync(io); });
         }
 
+        TAI_INLINE
         static void sync(Task task, IOCtrl* io = nullptr)
         {
             Worker::pushWait([=](){ Child::sync(task, io); });
         }
 
+        TAI_INLINE
         void flush(IOCtrl* io) override
         {
             if (dirty)
@@ -345,6 +364,7 @@ namespace tai
                         Worker::pushWait([=](){ i->flush(io); });
         }
 
+        TAI_INLINE
         void evict(bool release) override
         {
             Log::debug("Evicting {", offset, ", ", offset + N, "}");
@@ -369,37 +389,44 @@ namespace tai
 
         static constexpr auto N = n < sizeof(size_t) * 8 ? (size_t)1 << n : (size_t)0;
 
+        TAI_INLINE
         BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : BTreeNodeBase(conf, offset, parent)
         {
             Log::debug("Construct B-tree node [", offset, ", ", offset + N, "].");
         }
 
+        TAI_INLINE
         ~BTreeNode() override
         {
             Log::debug("Destruct B-tree node [", offset, ", ", offset + N, "].");
             evict(true);
         }
 
+        TAI_INLINE
         static void* operator new(size_t size)
         {
             return malloc(sizeof(Self));
         }
 
+        TAI_INLINE
         static void* operator new[](size_t size)
         {
             return malloc(size);
         }
 
+        TAI_INLINE
         static void operator delete(void* ptr)
         {
             free(ptr);
         }
 
+        TAI_INLINE
         static void operator delete[](void* ptr)
         {
             free(ptr);
         }
 
+        TAI_INLINE
         void merge(BTreeNodeBase* node, IOCtrl* io = nullptr) override
         {
             if (data)
@@ -412,6 +439,7 @@ namespace tai
             }
         }
 
+        TAI_INLINE
         void drop(bool force) override
         {
             if (data)
@@ -420,16 +448,19 @@ namespace tai
                 suicide();
         }
 
+        TAI_INLINE
         void dropChild(bool force) override
         {
         }
 
+        TAI_INLINE
         void detach(bool force) override
         {
             if (!data)
                 suicide();
         }
 
+        TAI_INLINE
         void read(size_t begin, size_t end, char* ptr, IOCtrl* io) override
         {
             Log::debug("read(leaf) {", offset, ", ", offset + N, " : ", begin, ", ", end, "}");
@@ -460,6 +491,7 @@ namespace tai
             }
         }
 
+        TAI_INLINE
         void write(size_t begin, size_t end, const char* ptr, IOCtrl* io) override
         {
             Log::debug("write(leaf) {", offset, ", ", offset + N, " : ", begin, ", ", end, "}");
@@ -489,11 +521,13 @@ namespace tai
             }
         }
 
+        TAI_INLINE
         static void sync(IOCtrl* io)
         {
             io->notify();
         }
 
+        TAI_INLINE
         static void sync(Task task, IOCtrl* io = nullptr)
         {
             task();
@@ -501,6 +535,7 @@ namespace tai
                 io->notify();
         }
 
+        TAI_INLINE
         void flush(IOCtrl* io) override
         {
             if (dirty)
@@ -514,6 +549,7 @@ namespace tai
             }
         }
 
+        TAI_INLINE
         void evict(bool release) override
         {
             Log::debug("Evicting {", offset, ", ", offset + N, "}");
@@ -547,6 +583,7 @@ namespace tai
         static constexpr std::array<size_t, level> bits = {n, rest...};
 
         // Bind to the file from given path.
+        TAI_INLINE
         explicit BTree(IOEngine* io) : BTreeBase(io), root(new Root(conf, 0))
         {
             Log::debug("Construct B-tree for ", conf.io->str(), ".");
@@ -557,6 +594,7 @@ namespace tai
             mtxUsedID.unlock();
         }
 
+        TAI_INLINE
         ~BTree() override
         {
             Log::debug("Destruct B-tree for \"", conf.io->str(), "\".");
@@ -568,6 +606,7 @@ namespace tai
 
         // Issue a read request to this file to the given controller.
         // Do not allow partial read.
+        TAI_INLINE
         IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr) override
         {
             Log::debug("Issued read: ", pos, ", " , len);
@@ -598,6 +637,7 @@ namespace tai
 
         // Issue a read request to this file to the given controller.
         // Allow partial read.
+        TAI_INLINE
         IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) override
         {
             Log::debug("Issued readsome: ", pos, ", " , len);
@@ -627,6 +667,7 @@ namespace tai
         }
 
         // Issue a write request to this file to the given controller.
+        TAI_INLINE
         IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr) override
         {
             Log::debug("Issued write: ", pos, ", " , len);
@@ -656,6 +697,7 @@ namespace tai
         }
 
         // Inject a task to pending list.
+        TAI_INLINE
         bool inject(Controller& ctrl, std::function<void()> task) override
         {
             Log::debug("Issued inject");
@@ -663,6 +705,7 @@ namespace tai
         }
 
         // Inject a task and track for completion.
+        TAI_INLINE
         IOCtrl* hook(Controller& ctrl, std::function<void()> task) override
         {
             Log::debug("Issued hook");
@@ -682,6 +725,7 @@ namespace tai
 
         // Issue a sync request to this file to the given controller.
         // Sync by recursively scan the B-tree.
+        TAI_INLINE
         IOCtrl* syncTree(Controller& ctrl) override
         {
             Log::debug("Issued recursive sync");
@@ -702,18 +746,21 @@ namespace tai
 
         // Issue a sync request to this file to the given controller.
         // Sync by scanning controller's cache list.
+        TAI_INLINE
         IOCtrl* syncCache(Controller& ctrl) override
         {
             Log::debug("Issued linear sync");
             return hook(ctrl, [&](){ ctrl.flush(); });
         }
 
+        TAI_INLINE
         IOCtrl* sync(Controller& ctrl) override
         {
             return syncTree(ctrl);
         }
 
         // Issue a sync request to this file to the given controller.
+        TAI_INLINE
         IOCtrl* detach(Controller& ctrl) override
         {
             Log::debug("Issued detach");
@@ -741,6 +788,7 @@ namespace tai
 
         // Issed a POSIX fsync().
         // This function can only be used with POSIXEngine.
+        TAI_INLINE
         IOCtrl* fsync(Controller& ctrl) override
         {
             Log::debug("Issued fsync");

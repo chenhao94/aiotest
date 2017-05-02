@@ -25,18 +25,6 @@ namespace tai
         Log::debug("    Controller destructed.");
     }
 
-    Controller::Usage Controller::usage(size_t alloc)
-    {
-        const auto space = used.load(std::memory_order_relaxed) + alloc;
-        if (space >= upper)
-            return Full;
-        if (space > lower)
-            return High;
-        if (space > 0)
-            return Low;
-        return Empty;
-    }
-
     void Controller::wait(WorkerState _, std::memory_order sync)
     {
         for (auto& i : workers)

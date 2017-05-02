@@ -11,7 +11,7 @@
 #include <boost/lockfree/queue.hpp>
 
 #include "Decl.hpp"
-#include "BTreeNodeBase.hpp"
+#include "Log.hpp"
 
 namespace tai
 {
@@ -38,6 +38,7 @@ namespace tai
         std::vector<Task>* current = &ready;
 
     public:
+        TAI_INLINE
         TLQ() :
             rand(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
             pending(std::thread::hardware_concurrency()),
@@ -59,18 +60,21 @@ namespace tai
         void clearCurrent(const char* reason = nullptr);
 
         // Setup current queue for next phase.
+        TAI_INLINE
         void setup(std::vector<Task>& queue)
         {
             remain.store((current = &queue)->size(), std::memory_order_relaxed);
         }
 
         // Setup "Done" phase.
+        TAI_INLINE
         void setupDone()
         {
             setup(done);
         }
 
         // Pop and execute one task from the current queue.
+        TAI_INLINE
         auto operator ()()
         {
             auto i = remain.fetch_sub(1, std::memory_order_relaxed);
@@ -80,18 +84,21 @@ namespace tai
         }
 
         // Push a task into "wait" queue.
+        TAI_INLINE
         void pushWait(Task task)
         {
             wait.emplace_back(task);
         }
 
         // Push a task into "done" queue.
+        TAI_INLINE
         void pushDone(Task task)
         {
             done.emplace_back(task);
         }
 
         // Push a task into "pending" queue.
+        TAI_INLINE
         void pushPending(Task task)
         {
             // for (auto ptr = new Task(task); !pending.push(ptr); Log::log("Internal Error: Pending task fails. Retry..."));

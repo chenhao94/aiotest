@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #endif
 
+#include "Decl.hpp"
 #include "Log.hpp"
 
 namespace tai
@@ -42,18 +43,21 @@ namespace tai
 
         virtual std::string str() = 0;
 
+        TAI_INLINE
         virtual bool read(char* dat, size_t pos, size_t len)
         {
             Log::log("Warning: ", str()," does not support read(dat, pos, len)");
             return false;
         }
 
+        TAI_INLINE
         virtual bool write(const char* dat, size_t pos, size_t len)
         {
             Log::log("Warning: ", str()," does not support write(dat, pos, len)");
             return false;
         }
 
+        TAI_INLINE
         virtual bool fsync()
         {
             Log::log("Warning: ", str()," does not support fsync()");
@@ -68,6 +72,7 @@ namespace tai
         std::fstream& get();
 
     public:
+        TAI_INLINE
         explicit STLEngine(const std::string& path) : path(path)
         {
             std::fstream file(path, std::ios_base::in | std::ios_base::binary);
@@ -82,16 +87,19 @@ namespace tai
             file.rdbuf()->pubsetbuf(nullptr, 0);
         }
 
+        TAI_INLINE
         virtual std::string str() override
         {
             return "[STLEngine: \"" + path + "\"]";
         }
 
+        TAI_INLINE
         virtual bool read(char* dat, size_t pos, size_t len) override
         {
             return bool(get().seekg(pos).read(dat, len));
         }
 
+        TAI_INLINE
         virtual bool write(const char* dat, size_t pos, size_t len) override
         {
             return bool(get().seekp(pos).write(dat, len));
@@ -105,6 +113,7 @@ namespace tai
         FILE* get();
 
     public:
+        TAI_INLINE
         explicit CEngine(const std::string& path) : path(path)
         {
             auto file = fopen(path.c_str(), "rb");
@@ -122,6 +131,7 @@ namespace tai
             fclose(file);
         }
 
+        TAI_INLINE
         ~CEngine()
         {
             while (mtx.test_and_set(std::memory_order_acquire));
@@ -131,17 +141,20 @@ namespace tai
             mtx.clear(std::memory_order_release);
         }
 
+        TAI_INLINE
         virtual std::string str() override
         {
             return "[CEngine: \"" + path + "\"]";
         }
 
+        TAI_INLINE
         virtual bool read(char* dat, size_t pos, size_t len) override
         {
             auto file = get();
             return !fseek(file, pos, SEEK_SET) && fread(dat, len, 1, file) == 1;
         }
 
+        TAI_INLINE
         virtual bool write(const char* dat, size_t pos, size_t len) override
         {
             auto file = get();
@@ -155,6 +168,7 @@ namespace tai
         std::string path;
         int fd = -1;
 
+        TAI_INLINE
         void loadSize()
         {
             if (~fd)
@@ -164,6 +178,7 @@ namespace tai
         }
 
     public:
+        TAI_INLINE
         explicit POSIXEngine(const std::string& path) : path(path), fd(open(path.c_str(), O_RDWR | O_CREAT))
         {
             if (!~fd)
@@ -172,37 +187,44 @@ namespace tai
             loadSize();
         }
 
+        TAI_INLINE
         explicit POSIXEngine(const std::string& path, int flags) : path(path), fd(open(path.c_str(), flags))
         {
             loadSize();
         }
 
+        TAI_INLINE
         explicit POSIXEngine(int fd) : fd(fd)
         {
             loadSize();
         }
 
+        TAI_INLINE
         ~POSIXEngine()
         {
             if (~fd)
                 close(fd);
         }
 
+        TAI_INLINE
         virtual std::string str() override
         {
             return "[POSIXEngine(fd = " + std::to_string(fd) + "): \"" + path + "\"]";
         }
 
+        TAI_INLINE
         virtual bool read(char* dat, size_t pos, size_t len) override
         {
             return pread(fd, dat, len, pos) == len;
         }
 
+        TAI_INLINE
         virtual bool write(const char* dat, size_t pos, size_t len) override
         {
             return pwrite(fd, dat, len, pos) == len;
         }
 
+        TAI_INLINE
         virtual bool fsync() override
         {
             return !::fsync(fd);
@@ -214,21 +236,25 @@ namespace tai
     {
     public:
         template<typename... Args>
+        TAI_INLINE
         explicit NullEngine(Args... args)
         {
             size = std::numeric_limits<decltype(size)>::max();
         }
 
+        TAI_INLINE
         virtual std::string str() override
         {
             return "[NullEngine]";
         }
 
+        TAI_INLINE
         virtual bool read(char* dat, size_t pos, size_t len) override
         {
             return true;
         }
 
+        TAI_INLINE
         virtual bool write(const char* dat, size_t pos, size_t len) override
         {
             return true;

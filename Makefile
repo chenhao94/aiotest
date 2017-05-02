@@ -59,7 +59,7 @@ $(TESTEXES): $(TARGETS_DIR)/%: $(OBJS_DIR)/%.cpp.o $(LIBTAI)
 	$(MKDIR) $(TARGETS_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
-$(TESTOBJS): $(OBJS_DIR)/%.o: $(TESTS_DIR)/%
+$(TESTOBJS): $(OBJS_DIR)/%.o: $(TESTS_DIR)/% $(PCHS)
 	$(MKDIR) $(OBJS_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
@@ -155,4 +155,4 @@ endif
 
 .PHONY: clean
 clean:
-	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(PCHS) tai tai.dSYM
+	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(PCHS) $(patsubst %,%-*,$(PCHS)) tai tai.dSYM

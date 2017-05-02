@@ -31,15 +31,18 @@ namespace tai
         // Configuration.
         BTreeConfig& conf;
 
+        TAI_INLINE
         BTreeBase(IOEngine* io) : conf(*new BTreeConfig(io))
         {
             confPool.push(&conf);
         }
 
+        TAI_INLINE
         virtual ~BTreeBase()
         {
         }
 
+        TAI_INLINE
         auto failed() const
         {
             return conf.failed.load(std::memory_order_relaxed);
