@@ -20,16 +20,31 @@ int main(int argc, char* argv[])
 
     vector<thread> threads;
 
-    auto epoch = high_resolution_clock::now();
-    for (size_t i = 0; i < thread_num; ++i)
+    time_point<high_resolution_clock> epoch;
+    long long time;
+    if (SINGLE_FILE)
     {
-        auto rw = RandomWrite::getInstance(testType);
-        threads.emplace_back([rw(move(rw)), i](){ rw->run(i); });
+        auto rw = RandomWrite::getInstance(testType, true).get();
+        epoch = high_resolution_clock::now();
+        for (size_t i = 0; i < thread_num; ++i)
+            threads.emplace_back([=](){ rw->run(0); });
+        for (auto& t : threads)
+            t.join();
+        time = duration_cast<nanoseconds>(high_resolution_clock::now() - epoch).count();
+        delete rw;
     }
-    for (auto& t : threads)
-        t.join();
-
-    auto time = duration_cast<nanoseconds>(high_resolution_clock::now() - epoch).count();
+    else
+    {
+        epoch = high_resolution_clock::now();
+        for (size_t i = 0; i < thread_num; ++i)
+        {
+            auto rw = RandomWrite::getInstance(testType);
+            threads.emplace_back([rw(move(rw)), i](){ rw->run(i); });
+        }
+        for (auto& t : threads)
+            t.join();
+        time = duration_cast<nanoseconds>(high_resolution_clock::now() - epoch).count();
+    }
 
     if (testType == 4)
         aio_end();

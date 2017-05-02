@@ -9,6 +9,7 @@
 #include <new>
 #include <string>
 #include <memory>
+#include <mutex>
 
 #if defined(__unix__) || defined(__MACH__)
 #include <unistd.h>
@@ -44,6 +45,8 @@ extern size_t WRITE_SIZE;
 extern size_t IO_ROUND;
 extern size_t SYNC_RATE;
 extern size_t WAIT_RATE;
+
+extern bool SINGLE_FILE;
 
 extern std::string testname[];
 extern std::string wlname[];
@@ -111,7 +114,7 @@ public:
     virtual void busywait_cb() {}
     virtual void cleanup() {}
 
-    static std::unique_ptr<RandomWrite> getInstance(int testType);
+    static std::unique_ptr<RandomWrite> getInstance(int testType, bool concurrent = false);
 };
 
 class BlockingWrite : public RandomWrite
@@ -125,6 +128,7 @@ public:
     static void startEntry(size_t thread_id, int flags = 0);
 };
 
+template <bool concurrent = false>
 class FstreamWrite : public BlockingWrite
 {
 public: 
@@ -132,12 +136,16 @@ public:
 
     void writeop(off_t offset, char* data) override
     {
+        if (concurrent) writeLock.lock();
         file.seekp(offset).write(data, WRITE_SIZE);
+        if (concurrent) writeLock.unlock();
     }
 
     void readop(off_t offset, char* data) override
     {
+        if (concurrent) writeLock.lock();
         file.seekg(offset).read(data, READ_SIZE);
+        if (concurrent) writeLock.unlock();
     }
 
     void syncop() override
@@ -158,6 +166,7 @@ public:
 
 private:
     std::fstream file;
+    std::mutex writeLock;
 };
 
 class AIOWrite : public RandomWrite
@@ -304,6 +313,7 @@ public:
     virtual void closefile() override
     {
         syncop();
+        ios.back()->wait();
         bt->detach(*ctrl)->wait();
         bt.reset(nullptr);
     }

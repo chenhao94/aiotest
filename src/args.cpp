@@ -33,15 +33,17 @@ void processArgs(int argc, char* argv[])
             &SYNC_RATE,
             &WAIT_RATE
             });
+    if (argc > 10)
+        SINGLE_FILE = (stoll(argv[10])>0);
 
     READ_SIZE = READ_SIZE << 10;
     WRITE_SIZE = WRITE_SIZE << 10;
 
     tai::Log::log("thread number: ", thread_num);
-    tai::Log::log(testname[testType]);
+    tai::Log::log(testname[testType], SINGLE_FILE?" on single file":" on multiple files");
 }
 
-std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType)
+std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType, bool concurrent)
 {
     static std::atomic_flag init = ATOMIC_FLAG_INIT;
     auto first = !init.test_and_set();
@@ -74,7 +76,10 @@ std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType)
         rw.reset(new TAIAIOWrite());
         break;
     case 5:
-        rw.reset(new FstreamWrite());
+        if (concurrent)
+            rw.reset(new FstreamWrite<true>());
+        else
+            rw.reset(new FstreamWrite<false>());
         break;
     case 6:
         rw.reset(new TAIWrite());

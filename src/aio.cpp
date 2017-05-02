@@ -140,7 +140,7 @@ namespace tai
         {
             aiocb::bts[fd].store(nullptr, std::memory_order_release);
             IOCtrlVec ios;
-            ios.emplace_back(victim->sync(*aiocb::ctrl));
+            ios.emplace_back(victim->sync(*aiocb::ctrl))->wait();
             ios.emplace_back(victim->detach(*aiocb::ctrl))->wait();
         }
 

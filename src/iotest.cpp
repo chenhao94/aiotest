@@ -22,6 +22,8 @@ size_t IO_ROUND = 1 << 10;
 size_t SYNC_RATE = 1;
 size_t WAIT_RATE = 1;
 
+bool SINGLE_FILE = false;
+
 #ifdef __linux__
 io_context_t LibAIOWrite::io_cxt;
 #endif
@@ -204,9 +206,10 @@ void BlockingWrite::startEntry(size_t thread_id, int flags)
     #endif
 }
 
-void FstreamWrite::startEntry(size_t thread_id)
+template <bool concurrent>
+void FstreamWrite<concurrent>::startEntry(size_t thread_id)
 {
-    FstreamWrite fw;
+    FstreamWrite<concurrent> fw;
     fw.run(thread_id);
 }
 
