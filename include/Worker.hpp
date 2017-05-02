@@ -6,18 +6,6 @@
 #include <array>
 #include <functional>
 
-#if defined(__unix__) || defined(__MACH__)
-#include <unistd.h>
-#endif
-
-#ifdef _POSIX_VERSION
-#include <errno.h>
-#endif
-
-#ifdef _POSIX_THREADS
-#include <pthread.h>
-#endif
-
 #include <boost/lockfree/queue.hpp>
 
 #include "Decl.hpp"
@@ -133,27 +121,7 @@ namespace tai
             return *ptr;
         }
 
-        TAI_INLINE
-        void go()
-        {
-            using namespace std;
-
-            handle.reset(new thread([this](){ run(); }));
-
-            #ifdef _POSIX_THREADS
-            #ifndef __APPLE__
-            cpu_set_t cpuset;
-            CPU_ZERO(&cpuset);
-            if (ctrl.affinity)
-                CPU_SET(getGID() % thread::hardware_concurrency(), &cpuset);
-            else
-                for (auto i = thread::hardware_concurrency(); i--; CPU_SET(i, &cpuset));
-
-            if (auto err = pthread_setaffinity_np(handle->native_handle(), sizeof(cpu_set_t), &cpuset))
-                Log::log("Warning: Failed to set thread affinity (Error: ", err, " ", strerror(err), ").");
-            #endif
-            #endif
-        }
+        void go();
 
         // Push task into the queue specified.
         static void pushWait(Task task);
