@@ -91,28 +91,6 @@ namespace tai
             pool.push(gid);
         }
 
-        TAI_INLINE
-        void go()
-        {
-            using namespace std;
-
-            handle.reset(new thread([this](){ run(); }));
-
-            #ifdef _POSIX_THREADS
-            #ifndef __APPLE__
-            cpu_set_t cpuset;
-            CPU_ZERO(&cpuset);
-            if (ctrl.affinity)
-                CPU_SET(getGID() % thread::hardware_concurrency(), &cpuset);
-            else
-                for (auto i = thread::hardware_concurrency(); i--; CPU_SET(i, &cpuset));
-
-            if (auto err = pthread_setaffinity_np(handle->native_handle(), sizeof(cpu_set_t), &cpuset))
-                Log::log("Warning: Failed to set thread affinity (Error: ", err, " ", strerror(err), ").");
-            #endif
-            #endif
-        }
-
         // Get global thread ID;
         TAI_INLINE
         auto getGID() const
@@ -153,6 +131,28 @@ namespace tai
             table.emplace_back(ptr);
             mtx.clear(std::memory_order_release);
             return *ptr;
+        }
+
+        TAI_INLINE
+        void go()
+        {
+            using namespace std;
+
+            handle.reset(new thread([this](){ run(); }));
+
+            #ifdef _POSIX_THREADS
+            #ifndef __APPLE__
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            if (ctrl.affinity)
+                CPU_SET(getGID() % thread::hardware_concurrency(), &cpuset);
+            else
+                for (auto i = thread::hardware_concurrency(); i--; CPU_SET(i, &cpuset));
+
+            if (auto err = pthread_setaffinity_np(handle->native_handle(), sizeof(cpu_set_t), &cpuset))
+                Log::log("Warning: Failed to set thread affinity (Error: ", err, " ", strerror(err), ").");
+            #endif
+            #endif
         }
 
         // Push task into the queue specified.
