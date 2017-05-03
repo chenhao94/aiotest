@@ -24,6 +24,8 @@ size_t WAIT_RATE = 1;
 
 bool SINGLE_FILE = false;
 
+thread_local int RandomWrite::tid = -1;
+
 #ifdef __linux__
 io_context_t LibAIOWrite::io_cxt;
 #endif
@@ -149,6 +151,7 @@ void RandomWrite::run_readwrite(size_t thread_id)
 
 void RandomWrite::run(size_t thread_id)
 {
+    tid = thread_id;
     array<function<void(size_t)>, 3>{
         [this](auto _){ run_readonly(_); },
         [this](auto _){ run_writeonly(_); },
@@ -216,7 +219,7 @@ void FstreamWrite<concurrent>::startEntry(size_t thread_id)
 void AIOWrite::cleanup() 
 {
     #ifdef _POSIX_VERSION
-    for (auto &i : cbs)
+    for (auto &i : cbs[tid])
         if (unlikely(aio_error(&i) && aio_error(&i) != EINPROGRESS))
         {
             cerr << aio_error(&i) <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
@@ -233,8 +236,8 @@ void AIOWrite::cleanup()
 void AIOWrite::writeop(off_t offset, char* data)
 {
     #ifdef _POSIX_VERSION
-    cbs.emplace_back();
-    auto& cb = cbs.back();
+    cbs[tid].emplace_back();
+    auto& cb = cbs[tid].back();
     memset(&cb, 0, sizeof(aiocb));
     cb.aio_fildes = fd;
     cb.aio_nbytes = WRITE_SIZE;
@@ -253,8 +256,8 @@ void AIOWrite::writeop(off_t offset, char* data)
 void AIOWrite::readop(off_t offset, char* data) 
 {
     #ifdef _POSIX_VERSION
-    cbs.emplace_back();
-    auto& cb = cbs.back();
+    cbs[tid].emplace_back();
+    auto& cb = cbs[tid].back();
     memset(&cb, 0, sizeof(aiocb));
     cb.aio_fildes = fd;
     cb.aio_nbytes = READ_SIZE;
@@ -273,8 +276,8 @@ void AIOWrite::readop(off_t offset, char* data)
 void AIOWrite::syncop() 
 {
     #ifdef _POSIX_VERSION
-    cbs.emplace_back();
-    auto& cb = cbs.back();
+    cbs[tid].emplace_back();
+    auto& cb = cbs[tid].back();
     memset(&cb, 0, sizeof(aiocb));
     cb.aio_fildes = fd;
     if (aio_fsync(O_SYNC, &cb))
@@ -300,7 +303,7 @@ void AIOWrite::startEntry(size_t thread_id)
 void LibAIOWrite::reset_cb() 
 {
     #ifdef __linux__
-    cbs.clear();
+    cbs[tid].clear();
     #else
     std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
     #endif
@@ -308,19 +311,24 @@ void LibAIOWrite::reset_cb()
 
 void LibAIOWrite::wait_cb()
 {
+    static mutex cntlock;
+    cntlock.lock();
+    int wait = cnt.load(memory_order_acquire);
+    cnt.store(0, memory_order_release);
+    cntlock.unlock();
+
     #ifdef __linux__
-    io_getevents(io_cxt, cnt, cnt, events, NULL);
+    io_getevents(io_cxt, wait, wait, events, NULL);
     #else
     std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
     #endif
-    cnt = 0;
 }
 
 void LibAIOWrite::writeop(off_t offset, char* data) 
 {
     #ifdef __linux__
-    cbs.emplace_back(new iocb);
-    auto& cb = cbs.back();
+    cbs[tid].emplace_back(new iocb);
+    auto& cb = cbs[tid].back();
     io_prep_pwrite(cb, fd, data, WRITE_SIZE, offset);
     auto err = io_submit(io_cxt, 1, &cb);
     if (err < 1)
@@ -337,8 +345,8 @@ void LibAIOWrite::writeop(off_t offset, char* data)
 void LibAIOWrite::readop(off_t offset, char* data)
 {
     #ifdef __linux__
-    cbs.emplace_back(new iocb);
-    auto& cb = cbs.back();
+    cbs[tid].emplace_back(new iocb);
+    auto& cb = cbs[tid].back();
     io_prep_pread(cb, fd, data, READ_SIZE, offset);
     auto err = io_submit(io_cxt, 1, &cb);
     if (err < 1)
@@ -368,7 +376,7 @@ void LibAIOWrite::startEntry(size_t thread_id)
 
 void TAIAIOWrite::cleanup() 
 {
-    for (auto &i : cbs)
+    for (auto &i : cbs[tid])
         if (unlikely(tai::aio_error(&i) && tai::aio_error(&i) != EINPROGRESS))
         {
             cerr << tai::aio_error(&i) <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
@@ -377,7 +385,7 @@ void TAIAIOWrite::cleanup()
         }
         else
             tai::aio_return(&i);
-    cbs.clear();
+    cbs[tid].clear();
     #ifdef _POSIX_VERSION
     if (fsync(fd))
     {
@@ -389,7 +397,7 @@ void TAIAIOWrite::cleanup()
 
 void TAIAIOWrite::writeop(off_t offset, char* data) 
 {
-    if (tai::aio_write(&cbs.emplace_back(fd, offset, data, WRITE_SIZE)))
+    if (tai::aio_write(&cbs[tid].emplace_back(fd, offset, data, WRITE_SIZE)))
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_write." << endl;
         exit(-1);
@@ -398,7 +406,7 @@ void TAIAIOWrite::writeop(off_t offset, char* data)
 
 void TAIAIOWrite::readop(off_t offset, char* data) 
 {
-    if (tai::aio_read(&cbs.emplace_back(fd, offset, data, READ_SIZE)))
+    if (tai::aio_read(&cbs[tid].emplace_back(fd, offset, data, READ_SIZE)))
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_read." << endl;
         exit(-1);
@@ -410,7 +418,7 @@ void TAIAIOWrite::syncop()
     #ifndef _POSIX_VERSION
     auto O_SYNC = 0;
     #endif
-    if (tai::aio_fsync(O_SYNC, &cbs.emplace_back(fd)))
+    if (tai::aio_fsync(O_SYNC, &cbs[tid].emplace_back(fd)))
     {
         cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_fsync." << endl;
         exit(-1);
@@ -442,7 +450,7 @@ void TAIWrite::writeop(off_t offset, char* data)
 {
     using namespace tai;
 
-    if (unlikely((*ios.emplace_back(bt->write(*ctrl, offset, READ_SIZE, data)))() == IOCtrl::Rejected))
+    if (unlikely((*ios[tid].emplace_back(bt->write(*ctrl, offset, READ_SIZE, data)))() == IOCtrl::Rejected))
     {
         cerr << "Error at TAI write." << endl;
         exit(-1);
@@ -453,7 +461,7 @@ void TAIWrite::readop(off_t offset, char* data)
 {
     using namespace tai;
 
-    if (unlikely((*ios.emplace_back(bt->readsome(*ctrl, offset, READ_SIZE, data)))() == IOCtrl::Rejected))
+    if (unlikely((*ios[tid].emplace_back(bt->readsome(*ctrl, offset, READ_SIZE, data)))() == IOCtrl::Rejected))
     {
         cerr << "Error at TAI read." << endl;
         exit(-1);
@@ -464,7 +472,7 @@ void TAIWrite::syncop()
 {
     using namespace tai;
 
-    if (unlikely((*ios.emplace_back(bt->fsync(*ctrl)))() == IOCtrl::Rejected))
+    if (unlikely((*ios[tid].emplace_back(bt->fsync(*ctrl)))() == IOCtrl::Rejected))
     {
         cerr << "Error at TAI sync." << endl;
         exit(-1);
@@ -475,11 +483,11 @@ void TAIWrite::cleanup()
 {
     using namespace tai;
 
-    for (auto &i : ios)
+    for (auto &i : ios[tid])
         if (unlikely(i->wait() != IOCtrl::Done))
         {
             cerr << "Error at TAI cleanup" << endl;
             exit(-1);
         }
-    ios.clear();
+    ios[tid].clear();
 }

@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     long long time;
     if (SINGLE_FILE)
     {
-        auto rw = RandomWrite::getInstance(testType, true).get();
+        auto rw = RandomWrite::getInstance(testType, true).release();
         epoch = high_resolution_clock::now();
         for (size_t i = 0; i < thread_num; ++i)
             threads.emplace_back([=](){ rw->run(0); });

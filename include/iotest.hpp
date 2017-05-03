@@ -10,6 +10,7 @@
 #include <string>
 #include <memory>
 #include <mutex>
+#include <atomic>
 
 #if defined(__unix__) || defined(__MACH__)
 #include <unistd.h>
@@ -48,6 +49,8 @@ extern size_t WAIT_RATE;
 
 extern bool SINGLE_FILE;
 
+static constexpr size_t MAX_THREAD_NUM = 8;
+
 extern std::string testname[];
 extern std::string wlname[];
 
@@ -69,6 +72,7 @@ class RandomWrite
 public:
     int fd = -1;
     int openflags;
+    std::atomic_int opencnt = 0;
 
     RandomWrite()
     {
@@ -90,6 +94,8 @@ public:
 
     virtual void openfile(const std::string& filename)
     {
+        if (opencnt.fetch_add(1) > 0)
+            return;
         #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags);
         #else
@@ -99,8 +105,11 @@ public:
 
     virtual void closefile()
     {
+        if (opencnt.fetch_sub(1) > 1)
+            return;
         #ifdef _POSIX_VERSION
         close(fd);
+        fd = -1;
         #else
         std::cerr << "RandomWrite::closefile() needs POSIX support." << std::endl;
         #endif
@@ -115,6 +124,7 @@ public:
     virtual void cleanup() {}
 
     static std::unique_ptr<RandomWrite> getInstance(int testType, bool concurrent = false);
+    static thread_local int tid;
 };
 
 class BlockingWrite : public RandomWrite
@@ -156,10 +166,24 @@ public:
 
     virtual void openfile(const std::string& filename) override
     {
-        RandomWrite::openfile(filename);
+        if (opencnt.fetch_add(1) > 0)
+            return;
+        #ifdef _POSIX_VERSION
+        fd = open(filename.c_str(), openflags); // fd for fsync
+        #endif
         if (file.is_open())
             file.close();
         file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
+    }
+
+    virtual void closefile() override
+    {
+        if (opencnt.fetch_sub(1) > 1)
+            return;
+        file.close();
+        #ifdef _POSIX_VERSION
+        close(fd);
+        #endif
     }
 
     static void startEntry(size_t thread_id);
@@ -175,20 +199,20 @@ public:
     AIOWrite()
     {
         #ifdef _POSIX_VERSION
-        cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        cbs[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         #else
         std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
         #endif
     }
 
     #ifdef _POSIX_VERSION
-    std::vector<aiocb> cbs;
+    std::array<std::vector<aiocb>, MAX_THREAD_NUM> cbs;
     #endif
 
     inline void reset_cb() override
     {
         #ifdef _POSIX_VERSION
-        cbs.clear();
+        cbs[tid].clear();
         #else
         std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
         #endif
@@ -199,7 +223,7 @@ public:
         using namespace std::chrono_literals;
 
         #ifdef _POSIX_VERSION
-        for (; aio_error(&(cbs.back())) == EINPROGRESS; std::this_thread::sleep_for(1ms));
+        for (; aio_error(&(cbs[tid].back())) == EINPROGRESS; std::this_thread::sleep_for(1ms));
         #else
         std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
         #endif
@@ -208,7 +232,7 @@ public:
     inline void busywait_cb() override
     {
         #ifdef _POSIX_VERSION
-        while (aio_error(&(cbs.back())) == EINPROGRESS);
+        while (aio_error(&(cbs[tid].back())) == EINPROGRESS);
         #else
         std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
         #endif
@@ -227,7 +251,7 @@ public:
     LibAIOWrite()
     {
         #ifdef __linux__
-        cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        cbs[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         openflags |= O_DIRECT;
         #else
         std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
@@ -235,8 +259,8 @@ public:
     }
 
     #ifdef __linux__
-    std::vector<iocb*> cbs;
-    io_event events[65536];
+    std::array<std::vector<iocb*>, MAX_THREAD_NUM> cbs;
+    io_event events[MAX_THREAD_NUM][65536];
     static io_context_t io_cxt;
     #endif
 
@@ -248,7 +272,7 @@ public:
     void syncop() override;
     static void startEntry(size_t thread_id);
 
-    int cnt = 0;
+    std::atomic<int> cnt = 0;
 };
 
 class TAIAIOWrite : public RandomWrite
@@ -256,25 +280,25 @@ class TAIAIOWrite : public RandomWrite
 public: 
     TAIAIOWrite()
     {
-        cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        cbs[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
     }
 
-    std::vector<tai::aiocb, tai::Alloc<tai::aiocb>> cbs;
+    std::array<std::vector<tai::aiocb, tai::Alloc<tai::aiocb>>, MAX_THREAD_NUM> cbs;
 
     inline void reset_cb() override
     {
-        cbs.clear();
+        cbs[tid].clear();
     }
 
     inline void wait_cb() override
     {
-        for (auto& i : cbs)
+        for (auto& i : cbs[tid])
             tai::aio_wait(&i);
     }
 
     inline void busywait_cb() override
     {
-        for (auto& i : cbs)
+        for (auto& i : cbs[tid])
             while (tai::aio_error(&i) == EINPROGRESS);
     }
 
@@ -285,13 +309,27 @@ public:
 
     virtual void openfile(const std::string& filename) override
     {
-        RandomWrite::openfile(filename);
+        if (opencnt.fetch_add(1) > 0)
+            return;
+        #ifdef _POSIX_VERSION
+        fd = open(filename.c_str(), openflags);
         tai::register_fd(fd, filename);
+        #else
+        std::cerr << "RandomWrite::openfile() needs POSIX support." << std::endl;
+        #endif
     }
 
     virtual void closefile() override
     {
+        if (opencnt.fetch_sub(1) > 1)
+            return;
         tai::deregister_fd(fd);
+        #ifdef _POSIX_VERSION
+        close(fd);
+        fd = -1;
+        #else
+        std::cerr << "RandomWrite::closefile() needs POSIX support." << std::endl;
+        #endif
     }
 
     static void startEntry(size_t thread_id);
@@ -306,28 +344,32 @@ public:
     {
         using namespace tai;
 
+        if (opencnt.fetch_add(1) > 0)
+            return;
         bt.reset(new BTree<45, 3 ,4, 12>(new POSIXEngine(filename))); 
-        ios.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        ios[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
     }
 
     virtual void closefile() override
     {
         syncop();
-        ios.back()->wait();
+        ios[tid].back()->wait();
+        if (opencnt.fetch_sub(1) > 1)
+            return;
         bt->detach(*ctrl)->wait();
         bt.reset(nullptr);
     }
 
     inline void reset_cb() override
     {
-        ios.clear();
+        ios[tid].clear();
     }
 
     inline void wait_cb() override
     {
         using namespace std::chrono_literals;
 
-        for (auto& i : ios)
+        for (auto& i : ios[tid])
             i->wait(32ms);
     }
 
@@ -335,7 +377,7 @@ public:
     {
         using namespace tai;
 
-        for (auto& i : ios)
+        for (auto& i : ios[tid])
             while ((*i)() == IOCtrl::Running);
     }
 
@@ -346,7 +388,7 @@ public:
 
 private:
     std::unique_ptr<tai::BTreeBase> bt;
-    tai::IOCtrlVec ios;
+    std::array<tai::IOCtrlVec, MAX_THREAD_NUM> ios;
 
     static std::unique_ptr<tai::Controller> ctrl;
 };
