@@ -1,3 +1,5 @@
+#include <thread>
+
 #include "Controller.hpp"
 #include "Worker.hpp"
 
@@ -5,7 +7,7 @@ namespace tai
 {
     thread_local Controller* Controller::ctrl = nullptr;
 
-    Controller::Controller(size_t lower, size_t upper, size_t concurrency) : concurrency(concurrency), lower(lower), upper(upper), cache(131072)
+    Controller::Controller(size_t lower, size_t upper, ssize_t concurrency) : concurrency(concurrency > 0 ? concurrency : std::thread::hardware_concurrency()), lower(lower), upper(upper), cache(131072)
     {
         Log::debug("Constructing controller...");
         workers.reserve(concurrency);

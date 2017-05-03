@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
             BTreeDefault bt(new POSIXEngine("tmp/tai"));
 
             Log::log("Creating Controller...");
-            Controller ctrl(1 << 28, 1 << 30);
+            Controller ctrl(1 << 28, 1 << 30, -1);
 
             Log::log("Writing...");
 

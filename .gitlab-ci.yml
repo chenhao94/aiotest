@@ -150,7 +150,7 @@ Try-test_lat:
       - log/
     expire_in: 1 day
 
-collect:
+.collect:
   stage: collect
   tags:
     - docker
@@ -163,7 +163,7 @@ collect:
     paths:
       - log/
 
-latency:
+.latency:
   stage: test_lat
   tags:
     - docker

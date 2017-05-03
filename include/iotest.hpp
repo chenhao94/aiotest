@@ -821,7 +821,7 @@ public:
 
         if (!master.test_and_set(memory_order_acq_rel))
         {
-            ctrl.reset(new Controller(1ll << 30, 1ll << 32, thread::hardware_concurrency() - 1));
+            ctrl.reset(new Controller(1ll << 30, 1ll << 32, -1));
             slave.store(true, memory_order_release);
         }
         while (!slave.load(memory_order_acquire));
