@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
         auto rw = RandomWrite::getInstance(testType, true).get();
         epoch = high_resolution_clock::now();
         for (size_t i = 0; i < thread_num; ++i)
-            threads.emplace_back([=](){ rw->run(i); });
+            threads.emplace_back([=](){ rw->run(0); });
         for (auto& t : threads)
             t.join();
         time = duration_cast<nanoseconds>(high_resolution_clock::now() - epoch).count();
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
             thread_num, " threads, ",
             1e9 * IO_ROUND * (int(workload == 2) + 1) * thread_num / time, " iops");
 
-    if (testType == 4)
+    if (testType == 4 || testType == 6)
     {
         auto rt = Log::run_time.load() / 1e9;
         auto st = Log::steal_time.load() / 1e9;
