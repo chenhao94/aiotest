@@ -115,6 +115,8 @@ public:
         }
     }
 
+    virtual ~RandomWrite() {}
+
     void run_writeonly(size_t thread_id)
     {
         using namespace std;
@@ -856,6 +858,7 @@ public:
 
         for (auto& i : ios)
             i->wait(32ms);
+        reset_cb();
     }
 
     TAI_INLINE
@@ -865,6 +868,7 @@ public:
 
         for (auto& i : ios)
             while ((*i)() == IOCtrl::Running);
+        reset_cb();
     }
 
     TAI_INLINE
@@ -910,7 +914,6 @@ public:
     virtual void cleanup() override
     {
         wait_cb();
-        reset_cb();
     }
 
     TAI_INLINE

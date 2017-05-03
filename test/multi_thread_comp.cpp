@@ -46,11 +46,6 @@ int main(int argc, char* argv[])
         time = duration_cast<nanoseconds>(high_resolution_clock::now() - epoch).count();
     }
 
-    if (testType == 4)
-        aio_end();
-    if (testType == 6)
-        TAIWrite::end();
-
     Log::log(testname[testType], " random ", wlname[workload], ": ",
             time / 1e9, " s in total, ",
             IO_ROUND * (int(workload == 2) + 1), " ops/thread, ",
@@ -61,6 +56,11 @@ int main(int argc, char* argv[])
 
     if (testType == 4 || testType == 6)
     {
+        if (testType == 4)
+            aio_end();
+        else
+            TAIWrite::end();
+
         auto rt = Log::run_time.load() / 1e9;
         auto st = Log::steal_time.load() / 1e9;
         auto bt = Log::barrier_time.load() / 1e9;
