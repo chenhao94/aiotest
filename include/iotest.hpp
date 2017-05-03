@@ -838,9 +838,9 @@ public:
     virtual void closefile() override
     {
         syncop();
-        ios.back()->wait();
-        bt->detach(*ctrl)->wait();
+        bt->detach(*ctrl);
         bt.reset(nullptr);
+        cleanup();
     }
 
     TAI_INLINE
@@ -909,16 +909,14 @@ public:
     TAI_INLINE
     virtual void cleanup() override
     {
-        using namespace std;
-        using namespace tai;
+        wait_cb();
+        reset_cb();
+    }
 
-        for (auto &i : ios)
-            if (unlikely(i->wait() != IOCtrl::Done))
-            {
-                cerr << "Error at TAI cleanup" << endl;
-                exit(-1);
-            }
-        ios.clear();
+    TAI_INLINE
+    static void end()
+    {
+        ctrl = nullptr;
     }
 
 private:
