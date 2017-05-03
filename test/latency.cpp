@@ -67,6 +67,8 @@ int main(int argc, char *argv[])
     deregister_fd(rw->fd);
     if (testType == 4)
         aio_end();
+    if (testType == 6)
+        TAIWrite::end();
 
     Log::log("testType, X of IO, size per IO(KB),",
             " 20 percentile of issuing(us), average, median, 80 percentile,",
