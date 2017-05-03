@@ -188,8 +188,8 @@ namespace tai
     TAI_INLINE
     static void aio_init()
     {
-        aiocb::ctrl.reset(new Controller(1ll << 30, 1ll << 32));
-        _AIO_INIT_.store(true, std::memory_order_seq_cst);
+        aiocb::ctrl.reset(new Controller(1ll << 30, 1ll << 32, 3));
+        _AIO_INIT_.store(true, std::memory_order_release);
     }
 
     TAI_INLINE
@@ -197,6 +197,6 @@ namespace tai
     {
         for (auto i = aiocb::bts.size(); i--; deregister_fd(i));
         aiocb::ctrl = nullptr;
-        _AIO_INIT_.store(false, std::memory_order_seq_cst);
+        _AIO_INIT_.store(false, std::memory_order_release);
     }
 }
