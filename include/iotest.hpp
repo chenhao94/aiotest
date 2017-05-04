@@ -107,13 +107,14 @@ public:
 
     RandomWrite()
     {
+        using namespace std;
         #ifdef _POSIX_VERSION
         openflags = O_RDWR;
         #endif
 
-        if (RAND_MAX < std::numeric_limits<int>::max())
+        if (RAND_MAX < numeric_limits<int>::max())
         {
-            std::cerr << "RAND_MAX smaller than expected." << std::endl;
+            cerr << "RAND_MAX smaller than expected." << endl;
             exit(-1);
         }
     }
@@ -122,6 +123,7 @@ public:
 
     void run_writeonly(size_t thread_id)
     {
+        using namespace std;
         if (SINGLE_FILE)
             openfile("tmp/file0");
         else
@@ -161,6 +163,7 @@ public:
     TAI_INLINE
     void run_readonly(size_t thread_id)
     {
+        using namespace std;
         if (SINGLE_FILE)
             openfile("tmp/file0");
         else
@@ -194,6 +197,7 @@ public:
     TAI_INLINE
     void run_readwrite(size_t thread_id)
     {
+        using namespace std;
         if (SINGLE_FILE)
             openfile("tmp/file0");
         else
@@ -264,25 +268,27 @@ public:
     TAI_INLINE
     virtual void openfile(const std::string& filename)
     {
+        using namespace std;
         if (opencnt.fetch_add(1) > 0)
             return;
         #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags);
         #else
-        std::cerr << "RandomWrite::openfile() needs POSIX support." << std::endl;
+        cerr << "RandomWrite::openfile() needs POSIX support." << endl;
         #endif
     }
 
     TAI_INLINE
     virtual void closefile()
     {
+        using namespace std;
         if (opencnt.fetch_sub(1) > 1)
             return;
         #ifdef _POSIX_VERSION
         close(fd);
         fd = -1;
         #else
-        std::cerr << "RandomWrite::closefile() needs POSIX support." << std::endl;
+        cerr << "RandomWrite::closefile() needs POSIX support." << endl;
         #endif
     }
 
@@ -412,6 +418,7 @@ public:
     TAI_INLINE
     virtual void openfile(const std::string& filename) override
     {
+        using namespace std;
         if (opencnt.fetch_add(1) > 0)
             return;
         #ifdef _POSIX_VERSION
@@ -419,7 +426,7 @@ public:
         #endif
         if (file.is_open())
             file.close();
-        file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
+        file.open(filename, ios::binary | ios::in | ios::out);
     }
 
     virtual void closefile() override
@@ -450,10 +457,11 @@ public:
     TAI_INLINE
     AIOWrite()
     {
+        using namespace std;
         #ifdef _POSIX_VERSION
         cbs[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         #else
-        std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
     }
 
@@ -480,7 +488,7 @@ public:
         using namespace chrono_literals;
 
         #ifdef _POSIX_VERSION
-        for (; aio_error(&(cbs[tid].back())) == EINPROGRESS; std::this_thread::sleep_for(1ms));
+        for (; aio_error(&(cbs[tid].back())) == EINPROGRESS; this_thread::sleep_for(1ms));
         #else
         cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
@@ -501,6 +509,7 @@ public:
     TAI_INLINE
     virtual void cleanup() override
     {
+        using namespace std;
         #ifdef _POSIX_VERSION
         for (auto &i : cbs[tid])
             if (unlikely(aio_error(&i) && aio_error(&i) != EINPROGRESS))
@@ -512,7 +521,7 @@ public:
             else
                 aio_return(&i);
         #else
-        std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
     }
 
@@ -520,6 +529,7 @@ public:
     TAI_INLINE
     virtual void writeop(off_t offset, char* data) override
     {
+        using namespace std;
         #ifdef _POSIX_VERSION
         cbs[tid].emplace_back();
         auto& cb = cbs[tid].back();
@@ -534,13 +544,14 @@ public:
             exit(-1);
         }
         #else
-        std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
     }
 
     TAI_INLINE
     virtual void readop(off_t offset, char* data) override
     {
+        using namespace std;
         #ifdef _POSIX_VERSION
         cbs[tid].emplace_back();
         auto& cb = cbs[tid].back();
@@ -549,13 +560,14 @@ public:
         cb.aio_nbytes = READ_SIZE;
         cb.aio_buf = data;
         cb.aio_offset = offset;
+        cout << fd << " " << READ_SIZE << " " << offset << " " << data[0] << endl;
         if (aio_read(&cb))
         {
             cerr << "Error " << errno << ": " << strerror(errno) << " at aio_read." << endl;
             exit(-1);
         }
         #else
-        std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
     }
 
@@ -563,6 +575,7 @@ public:
     TAI_INLINE
     virtual void syncop() override
     {
+        using namespace std;
         #ifdef _POSIX_VERSION
         cbs[tid].emplace_back();
         auto& cb = cbs[tid].back();
@@ -574,7 +587,7 @@ public:
             exit(-1);
         }
         #else
-        std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
     }
 
@@ -668,7 +681,7 @@ public:
             exit(-1);
         }
         #else
-        std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
+        cerr << "Warning: LibAIO is not supported on non-Linux system." << endl;
         #endif
         ++cnt;
     }
@@ -689,7 +702,7 @@ public:
             exit(-1);
         }
         #else
-        std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
+        cerr << "Warning: LibAIO is not supported on non-Linux system." << endl;
         #endif
         ++cnt;
     }
@@ -812,19 +825,21 @@ public:
     TAI_INLINE
     virtual void openfile(const std::string& filename) override
     {
+        using namespace std;
         if (opencnt.fetch_add(1) > 0)
             return;
         #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags);
         tai::register_fd(fd, filename);
         #else
-        std::cerr << "RandomWrite::openfile() needs POSIX support." << std::endl;
+        cerr << "RandomWrite::openfile() needs POSIX support." << endl;
         #endif
     }
 
     TAI_INLINE
     virtual void closefile() override
     {
+        using namespace std;
         if (opencnt.fetch_sub(1) > 1)
             return;
         tai::deregister_fd(fd);
@@ -832,7 +847,7 @@ public:
         close(fd);
         fd = -1;
         #else
-        std::cerr << "RandomWrite::closefile() needs POSIX support." << std::endl;
+        cerr << "RandomWrite::closefile() needs POSIX support." << endl;
         #endif
     }
 
@@ -867,6 +882,7 @@ public:
     TAI_INLINE
     virtual void openfile(const std::string& filename) override 
     {
+        using namespace std;
         using namespace tai;
 
         if (opencnt.fetch_add(1) > 0)
@@ -896,7 +912,8 @@ public:
     TAI_INLINE
     virtual void wait_cb() override
     {
-        using namespace std::chrono_literals;
+        using namespace std;
+        using namespace chrono_literals;
 
         for (auto& i : ios[tid])
             i->wait(32ms);
