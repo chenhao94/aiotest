@@ -832,7 +832,7 @@ public:
     {
         using namespace tai;
 
-        bt.reset(new BTree<45, 3 ,4, 12>(new POSIXEngine(filename))); 
+        bt.reset(new BTree<44, 4 ,4, 12>(new POSIXEngine(filename))); 
         ios.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
     }
 
