@@ -61,7 +61,7 @@ namespace tai
         // Cahce queue for GC.
         boost::lockfree::queue<BTreeNodeBase*> cache;
 
-        explicit Controller(size_t lower, size_t upper, ssize_t concurrency = 0);
+        explicit Controller(size_t lower, size_t upper, ssize_t con = 0);
 
         ~Controller();
 

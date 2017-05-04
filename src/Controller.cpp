@@ -7,7 +7,7 @@ namespace tai
 {
     thread_local Controller* Controller::ctrl = nullptr;
 
-    Controller::Controller(size_t lower, size_t upper, ssize_t concurrency) : concurrency(concurrency > 0 ? concurrency : std::thread::hardware_concurrency()), lower(lower), upper(upper), cache(131072)
+    Controller::Controller(size_t lower, size_t upper, ssize_t con) : concurrency(con + (con > 0 ? 0 : std::thread::hardware_concurrency())), lower(lower), upper(upper), cache(131072)
     {
         Log::debug("Constructing controller...");
         workers.reserve(concurrency);
