@@ -35,12 +35,12 @@ int main(int argc, char* argv[])
     }
     else
     {
-        epoch = high_resolution_clock::now();
+        vector<unique_ptr<RandomWrite>> rw;
         for (size_t i = 0; i < thread_num; ++i)
-        {
-            auto rw = RandomWrite::getInstance(testType);
-            threads.emplace_back([rw(move(rw)), i](){ rw->run(i); });
-        }
+            rw.emplace_back(RandomWrite::getInstance(testType));
+        epoch = high_resolution_clock::now();
+        for (size_t i = 0; i < rw.size(); ++i)
+            threads.emplace_back([=](auto&& rw){ rw->run(i); }, move(rw[i]));
         for (auto& t : threads)
             t.join();
         time = duration_cast<nanoseconds>(high_resolution_clock::now() - epoch).count();
