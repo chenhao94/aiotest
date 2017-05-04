@@ -73,6 +73,7 @@ namespace tai
 
             void write()
             {
+                //std::cout << (unsigned long long)bts[aio_fildes].load(std::memory_order_acquire) << std::endl;
                 io = bts[aio_fildes].load(std::memory_order_acquire)->write(*ctrl, aio_offset, aio_nbytes, (const char *)aio_buf);
             }
 

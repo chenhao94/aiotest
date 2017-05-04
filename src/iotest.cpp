@@ -34,7 +34,10 @@ unique_ptr<tai::Controller> TAIWrite::ctrl;
 
 void RandomWrite::run_writeonly(size_t thread_id)
 {
-    openfile("tmp/file" + to_string(thread_id));
+    if (SINGLE_FILE)
+        openfile("tmp/file0");
+    else
+        openfile("tmp/file" + to_string(thread_id));
     //vector<char> data(WRITE_SIZE, 'a');
     auto data = new
         #ifdef __linux__
@@ -69,7 +72,10 @@ void RandomWrite::run_writeonly(size_t thread_id)
 
 void RandomWrite::run_readonly(size_t thread_id)
 {
-    openfile("tmp/file" + to_string(thread_id));
+    if (SINGLE_FILE)
+        openfile("tmp/file0");
+    else
+        openfile("tmp/file" + to_string(thread_id));
     auto buf = new
         #ifdef __linux__
         (align_val_t(512))
@@ -98,7 +104,10 @@ void RandomWrite::run_readonly(size_t thread_id)
 
 void RandomWrite::run_readwrite(size_t thread_id)
 {
-    openfile("tmp/file" + to_string(thread_id));
+    if (SINGLE_FILE)
+        openfile("tmp/file0");
+    else
+        openfile("tmp/file" + to_string(thread_id));
     auto data = new
         #ifdef __linux__
         (align_val_t(512))
@@ -318,7 +327,7 @@ void LibAIOWrite::wait_cb()
     cntlock.unlock();
 
     #ifdef __linux__
-    io_getevents(io_cxt, wait, wait, events, NULL);
+    io_getevents(io_cxt, wait, wait, events[tid], NULL);
     #else
     std::cerr << "Warning: LibAIO is not supported on non-Linux system." << std::endl;
     #endif
@@ -327,8 +336,7 @@ void LibAIOWrite::wait_cb()
 void LibAIOWrite::writeop(off_t offset, char* data) 
 {
     #ifdef __linux__
-    cbs[tid].emplace_back(new iocb);
-    auto& cb = cbs[tid].back();
+    auto& cb = cbs[tid].emplace_back(new iocb);
     io_prep_pwrite(cb, fd, data, WRITE_SIZE, offset);
     auto err = io_submit(io_cxt, 1, &cb);
     if (err < 1)

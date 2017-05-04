@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
         auto rw = RandomWrite::getInstance(testType, true).release();
         epoch = high_resolution_clock::now();
         for (size_t i = 0; i < thread_num; ++i)
-            threads.emplace_back([=](){ rw->run(0); });
+            threads.emplace_back([=](){ rw->run(i); });
         for (auto& t : threads)
             t.join();
         time = duration_cast<nanoseconds>(high_resolution_clock::now() - epoch).count();
