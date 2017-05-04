@@ -1,16 +1,8 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <thread>
 #include <atomic>
 #include <string>
 #include <memory>
-#include <new>
-#include <chrono>
 
 #include "iotest.hpp"
-
-using namespace std;
 
 size_t thread_num = 1;
 size_t testType;
@@ -24,9 +16,60 @@ size_t WAIT_RATE = 1;
 
 bool SINGLE_FILE = false;
 
-thread_local int RandomWrite::tid = -1;
-
 #ifdef __linux__
 io_context_t LibAIOWrite::io_cxt;
 #endif
+
+std::unique_ptr<tai::Controller> TAIWrite::ctrl;
+
+std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType, bool concurrent)
+{
+    using namespace std;
+
+    static std::atomic_flag init = ATOMIC_FLAG_INIT;
+    auto first = !init.test_and_set();
+
+    std::unique_ptr<RandomWrite> rw;
+    switch (testType)
+    {
+    case 0:
+    case 1:
+        rw.reset(new BlockingWrite());
+        rw->openflags |= -testType & (
+                            #ifdef __linux__
+                            O_DIRECT |
+                            #endif
+                            O_SYNC);
+        break;
+    case 2:
+        rw.reset(new AIOWrite());
+        break;
+    case 3:
+        #ifdef __linux__
+        if (first)
+            io_setup(1048576, &LibAIOWrite::io_cxt);
+        #endif
+        rw.reset(new LibAIOWrite());
+        break;
+    case 4:
+        if (first)
+            tai::aio_init();
+        rw.reset(new TAIAIOWrite());
+        break;
+    case 5:
+        if (concurrent)
+            rw.reset(new FstreamWrite<true>());
+        else
+            rw.reset(new FstreamWrite<false>());
+        break;
+    case 6:
+        rw.reset(new TAIWrite());
+        break;
+    default:
+        std::cerr << "Illegal IO-type! Exit..." << std::endl;
+        exit(-1);
+    }
+
+    return rw;
+}
 
