@@ -24,4 +24,4 @@ for t in `seq 3`; do
             grep iops cs.log | sed 's/.* \([0-9\.]*\) iops/\1/' | paste - - - - -
 done done done
 
-/mnt/ssd/flyysm/unlock_server.sh hao_tongliang
+/mnt/ssd/flsm/unlock_server.sh hao_tongliang
