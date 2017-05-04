@@ -58,6 +58,7 @@ namespace tai
         // Construct as the id-th worker of the controller.
         Worker(Controller& ctrl, size_t id);
 
+        TAI_INLINE
         Worker(Worker&& _) noexcept :
             ctrl(_.ctrl),
             gid(_.gid),
@@ -70,6 +71,7 @@ namespace tai
         {
         }
 
+        TAI_INLINE
         ~Worker()
         {
             if (handle)
@@ -77,9 +79,8 @@ namespace tai
             pool.push(gid);
         }
 
-        void go();
-
         // Get global thread ID;
+        TAI_INLINE
         auto getGID() const
         {
             return gid;
@@ -87,6 +88,7 @@ namespace tai
 
         // Get global thread ID;
         // This can only be called directly from the worker thread.
+        TAI_INLINE
         static auto getSGID()
         {
             return sgid;
@@ -94,6 +96,7 @@ namespace tai
 
         // Get the thread-local object via global thread ID.
         template<typename T, typename... Init>
+        TAI_INLINE
         static auto& getTL(std::vector<std::unique_ptr<T>>& table, std::atomic_flag& mtx, Init&&... init)
         {
             while (mtx.test_and_set(std::memory_order_acquire));
@@ -117,6 +120,8 @@ namespace tai
             mtx.clear(std::memory_order_release);
             return *ptr;
         }
+
+        void go();
 
         // Push task into the queue specified.
         static void pushWait(Task task);

@@ -1,3 +1,5 @@
+#include <thread>
+
 #include "Controller.hpp"
 #include "Worker.hpp"
 
@@ -5,7 +7,7 @@ namespace tai
 {
     thread_local Controller* Controller::ctrl = nullptr;
 
-    Controller::Controller(size_t lower, size_t upper, size_t concurrency) : concurrency(concurrency), lower(lower), upper(upper), cache(131072)
+    Controller::Controller(size_t lower, size_t upper, ssize_t con) : concurrency(con + (con > 0 ? 0 : std::thread::hardware_concurrency())), lower(lower), upper(upper), cache(131072)
     {
         Log::debug("Constructing controller...");
         workers.reserve(concurrency);
@@ -23,18 +25,6 @@ namespace tai
         ready.store(false, std::memory_order_relaxed);
         wait(Quit, std::memory_order_relaxed);
         Log::debug("    Controller destructed.");
-    }
-
-    Controller::Usage Controller::usage(size_t alloc)
-    {
-        const auto space = used.load(std::memory_order_relaxed) + alloc;
-        if (space >= upper)
-            return Full;
-        if (space > lower)
-            return High;
-        if (space > 0)
-            return Low;
-        return Empty;
     }
 
     void Controller::wait(WorkerState _, std::memory_order sync)

@@ -31,30 +31,33 @@ namespace tai
         // Configuration.
         BTreeConfig& conf;
 
+        TAI_INLINE
         BTreeBase(IOEngine* io) : conf(*new BTreeConfig(io))
         {
             confPool.push(&conf);
         }
 
+        TAI_INLINE
         virtual ~BTreeBase()
         {
         }
 
+        TAI_INLINE
         auto failed() const
         {
             return conf.failed.load(std::memory_order_relaxed);
         }
 
-        virtual IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr, IOCtrl* io = nullptr) = 0;
-        virtual IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr, IOCtrl* io = nullptr) = 0;
-        virtual IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr, IOCtrl* io = nullptr) = 0;
-        virtual IOCtrl* hook(Controller& ctrl, std::function<void()> task, IOCtrl* io = nullptr) = 0;
+        virtual IOCtrl* read(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
+        virtual IOCtrl* readsome(Controller& ctrl, size_t pos, size_t len, char* ptr) = 0;
+        virtual IOCtrl* write(Controller& ctrl, size_t pos, size_t len, const char* ptr) = 0;
+        virtual IOCtrl* hook(Controller& ctrl, std::function<void()> task) = 0;
         virtual bool inject(Controller& ctrl, std::function<void()> task) = 0;
-        virtual IOCtrl* syncTree(Controller& ctrl, IOCtrl* io = nullptr) = 0;
-        virtual IOCtrl* syncCache(Controller& ctrl, IOCtrl* io = nullptr) = 0;
-        virtual IOCtrl* sync(Controller& ctrl, IOCtrl* io = nullptr) = 0;
-        virtual IOCtrl* detach(Controller& ctrl, IOCtrl* io = nullptr) = 0;
+        virtual IOCtrl* syncTree(Controller& ctrl) = 0;
+        virtual IOCtrl* syncCache(Controller& ctrl) = 0;
+        virtual IOCtrl* sync(Controller& ctrl) = 0;
+        virtual IOCtrl* detach(Controller& ctrl) = 0;
 
-        virtual IOCtrl* fsync(Controller& ctrl, IOCtrl* io = nullptr) = 0;
+        virtual IOCtrl* fsync(Controller& ctrl) = 0;
     };
 }

@@ -22,6 +22,7 @@ export LIBTAI = $(LIBS_DIR)/libtai.a
 
 export TEST_LOAD ?= $(shell nproc --all)
 export TEST_ARGS ?= 30 64 64 14 8 10
+export TEST_TYPE ?= $(shell seq 0 6)
 # For test_mt only:
 #     read size, write size (KB)
 #     file size, io round, sync rate, wait rate (2^x)
@@ -59,7 +60,7 @@ $(TESTEXES): $(TARGETS_DIR)/%: $(OBJS_DIR)/%.cpp.o $(LIBTAI)
 	$(MKDIR) $(TARGETS_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
-$(TESTOBJS): $(OBJS_DIR)/%.o: $(TESTS_DIR)/%
+$(TESTOBJS): $(OBJS_DIR)/%.o: $(TESTS_DIR)/% $(PCHS)
 	$(MKDIR) $(OBJS_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
@@ -121,7 +122,7 @@ test: pre_test
 
 .PHONY: test_mt
 test_mt: pre_test
-	for i in `seq 0 6`; do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do                                               \
+	for i in $(TEST_TYPE); do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do                                               \
 	    if [ $(OS) == Darwin ]; then sudo purge; fi;                                                                            \
 	    if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;                                         \
 	    time (`if [ $(OS) == _Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS));  \
@@ -131,7 +132,7 @@ test_mt: pre_test
 
 .PHONY: test_lat
 test_lat: pre_test
-	for i in `seq 0 6`; do                                                              \
+	for i in $(TEST_TYPE); do                                                              \
 	    sync;                                                                           \
 	    if [ $(OS) == Darwin ]; then sudo purge; fi;                                    \
 	    if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
@@ -155,4 +156,4 @@ endif
 
 .PHONY: clean
 clean:
-	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(PCHS) tai tai.dSYM
+	@$(RM) $(LIBS_DIR) $(DEPS_DIR) $(OBJS_DIR) $(TARGETS_DIR) $(PCHS) $(patsubst %,%-*,$(PCHS)) tai tai.dSYM
