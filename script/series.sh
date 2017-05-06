@@ -4,11 +4,15 @@ mkdir -p log
 
 truncate -s0 cs.log
 
-/mnt/ssd/flsm/lock_server.sh hao_tongliang
-if [ `cat /mnt/ssd/flsm/lock` != "hao_tongliang" ]; then
-    echo "Server lock acquiring failed: held by" `cat /mnt/ssd/flsm/lock`
-    exit 1
+if [ `hostname` == erode-lom ]; then
+    /mnt/ssd/flsm/lock_server.sh hao_tongliang
+    if [ `cat /mnt/ssd/flsm/lock` != "hao_tongliang" ]; then
+        echo "Server lock acquiring failed: held by" `cat /mnt/ssd/flsm/lock`
+        exit 1
+    fi
 fi
+
+export ASAN_OPTIONS=use_odr_indicator=1
 
 for t in `seq 3`; do 
     for k in 4 8 16 32 64 128 256 512 1024 2048 4096; do
@@ -24,4 +28,6 @@ for t in `seq 3`; do
             grep iops cs.log | sed 's/.* \([0-9\.]*\) iops/\1/' | paste - - - - -
 done done done
 
-/mnt/ssd/flsm/unlock_server.sh hao_tongliang
+if [ `hostname` == erode-lom ]; then
+    /mnt/ssd/flsm/unlock_server.sh hao_tongliang
+fi
