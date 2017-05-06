@@ -840,7 +840,11 @@ public:
     virtual void closefile() override
     {
         syncop();
-        bt->detach(*ctrl);
+        if (unlikely((*ios.emplace_back(bt->detach(*ctrl)))() == IOCtrl::Rejected))
+        {
+            cerr << "Error at TAI detach." << endl;
+            exit(-1);
+        }
         bt.reset(nullptr);
         cleanup();
     }
