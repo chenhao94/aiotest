@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <type_traits>
 
 #include "Decl.hpp"
