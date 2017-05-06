@@ -25,12 +25,12 @@ int main(int argc, char *argv[])
     auto rw = RandomWrite::getInstance(testType);
     rw->openfile("tmp/file0");
 
-    unique_ptr<char> data(new
+    auto data = new
         #ifdef __linux__
         (align_val_t(512))
         #endif
-        char[WRITE_SIZE]);
-    memset(data.get(), 'a', WRITE_SIZE);
+        char[WRITE_SIZE];
+    memset(data, 'a', WRITE_SIZE);
 
     auto sum_issue = 0ull, sum_sync = 0ull; 
     auto tot_rnd = IO_ROUND / SYNC_RATE;
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
         for (int i = SYNC_RATE; i--; )
         {
             auto offset = randgen(WRITE_SIZE);
-            rw->writeop(offset, data.get());
+            rw->writeop(offset, data);
         }
         auto mid = high_resolution_clock::now();
         rw->syncop();
@@ -72,6 +72,8 @@ int main(int argc, char *argv[])
 
     rw->cleanup();
     rw->closefile();
+
+    delete[] data;
 
     if (testType == 4)
         aio_end();
