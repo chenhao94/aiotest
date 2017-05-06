@@ -104,13 +104,15 @@ public:
 
     RandomWrite()
     {
+        using namespace std;
+
         #ifdef _POSIX_VERSION
         openflags = O_RDWR;
         #endif
 
-        if (RAND_MAX < std::numeric_limits<int>::max())
+        if (RAND_MAX < numeric_limits<int>::max())
         {
-            std::cerr << "RAND_MAX smaller than expected." << std::endl;
+            cerr << "RAND_MAX smaller than expected." << endl;
             exit(-1);
         }
     }
@@ -257,20 +259,24 @@ public:
     TAI_INLINE
     virtual void openfile(const std::string& filename)
     {
+        using namespace std;
+
         #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags);
         #else
-        std::cerr << "RandomWrite::openfile() needs POSIX support." << std::endl;
+        cerr << "RandomWrite::openfile() needs POSIX support." << endl;
         #endif
     }
 
     TAI_INLINE
     virtual void closefile()
     {
+        using namespace std;
+
         #ifdef _POSIX_VERSION
         close(fd);
         #else
-        std::cerr << "RandomWrite::closefile() needs POSIX support." << std::endl;
+        cerr << "RandomWrite::closefile() needs POSIX support." << endl;
         #endif
     }
 
@@ -399,10 +405,12 @@ public:
     TAI_INLINE
     virtual void openfile(const std::string& filename) override
     {
+        using namespace std;
+
         RandomWrite::openfile(filename);
         if (file.is_open())
             file.close();
-        file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
+        file.open(filename, ios::binary | ios::in | ios::out);
     }
 
     TAI_INLINE
@@ -423,10 +431,12 @@ public:
     TAI_INLINE
     AIOWrite()
     {
+        using namespace std;
+
         #ifdef _POSIX_VERSION
         cbs.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         #else
-        std::cerr << "Warning: POSIX AIO needs POSIX support." << std::endl;
+        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
     }
 
@@ -839,6 +849,8 @@ public:
     TAI_INLINE
     virtual void closefile() override
     {
+        using namespace std;
+
         syncop();
         if (unlikely((*ios.emplace_back(bt->detach(*ctrl)))() == IOCtrl::Rejected))
         {

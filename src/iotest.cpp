@@ -26,10 +26,10 @@ std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType, bool concurr
 {
     using namespace std;
 
-    static std::atomic_flag init = ATOMIC_FLAG_INIT;
+    static atomic_flag init = ATOMIC_FLAG_INIT;
     auto first = !init.test_and_set();
 
-    std::unique_ptr<RandomWrite> rw;
+    unique_ptr<RandomWrite> rw;
     switch (testType)
     {
     case 0:
@@ -66,7 +66,7 @@ std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType, bool concurr
         rw.reset(new TAIWrite());
         break;
     default:
-        std::cerr << "Illegal IO-type! Exit..." << std::endl;
+        cerr << "Illegal IO-type! Exit..." << endl;
         exit(-1);
     }
 
