@@ -771,7 +771,7 @@ namespace tai
                 Log::log("Detach is rejected due to double free.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             }
-            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->detach(false); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->detach(false); }))
             {
                 Log::log("Detach is rejected by pending queue.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
