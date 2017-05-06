@@ -850,6 +850,7 @@ public:
     virtual void closefile() override
     {
         using namespace std;
+        using namespace tai;
 
         syncop();
         if (unlikely((*ios.emplace_back(bt->detach(*ctrl)))() == IOCtrl::Rejected))
