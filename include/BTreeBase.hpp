@@ -22,7 +22,6 @@ namespace tai
         static std::unordered_set<size_t> usedID;
         static volatile size_t IDCount;
         static std::mutex mtxUsedID;
-        static boost::lockfree::queue<BTreeConfig*> confPool;
         size_t id = 0;
 
         // Random engine.
@@ -34,7 +33,6 @@ namespace tai
         TAI_INLINE
         BTreeBase(IOEngine* io) : conf(*new BTreeConfig(io))
         {
-            confPool.push(&conf);
         }
 
         TAI_INLINE

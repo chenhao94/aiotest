@@ -23,9 +23,17 @@ namespace tai
         std::unique_ptr<IOEngine> io;
         std::atomic<bool> failed = { false };
 
+        static std::vector<std::unique_ptr<BTreeConfig>> pool;
+        static std::atomic_flag lck;
+
         TAI_INLINE
         explicit BTreeConfig(IOEngine* io) : io(io)
         {
+            using namespace std;
+
+            while (lck.test_and_set(memory_order_acquire));
+            pool.emplace_back(this);
+            lck.clear(memory_order_release);
         }
 
         void operator()(BTreeNodeBase* node, size_t size);
