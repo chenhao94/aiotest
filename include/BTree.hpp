@@ -169,15 +169,21 @@ namespace tai
         void detach(bool force) override
         {
             if (data)
-                return;
-
-            for (auto& i : child)
-                if (i)
-                {
-                    i->parent = force ? nullptr : i;
-                    Worker::pushWait([=](){ i->detach(force); });
-                }
-            suicide();
+            {
+                if (!force)
+                    evict(false);
+                parent = nullptr;
+            }
+            else
+            {
+                for (auto& i : child)
+                    if (i)
+                    {
+                        i->parent = force ? nullptr : i;
+                        Worker::pushWait([=](){ i->detach(force); });
+                    }
+                suicide();
+            }
         }
 
     private:
@@ -462,7 +468,13 @@ namespace tai
         TAI_INLINE
         void detach(bool force) override
         {
-            if (!data)
+            if (data)
+            {
+                if (!force)
+                    evict(false);
+                parent = nullptr;
+            }
+            else
                 suicide();
         }
 
