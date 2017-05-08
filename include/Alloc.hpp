@@ -7,8 +7,6 @@
 
 #ifdef TAI_JEMALLOC
 #include <jemalloc/jemalloc.h>
-#else
-#include <cstdlib>
 #endif
 
 namespace tai
