@@ -179,7 +179,8 @@ public:
             if (i && !(i & ~-WAIT_RATE))
                 wait_cb();
             auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
-            readop(offset, buf + (i & ~-WAIT_RATE) * WRITE_SIZE);
+            //readop(offset, buf + (i & ~-WAIT_RATE) * WRITE_SIZE);
+            readop(offset, buf);
             if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
                 tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
@@ -459,7 +460,8 @@ public:
     {
         using namespace std;
         #ifdef _POSIX_VERSION
-        cbs[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            cbs[i].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         #else
         cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
@@ -467,6 +469,7 @@ public:
 
     #ifdef _POSIX_VERSION
     std::array<std::vector<aiocb>, MAX_THREAD_NUM> cbs;
+    //std::vector<aiocb> cbs;
     #endif
 
     TAI_INLINE
@@ -560,7 +563,7 @@ public:
         cb.aio_nbytes = READ_SIZE;
         cb.aio_buf = data;
         cb.aio_offset = offset;
-        cout << fd << " " << READ_SIZE << " " << offset << " " << data[0] << endl;
+        //tai::Log::log(fd, " ", READ_SIZE, " ", offset, " ", data[0]);
         if (aio_read(&cb))
         {
             cerr << "Error " << errno << ": " << strerror(errno) << " at aio_read." << endl;
@@ -615,7 +618,8 @@ public:
         using namespace std;
 
         #ifdef __linux__
-        cbs[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            cbs[i].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         openflags |= O_DIRECT;
         #else
         cerr << "Warning: LibAIO is not supported on non-Linux system." << endl;
@@ -734,7 +738,8 @@ public:
     TAI_INLINE
     TAIAIOWrite()
     {
-        cbs[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            cbs[i].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
     }
 
     std::array<std::vector<tai::aiocb, tai::Alloc<tai::aiocb>>, MAX_THREAD_NUM> cbs;
