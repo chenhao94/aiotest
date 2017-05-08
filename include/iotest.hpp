@@ -893,7 +893,11 @@ public:
         if (opencnt.fetch_add(1) > 0)
             return;
         ios[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
-        bt.reset(new BTree<44, 4, 4, 12>(new POSIXEngine(filename, O_CREAT | O_RDWR | O_DIRECT)));
+        bt.reset(new BTree<44, 4, 4, 12>(new POSIXEngine(filename, O_CREAT | O_RDWR
+                        #ifdef __linux__
+                        | O_DIRECT
+                        #endif
+                        )));
     }
 
     TAI_INLINE

@@ -228,7 +228,7 @@ namespace tai
         TAI_INLINE
         virtual bool fsync() override
         {
-            if (flags & O_SYNC == O_SYNC)
+            if ((flags & O_SYNC) == O_SYNC)
                 return true;
             return !::fsync(fd);
         }

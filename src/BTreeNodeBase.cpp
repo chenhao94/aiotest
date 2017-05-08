@@ -26,24 +26,35 @@ namespace tai
 
     void BTreeConfig::operator()(BTreeNodeBase* node, size_t size)
     {
+        using namespace std;
+
         Log::debug(node->data ? "Release [" : "Allocate [", node->effective, "/", size, "]");
 
         node->effective = 0;
         if (node->data)
         {
             Controller::ctrl->used.fetch_sub(size, std::memory_order_relaxed);
+            #ifdef TAI_JEMALLOC
             free(node->data);
+            #else
+            delete[] node->data;
+            #endif
             node->data = nullptr;
         }
         else
         {
             Controller::ctrl->used.fetch_add(size, std::memory_order_relaxed);
             Controller::ctrl->cache.push(node);
-            #ifdef TAI_JEMALLOC
-            node->data = (char*)aligned_alloc(4096, size);
-            #else
-            node->data = (char*)malloc(size);
-            #endif
+            node->data =
+                #ifdef TAI_JEMALLOC
+                (char*)aligned_alloc(4096, size);
+                #else
+                new
+                    #ifndef __MACH__
+                    (align_val_t(4096))
+                    #endif
+                    char[size];
+                #endif
         }
     }
 

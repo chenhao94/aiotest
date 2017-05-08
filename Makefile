@@ -40,7 +40,7 @@ ifeq ($(mode), debug)
 endif
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
 export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
-export CXXFLAGS += -DTAI_JEMALLOC -ljemalloc
+# export CXXFLAGS += -DTAI_JEMALLOC -ljemalloc
 export CXXFLAGS += -lm -lpthread
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-lrt -laio'; fi)
 # export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address -mllvm -asan-use-private-alias
