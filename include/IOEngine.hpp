@@ -166,6 +166,7 @@ namespace tai
     class POSIXEngine : public IOEngine
     {
         std::string path;
+        int flags = 0;
         int fd = -1;
 
         TAI_INLINE
@@ -179,16 +180,16 @@ namespace tai
 
     public:
         TAI_INLINE
-        explicit POSIXEngine(const std::string& path) : path(path), fd(open(path.c_str(), O_RDWR | O_CREAT))
+        explicit POSIXEngine(const std::string& path) : path(path), flags(O_CREAT | O_RDWR), fd(open(path.c_str(), flags))
         {
             if (!~fd)
-                fd = open(path.c_str(), O_RDONLY | O_CREAT);
+                fd = open(path.c_str(), flags = O_CREAT | O_RDONLY);
 
             loadSize();
         }
 
         TAI_INLINE
-        explicit POSIXEngine(const std::string& path, int flags) : path(path), fd(open(path.c_str(), flags))
+        explicit POSIXEngine(const std::string& path, int flags) : path(path), flags(flags), fd(open(path.c_str(), flags))
         {
             loadSize();
         }
@@ -227,6 +228,8 @@ namespace tai
         TAI_INLINE
         virtual bool fsync() override
         {
+            if (flags & O_SYNC == O_SYNC)
+                return true;
             return !::fsync(fd);
         }
     };

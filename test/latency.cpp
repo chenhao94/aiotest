@@ -9,6 +9,7 @@
 #include <chrono>
 #include <thread>
 #include <new>
+#include <memory>
 
 #include "iotest.hpp"
 
@@ -63,18 +64,21 @@ int main(int argc, char *argv[])
     double mid_sync = sync[sync.size() / 2], pcnt20_sync = sync[pcnt20], pcnt80_sync = sync[pcnt80];
     double avg_sync = accumulate(avg_st_sync,  avg_en_sync, 0.) / (avg_en_sync - avg_st_sync);
 
-    rw->cleanup();
-    deregister_fd(rw->fd);
-    if (testType == 4)
-        aio_end();
-    if (testType == 6)
-        TAIWrite::end();
-
     Log::log("testType, X of IO, size per IO(KB),",
             " 20 percentile of issuing(us), average, median, 80 percentile,",
             " 20 percentile of syncing, average, median, 80 percentile");
     cout << testname[testType] << ", " << SYNC_RATE << ", " << (WRITE_SIZE >> 10) << ", " << pcnt20_issue << ", " << avg_issue << ", " << mid_issue << ", " <<pcnt80_issue;
     cout << ", " << pcnt20_sync << ", " << avg_sync << ", " << mid_sync << ", " <<pcnt80_sync << endl;
+
+    rw->cleanup();
     rw->closefile();
+
+    delete[] data;
+
+    if (testType == 4)
+        aio_end();
+    if (testType == 6)
+        TAIWrite::end();
+
     return 0;
 }

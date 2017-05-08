@@ -1,7 +1,5 @@
 #!/bin/bash
 
-make -j
-
 mkdir -p log/latency
 
 if [ `hostname` == "erode-lom" ]; then
@@ -11,6 +9,8 @@ if [ `hostname` == "erode-lom" ]; then
         exit 1
     fi
 fi
+
+export ASAN_OPTIONS=use_odr_indicator=1
 
 echo "test type, X of IOs per round, size (KB), 20 percentile(issue), avg, med, 80, 20 (sync), avg, med, 80" > log/latency/latency.log
 dd if=/dev/zero of=tmp/file bs=2G count=1

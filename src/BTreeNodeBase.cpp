@@ -1,11 +1,11 @@
 #include <cstdlib>
 #include <string>
 #include <memory>
+#include <vector>
 #include <fstream>
 #include <functional>
 #include <new>
-
-#include <boost/lockfree/queue.hpp>
+#include <atomic>
 
 #ifdef TAI_JEMALLOC
 #include <jemalloc/jemalloc.h>
@@ -21,6 +21,9 @@
 
 namespace tai
 {
+    std::vector<std::unique_ptr<BTreeConfig>> BTreeConfig::pool;
+    std::atomic_flag BTreeConfig::lck = ATOMIC_FLAG_INIT;
+
     void BTreeConfig::operator()(BTreeNodeBase* node, size_t size)
     {
         Log::debug(node->data ? "Release [" : "Allocate [", node->effective, "/", size, "]");

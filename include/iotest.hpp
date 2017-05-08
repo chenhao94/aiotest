@@ -893,12 +893,16 @@ public:
         if (opencnt.fetch_add(1) > 0)
             return;
         ios[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
-        bt.reset(new BTree<44, 4, 4, 12>(new POSIXEngine(filename))); 
+        bt.reset(new BTree<44, 4, 4, 12>(new POSIXEngine(filename, O_CREAT | O_RDWR | O_DIRECT)));
+        ios.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
     }
 
     TAI_INLINE
     virtual void closefile() override
     {
+        using namespace std;
+        using namespace tai;
+
         syncop();
         ios[tid].back()->wait();
         if (opencnt.fetch_sub(1) > 1)

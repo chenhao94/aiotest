@@ -23,9 +23,17 @@ namespace tai
         std::unique_ptr<IOEngine> io;
         std::atomic<bool> failed = { false };
 
+        static std::vector<std::unique_ptr<BTreeConfig>> pool;
+        static std::atomic_flag lck;
+
         TAI_INLINE
         explicit BTreeConfig(IOEngine* io) : io(io)
         {
+            using namespace std;
+
+            while (lck.test_and_set(memory_order_acquire));
+            pool.emplace_back(this);
+            lck.clear(memory_order_release);
         }
 
         void operator()(BTreeNodeBase* node, size_t size);
@@ -38,6 +46,13 @@ namespace tai
 
         using Self = BTreeNodeBase;
         using Task = std::function<void()>;
+
+        const size_t layerSize;
+        const size_t layerBits;
+        const size_t childSize;
+        const size_t childBits;
+        const size_t totalSize;
+        const size_t totalBits;
 
         // Merge cache to ptr.
         virtual void merge(BTreeNodeBase* ptr, IOCtrl* io = nullptr) = 0;
@@ -71,11 +86,7 @@ namespace tai
         void gc()
         {
             if (valid())
-            {
                 evict(true);
-                if (parent == this)
-                    suicide();
-            }
             else
                 suicide();
         }
@@ -112,8 +123,9 @@ namespace tai
             return effective >= len;
         }
 
+        template <typename T>
         TAI_INLINE
-        BTreeNodeBase(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : conf(conf), offset(offset), parent(parent)
+        BTreeNodeBase(BTreeConfig& conf, size_t offset, T*, BTreeNodeBase* parent) : conf(conf), offset(offset), parent(parent), layerSize(T::N), layerBits(T::n), childSize(T::M), childBits(T::m), totalSize(T::NM), totalBits(T::nm)
         {
         }
 

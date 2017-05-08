@@ -30,16 +30,17 @@
 
 namespace tai
 {
-    template<size_t n, size_t... rest>
+    template<size_t first, size_t... rest>
     class BTreeNode : public BTreeNodeBase
     {
-        static_assert(n <= sizeof(size_t) * 8, "B-tree node cannot be larger than the size of address space.");
-        static_assert((n + ... + rest) <= sizeof(size_t) * 8, "B-tree node cannot be larger than the size of address space.");
+        static_assert(first <= sizeof(size_t) * 8, "B-tree node cannot be larger than the size of address space.");
+        static_assert((first + ... + rest) <= sizeof(size_t) * 8, "B-tree node cannot be larger than the size of address space.");
 
     public:
-        using Self = BTreeNode<n, rest...>;
+        using Self = BTreeNode<first, rest...>;
         using Child = BTreeNode<rest...>;
 
+        static constexpr auto n = first;
         static constexpr auto N = (size_t)1 << n;
         static constexpr auto m = (rest + ...);
         static constexpr auto M = (size_t)1 << m;
@@ -85,7 +86,7 @@ namespace tai
 
     public:
         TAI_INLINE
-        BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : BTreeNodeBase(conf, offset, parent), child(1)
+        BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent) : BTreeNodeBase(conf, offset, this, parent), child(1)
         {
             Log::debug("Construct B-tree node [", offset, ", ", offset + NM, "].");
         }
@@ -168,15 +169,21 @@ namespace tai
         void detach(bool force) override
         {
             if (data)
-                return;
-
-            for (auto& i : child)
-                if (i)
-                {
-                    i->parent = force ? nullptr : i;
-                    Worker::pushWait([=](){ i->detach(force); });
-                }
-            suicide();
+            {
+                if (!force)
+                    evict(false);
+                parent = nullptr;
+            }
+            else
+            {
+                for (auto& i : child)
+                    if (i)
+                    {
+                        i->parent = force ? nullptr : i;
+                        Worker::pushWait([=](){ i->detach(force); });
+                    }
+                suicide();
+            }
         }
 
     private:
@@ -379,18 +386,23 @@ namespace tai
         }
     };
 
-    template<size_t n>
-    class BTreeNode<n> : public BTreeNodeBase
+    template<size_t first>
+    class BTreeNode<first> : public BTreeNodeBase
     {
-        static_assert(n <= sizeof(size_t) * 8, "B-tree node cannot be larger than the size of address space.");
+        static_assert(first <= sizeof(size_t) * 8, "B-tree node cannot be larger than the size of address space.");
 
     public:
-        using Self = BTreeNode<n>;
+        using Self = BTreeNode<first>;
 
+        static constexpr auto n = first;
         static constexpr auto N = n < sizeof(size_t) * 8 ? (size_t)1 << n : (size_t)0;
+        static constexpr auto m = 0;
+        static constexpr auto M = (size_t)1;
+        static constexpr auto nm = n;
+        static constexpr auto NM = N;
 
         TAI_INLINE
-        BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent = nullptr) : BTreeNodeBase(conf, offset, parent)
+        BTreeNode(BTreeConfig& conf, size_t offset, BTreeNodeBase* parent) : BTreeNodeBase(conf, offset, this, parent)
         {
             Log::debug("Construct B-tree node [", offset, ", ", offset + N, "].");
         }
@@ -456,7 +468,13 @@ namespace tai
         TAI_INLINE
         void detach(bool force) override
         {
-            if (!data)
+            if (data)
+            {
+                if (!force)
+                    evict(false);
+                parent = nullptr;
+            }
+            else
                 suicide();
         }
 
@@ -584,7 +602,7 @@ namespace tai
 
         // Bind to the file from given path.
         TAI_INLINE
-        explicit BTree(IOEngine* io) : BTreeBase(io), root(new Root(conf, 0))
+        explicit BTree(IOEngine* io) : BTreeBase(io), root(new Root(conf, 0, nullptr))
         {
             Log::debug("Construct B-tree for ", conf.io->str(), ".");
             mtxUsedID.lock();
@@ -771,7 +789,7 @@ namespace tai
                 Log::log("Detach is rejected due to double free.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);
             }
-            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->detach(false); }) || !ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ Root::sync(io); }))
+            else if (!ctrl.workers[id % ctrl.workers.size()].pushPending([=](){ capture->detach(false); }))
             {
                 Log::log("Detach is rejected by pending queue.");
                 io->state.store(IOCtrl::Rejected, std::memory_order_relaxed);

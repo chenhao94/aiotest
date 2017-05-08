@@ -29,7 +29,7 @@ export TEST_TYPE ?= $(shell seq 0 6)
 
 export LD = lld
 export CXX = clang++
-# export CXX = g++-6
+# export CXX = g++-7
 # export CXX = g++
 export CXXFLAGS = -std=c++1z -m64 -Wall -O0 -g#-O3 -g
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-fuse-ld=lld'; fi)
@@ -43,7 +43,7 @@ export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
 export CXXFLAGS += -DTAI_JEMALLOC -ljemalloc
 export CXXFLAGS += -lm -lpthread
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-lrt -laio'; fi)
-export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address
+# export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address -mllvm -asan-use-private-alias
 export AR = llvm-ar
 export MKDIR = @mkdir -p
 export CMP = cmp -b
