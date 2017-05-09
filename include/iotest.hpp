@@ -623,13 +623,16 @@ class LibAIOWrite : public RandomWrite
     #ifdef __linux__
     std::array<std::vector<iocb*>, MAX_THREAD_NUM> cbs;
     io_event events[MAX_THREAD_NUM][65536];
-    static io_context_t io_cxt;
     #endif
 
     static std::mutex cntMtx;
     static size_t cnt;
 
 public:
+    #ifdef __linux__
+    static io_context_t io_cxt;
+    #endif
+
     TAI_INLINE
     LibAIOWrite()
     {
