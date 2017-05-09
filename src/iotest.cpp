@@ -15,7 +15,7 @@ size_t SYNC_RATE = 1;
 size_t WAIT_RATE = 1;
 
 bool SINGLE_FILE = false;
-thread_local ssize_t RandomWrite::tid = -1;
+thread_local ssize_t RandomWrite::tid = 0;
 
 #ifdef __linux__
 io_context_t LibAIOWrite::io_cxt;
