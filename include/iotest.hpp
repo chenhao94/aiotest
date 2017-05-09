@@ -672,7 +672,6 @@ public:
         cerr << "Warning: LibAIO is not supported on non-Linux system." << endl;
         #endif
 
-<<<<<<< HEAD
         #ifdef _POSIX_VERSION
         if (fsync(fd))
         {
@@ -680,9 +679,7 @@ public:
             exit(-1);
         }
         #endif
-=======
         cnt = 0;
->>>>>>> d6e57028ea1d67a44ae3e85213d19a2872eb4b5b
     }
 
     // No way to busy wait.
