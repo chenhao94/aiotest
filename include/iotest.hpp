@@ -130,7 +130,7 @@ public:
 
         openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto data = new
-            #ifdef __linux__
+            #ifndef __MACH__
             (align_val_t(4096))
             #endif
             char[WRITE_SIZE];
@@ -154,7 +154,7 @@ public:
         cleanup();
         closefile();
         operator delete[](data
-                #ifdef __linux__
+                #ifndef __MACH__
                 , align_val_t(4096)
                 #endif
                 );
@@ -168,7 +168,7 @@ public:
 
         openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto buf = new
-            #ifdef __linux__
+            #ifndef __MACH__
             (align_val_t(4096))
             #endif
             char[READ_SIZE * WAIT_RATE];
@@ -188,7 +188,7 @@ public:
         cleanup();
         closefile();
         operator delete[](buf
-                #ifdef __linux__
+                #ifndef __MACH__
                 , align_val_t(4096)
                 #endif
                 );
@@ -202,12 +202,12 @@ public:
 
         openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto data = new
-            #ifdef __linux__
+            #ifndef __MACH__
             (align_val_t(4096))
             #endif
             char[WRITE_SIZE];
         auto buf = new
-            #ifdef __linux__
+            #ifndef __MACH__
             (align_val_t(4096))
             #endif
             char[WRITE_SIZE * WAIT_RATE];
@@ -238,12 +238,12 @@ public:
         cleanup();
         closefile();
         operator delete[](data
-                #ifdef __linux__
+                #ifndef __MACH__
                 , align_val_t(4096)
                 #endif
                 );
         operator delete[](buf
-                #ifdef __linux__
+                #ifndef __MACH__
                 , align_val_t(4096)
                 #endif
                 );

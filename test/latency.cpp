@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     rw->openfile("tmp/file0");
 
     auto data = new
-        #ifdef __linux__
+        #ifndef __MACH__
         (align_val_t(512))
         #endif
         char[WRITE_SIZE];
