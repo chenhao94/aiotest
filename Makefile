@@ -31,9 +31,9 @@ export LD = lld
 export CXX = clang++
 # export CXX = g++-7
 # export CXX = g++
-export CXXFLAGS = -std=c++1z -m64 -Wall -O0 -g#-O3 -g
+export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-fuse-ld=lld'; fi)
-# export CXXFLAGS += -flto -fwhole-program-vtables
+export CXXFLAGS += -flto -fwhole-program-vtables
 export CXXFLAGS += -D_FILE_OFFSET_BITS=64
 ifeq ($(mode), debug) 
 	CXXFLAGS += -DTAI_DEBUG
