@@ -752,6 +752,15 @@ public:
     }
 
     TAI_INLINE
+    virtual void cleanup() override
+    {
+        for (auto &i : cbs[tid])
+            delete i;
+        cbs[tid].clear();
+    }
+
+
+    TAI_INLINE
     static void startEntry(size_t thread_id)
     {
         using namespace std;
