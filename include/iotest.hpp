@@ -123,11 +123,11 @@ public:
 
     virtual ~RandomWrite() {}
 
-    void run_writeonly(size_t thread_id)
+    void run_writeonly()
     {
         using namespace std;
 
-        openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : thread_id));
+        openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto data = new
             #ifdef __linux__
             (align_val_t(512))
@@ -146,7 +146,7 @@ public:
             auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
             writeop(offset, data);
             if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
-                tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
+                tai::Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
         syncop();
         wait_cb();
@@ -160,11 +160,11 @@ public:
     }
 
     TAI_INLINE
-    void run_readonly(size_t thread_id)
+    void run_readonly()
     {
         using namespace std;
 
-        openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : thread_id));
+        openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto buf = new
             #ifdef __linux__
             (align_val_t(512))
@@ -179,7 +179,7 @@ public:
             //readop(offset, buf + (i & ~-WAIT_RATE) * WRITE_SIZE);
             readop(offset, buf);
             if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
-                tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
+                tai::Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
         //syncop();
         wait_cb();
@@ -193,11 +193,11 @@ public:
     }
 
     TAI_INLINE
-    void run_readwrite(size_t thread_id)
+    void run_readwrite()
     {
         using namespace std;
 
-        openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : thread_id));
+        openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto data = new
             #ifdef __linux__
             (align_val_t(512))
@@ -228,7 +228,7 @@ public:
             offs.push_back(offset);
             writeop(offset, data);
             if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
-                tai::Log::log("[Thread ", thread_id, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
+                tai::Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
         for (auto j = IO_ROUND - WAIT_RATE; j < IO_ROUND; ++j)
             readop(offs[j], buf + (j & ~-WAIT_RATE) * WRITE_SIZE);
@@ -249,15 +249,17 @@ public:
     }
 
     TAI_INLINE
-    void run(size_t tid)
+    void run(ssize_t tid)
     {
         using namespace std;
 
-        array<function<void(size_t)>, 3>{
-            [this](auto _){ run_readonly(_); },
-            [this](auto _){ run_writeonly(_); },
-            [this](auto _){ run_readwrite(_); }
-        }[workload](this->tid = tid);
+        this->tid = tid;
+
+        array<function<void()>, 3>{
+            [this](){ run_readonly(); },
+            [this](){ run_writeonly(); },
+            [this](){ run_readwrite(); }
+        }[workload]();
     }
 
     TAI_INLINE
@@ -308,7 +310,7 @@ public:
     virtual void cleanup() {}
 
     static std::unique_ptr<RandomWrite> getInstance(int testType, bool concurrent = false);
-    static thread_local int tid;
+    static thread_local ssize_t tid;
 };
 
 class BlockingWrite : public RandomWrite
@@ -624,7 +626,7 @@ public:
     #endif
 
     static std::mutex cntMtx;
-    static size_t cnt = 0;
+    static size_t cnt;
 
     TAI_INLINE
     LibAIOWrite()
@@ -722,6 +724,8 @@ public:
     TAI_INLINE
     virtual void syncop() override
     {
+        using namespace std;
+
         wait_cb();
 
         #ifdef _POSIX_VERSION
