@@ -131,7 +131,7 @@ public:
         openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto data = new
             #ifdef __linux__
-            (align_val_t(512))
+            (align_val_t(4096))
             #endif
             char[WRITE_SIZE];
         memset(data, 'a', sizeof(WRITE_SIZE));
@@ -155,7 +155,7 @@ public:
         closefile();
         operator delete[](data
                 #ifdef __linux__
-                , align_val_t(512)
+                , align_val_t(4096)
                 #endif
                 );
     }
@@ -169,7 +169,7 @@ public:
         openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto buf = new
             #ifdef __linux__
-            (align_val_t(512))
+            (align_val_t(4096))
             #endif
             char[READ_SIZE * WAIT_RATE];
         reset_cb();
@@ -189,7 +189,7 @@ public:
         closefile();
         operator delete[](buf
                 #ifdef __linux__
-                , align_val_t(512)
+                , align_val_t(4096)
                 #endif
                 );
     }
@@ -203,12 +203,12 @@ public:
         openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto data = new
             #ifdef __linux__
-            (align_val_t(512))
+            (align_val_t(4096))
             #endif
             char[WRITE_SIZE];
         auto buf = new
             #ifdef __linux__
-            (align_val_t(512))
+            (align_val_t(4096))
             #endif
             char[WRITE_SIZE * WAIT_RATE];
         vector<size_t> offs;
@@ -239,12 +239,12 @@ public:
         closefile();
         operator delete[](data
                 #ifdef __linux__
-                , align_val_t(512)
+                , align_val_t(4096)
                 #endif
                 );
         operator delete[](buf
                 #ifdef __linux__
-                , align_val_t(512)
+                , align_val_t(4096)
                 #endif
                 );
     }
