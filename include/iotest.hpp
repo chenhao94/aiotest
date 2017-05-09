@@ -950,10 +950,13 @@ public:
         using namespace tai;
 
         syncop();
-        ios[tid].back()->wait();
         if (opencnt.fetch_sub(1) > 1)
             return;
-        bt->detach(*ctrl);
+        if (unlikely((*ios[tid].emplace_back(bt->detach(*ctrl)))() == IOCtrl::Rejected))
+        {
+            cerr << "Error at TAI detach." << endl;
+            exit(-1);
+        }
         bt.reset(nullptr);
         cleanup();
     }
