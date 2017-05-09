@@ -104,7 +104,7 @@ class RandomWrite
 public:
     int fd = -1;
     int openflags;
-    std::atomic_int opencnt = 0;
+    std::atomic<size_t> opencnt = 0;
 
     RandomWrite()
     {
@@ -126,6 +126,7 @@ public:
     void run_writeonly()
     {
         using namespace std;
+        using namespace tai;
 
         openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto data = new
@@ -143,10 +144,10 @@ public:
                 if (!(i & ~-WAIT_RATE))
                     wait_cb();
             }
-            auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
+            auto offset = randgen(WRITE_SIZE);
             writeop(offset, data);
             if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
-                tai::Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
+                Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
         syncop();
         wait_cb();
@@ -163,23 +164,24 @@ public:
     void run_readonly()
     {
         using namespace std;
+        using namespace tai;
 
         openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto buf = new
             #ifdef __linux__
             (align_val_t(512))
             #endif
-            char[WRITE_SIZE * WAIT_RATE];
+            char[READ_SIZE * WAIT_RATE];
         reset_cb();
         for (size_t i = 0; i < IO_ROUND; ++i)
         {
             if (i && !(i & ~-WAIT_RATE))
                 wait_cb();
-            auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
+            auto offset = randgen(READ_SIZE);
             //readop(offset, buf + (i & ~-WAIT_RATE) * WRITE_SIZE);
             readop(offset, buf);
             if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
-                tai::Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
+                Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
         //syncop();
         wait_cb();
@@ -196,6 +198,7 @@ public:
     void run_readwrite()
     {
         using namespace std;
+        using namespace tai;
 
         openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : tid));
         auto data = new
@@ -224,11 +227,9 @@ public:
                     wait_cb();
                 }
             }
-            auto offset = randgen(max(READ_SIZE, WRITE_SIZE));
-            offs.push_back(offset);
-            writeop(offset, data);
+            writeop(offs.emplace_back(randgen(WRITE_SIZE)), data);
             if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
-                tai::Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
+                Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
         for (auto j = IO_ROUND - WAIT_RATE; j < IO_ROUND; ++j)
             readop(offs[j], buf + (j & ~-WAIT_RATE) * WRITE_SIZE);
@@ -267,7 +268,7 @@ public:
     {
         using namespace std;
 
-        if (opencnt.fetch_add(1) > 0)
+        if (opencnt.fetch_add(1))
             return;
 
         #ifdef _POSIX_VERSION
@@ -282,7 +283,7 @@ public:
     {
         using namespace std;
 
-        if (opencnt.fetch_sub(1) > 1)
+        if (opencnt.fetch_sub(1) - 1)
             return;
 
         #ifdef _POSIX_VERSION
@@ -387,6 +388,9 @@ public:
 template <bool concurrent = false>
 class FstreamWrite : public BlockingWrite
 {
+    std::fstream file;
+    std::mutex writeLock;
+
 public: 
     TAI_INLINE
     FstreamWrite()
@@ -425,12 +429,13 @@ public:
     {
         using namespace std;
 
-        if (opencnt.fetch_add(1) > 0)
+        if (opencnt.fetch_add(1))
             return;
 
         #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags); // fd for fsync
         #endif
+
         if (file.is_open())
             file.close();
         file.open(filename, ios::binary | ios::in | ios::out);
@@ -438,10 +443,11 @@ public:
 
     virtual void closefile() override
     {
-        if (opencnt.fetch_sub(1) > 1)
+        if (opencnt.fetch_sub(1) - 1)
             return;
 
         file.close();
+
         #ifdef _POSIX_VERSION
         close(fd);
         #endif
@@ -453,14 +459,14 @@ public:
         FstreamWrite<concurrent> fw;
         fw.run(thread_id);
     }
-
-private:
-    std::fstream file;
-    std::mutex writeLock;
 };
 
 class AIOWrite : public RandomWrite
 {
+    #ifdef _POSIX_VERSION
+    std::array<std::vector<aiocb>, MAX_THREAD_NUM> cbs;
+    #endif
+
 public:
     TAI_INLINE
     AIOWrite()
@@ -468,16 +474,12 @@ public:
         using namespace std;
 
         #ifdef _POSIX_VERSION
-        for (int i = 0; i < MAX_THREAD_NUM; ++i)
-            cbs[i].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        for (auto& i : cbs)
+            i.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         #else
         cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
     }
-
-    #ifdef _POSIX_VERSION
-    std::array<std::vector<aiocb>, MAX_THREAD_NUM> cbs;
-    #endif
 
     TAI_INLINE
     virtual void reset_cb() override
@@ -544,7 +546,7 @@ public:
 
         #ifdef _POSIX_VERSION
         auto& cb = cbs[tid].emplace_back();
-        memset(&cb, 0, sizeof(aiocb));
+        memset(&cb, 0, sizeof(cb));
         cb.aio_fildes = fd;
         cb.aio_nbytes = WRITE_SIZE;
         cb.aio_buf = data;
@@ -566,7 +568,7 @@ public:
 
         #ifdef _POSIX_VERSION
         auto& cb = cbs[tid].emplace_back();
-        memset(&cb, 0, sizeof(aiocb));
+        memset(&cb, 0, sizeof(cb));
         cb.aio_fildes = fd;
         cb.aio_nbytes = READ_SIZE;
         cb.aio_buf = data;
@@ -589,7 +591,7 @@ public:
 
         #ifdef _POSIX_VERSION
         auto& cb = cbs[tid].emplace_back();
-        memset(&cb, 0, sizeof(aiocb));
+        memset(&cb, 0, sizeof(cb));
         cb.aio_fildes = fd;
         if (aio_fsync(O_SYNC, &cb))
         {
@@ -618,7 +620,6 @@ public:
 
 class LibAIOWrite : public RandomWrite
 {
-public:
     #ifdef __linux__
     std::array<std::vector<iocb*>, MAX_THREAD_NUM> cbs;
     io_event events[MAX_THREAD_NUM][65536];
@@ -628,6 +629,7 @@ public:
     static std::mutex cntMtx;
     static size_t cnt;
 
+public:
     TAI_INLINE
     LibAIOWrite()
     {
@@ -755,9 +757,9 @@ public:
 
 class TAIAIOWrite : public RandomWrite
 {
-public: 
     std::array<std::vector<tai::aiocb, tai::Alloc<tai::aiocb>>, MAX_THREAD_NUM> cbs;
 
+public: 
     TAI_INLINE
     TAIAIOWrite()
     {
@@ -899,6 +901,11 @@ public:
 
 class TAIWrite : public RandomWrite
 {
+    std::unique_ptr<tai::BTreeBase> bt;
+    std::array<tai::IOCtrlVec, MAX_THREAD_NUM> ios;
+
+    static std::unique_ptr<tai::Controller> ctrl;
+
 public: 
     TAI_INLINE
     TAIWrite()
@@ -1025,11 +1032,5 @@ public:
     {
         ctrl = nullptr;
     }
-
-private:
-    std::unique_ptr<tai::BTreeBase> bt;
-    std::array<tai::IOCtrlVec, MAX_THREAD_NUM> ios;
-
-    static std::unique_ptr<tai::Controller> ctrl;
 };
 

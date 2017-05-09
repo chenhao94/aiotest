@@ -42,11 +42,7 @@ int main(int argc, char *argv[])
         rw->reset_cb();
 
         auto start = high_resolution_clock::now();
-        for (int i = SYNC_RATE; i--; )
-        {
-            auto offset = randgen(WRITE_SIZE);
-            rw->writeop(offset, data);
-        }
+        for (auto i = SYNC_RATE; i--; rw->writeop(randgen(WRITE_SIZE), data));
         auto mid = high_resolution_clock::now();
         rw->syncop();
         rw->busywait_cb();
