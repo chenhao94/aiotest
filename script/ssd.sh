@@ -12,7 +12,7 @@ fi
 
 export ASAN_OPTIONS=use_odr_indicator=1
 
-export TEST_TYPE='6'
+export TEST_TYPE='0 1 2 3 4 5 6'
 
 make test_mt TEST_ARGS='25 4 4 19 16 16' 2>&1 | tee log/4K-Overlay.log
 for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s\# -t; echo; echo; done
