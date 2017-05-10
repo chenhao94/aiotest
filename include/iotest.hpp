@@ -178,8 +178,7 @@ public:
             if (i && !(i & ~-WAIT_RATE))
                 wait_cb();
             auto offset = randgen(READ_SIZE);
-            //readop(offset, buf + (i & ~-WAIT_RATE) * WRITE_SIZE);
-            readop(offset, buf);
+            readop(offset, buf + (i & ~-WAIT_RATE) * WRITE_SIZE);
             if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
                 Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
@@ -414,7 +413,7 @@ public:
             writeLock.lock();
         file.seekg(offset).read(data, READ_SIZE);
         if (concurrent)
-            writeLock.lock();
+            writeLock.unlock();
     }
 
     TAI_INLINE
@@ -618,27 +617,28 @@ public:
 
 };
 
+template <bool concurrent = false>
 class LibAIOWrite : public RandomWrite
 {
     #ifdef __linux__
     std::array<std::vector<iocb*>, MAX_THREAD_NUM> cbs;
     io_event events[MAX_THREAD_NUM][65536];
+    io_context_t io_cxt;
     #endif
-
-    static std::mutex cntMtx;
-    static size_t cnt;
-
+    std::mutex cntMtx;
+    int cnt;
 public:
-    #ifdef __linux__
-    static io_context_t io_cxt;
-    #endif
-
     TAI_INLINE
     LibAIOWrite()
     {
         using namespace std;
 
         #ifdef __linux__
+        if (auto err = io_setup(131072, &io_cxt))
+        {
+            cerr << err << " " << strerror(err) << endl;
+            exit(-1);
+        }
         for (auto& i : cbs)
             i.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         openflags |= O_DIRECT;
@@ -664,8 +664,9 @@ public:
     {
         using namespace std;
 
-        unique_lock<mutex> lck(cntMtx);
-
+        unique_lock<mutex> lck(cntMtx, std::defer_lock);
+        if (concurrent)
+            lck.lock();
         #ifdef __linux__
         io_getevents(io_cxt, cnt, cnt, events[tid], nullptr);
         #else
@@ -694,6 +695,9 @@ public:
     {
         using namespace std;
 
+        unique_lock<mutex> lck(cntMtx, std::defer_lock);
+        if (concurrent)
+            lck.lock();
         #ifdef __linux__
         auto& cb = cbs[tid].emplace_back(new iocb);
         io_prep_pwrite(cb, fd, data, WRITE_SIZE, offset);
@@ -706,8 +710,6 @@ public:
         #else
         cerr << "Warning: LibAIO is not supported on non-Linux system." << endl;
         #endif
-
-        unique_lock<mutex> lck(cntMtx);
         ++cnt;
     }
 
@@ -716,6 +718,9 @@ public:
     {
         using namespace std;
 
+        unique_lock<mutex> lck(cntMtx, std::defer_lock);
+        if (concurrent)
+            lck.lock();
         #ifdef __linux__
         auto& cb = cbs[tid].emplace_back(new iocb);
         io_prep_pread(cb, fd, data, READ_SIZE, offset);
@@ -728,8 +733,6 @@ public:
         #else
         cerr << "Warning: LibAIO is not supported on non-Linux system." << endl;
         #endif
-
-        unique_lock<mutex> lck(cntMtx);
         ++cnt;
     }
 

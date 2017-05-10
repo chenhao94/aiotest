@@ -43,7 +43,7 @@ export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
 export CXXFLAGS += -DTAI_JEMALLOC -ljemalloc
 export CXXFLAGS += -lm -lpthread
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-lrt -laio'; fi)
-export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address -mllvm -asan-use-private-alias
+# export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address -mllvm -asan-use-private-alias
 export AR = llvm-ar
 export MKDIR = @mkdir -p
 export CMP = cmp -b
@@ -122,24 +122,24 @@ test: pre_test
 
 .PHONY: test_mt
 test_mt: pre_test
-	for i in $(TEST_TYPE); do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do                                               \
+	for i in $(TEST_TYPE); do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do for l in `seq 0 1`; do                         \
 	    if [ $(OS) == Darwin ]; then sudo purge; fi;                                                                            \
 	    if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;                                         \
-	    time (`if [ $(OS) == _Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS));  \
+	    time (`if [ $(OS) == _Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS) $$l);  \
 	    time (sync tmp/*);                                                                                                      \
 	    time sync;                                                                                                              \
-	done done done
+	done done done done
 
 .PHONY: test_lat
 test_lat: pre_test
-	for i in $(TEST_TYPE); do                                                              \
+	for i in $(TEST_TYPE); do for j in `seq 0 1`; do                                        \
 	    sync;                                                                           \
 	    if [ $(OS) == Darwin ]; then sudo purge; fi;                                    \
 	    if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
-	    bin/latency 1 $$i 1 $(TEST_ARGS);                                               \
+	    bin/latency 1 $$i 1 $(TEST_ARGS) $$j;                                           \
 	    sync tmp/*;                                                                     \
 	    sync;                                                                           \
-	done 
+	done done
 	
 
 ifneq ($(MAKECMDGOALS),clean)

@@ -17,12 +17,6 @@ size_t WAIT_RATE = 1;
 bool SINGLE_FILE = false;
 thread_local ssize_t RandomWrite::tid = 0;
 
-#ifdef __linux__
-io_context_t LibAIOWrite::io_cxt;
-#endif
-std::mutex LibAIOWrite::cntMtx;
-size_t LibAIOWrite::cnt = 0;
-
 std::unique_ptr<tai::Controller> TAIWrite::ctrl;
 
 std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType, bool concurrent)
@@ -48,11 +42,10 @@ std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType, bool concurr
         rw.reset(new AIOWrite());
         break;
     case 3:
-        #ifdef __linux__
-        if (first)
-            io_setup(1048576, &LibAIOWrite::io_cxt);
-        #endif
-        rw.reset(new LibAIOWrite());
+        if (concurrent)
+            rw.reset(new LibAIOWrite<true>());
+        else
+            rw.reset(new LibAIOWrite<false>());
         break;
     case 4:
         if (first)
