@@ -149,9 +149,6 @@ public:
             if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
                 Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
-        syncop();
-        wait_cb();
-        cleanup();
         closefile();
         operator delete[](data
                 #ifndef __MACH__
@@ -182,9 +179,6 @@ public:
             if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
                 Log::log("[Thread ", tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
         }
-        //syncop();
-        wait_cb();
-        cleanup();
         closefile();
         operator delete[](buf
                 #ifndef __MACH__
@@ -232,9 +226,6 @@ public:
         }
         for (auto j = IO_ROUND - WAIT_RATE; j < IO_ROUND; ++j)
             readop(offs[j], buf + (j & ~-WAIT_RATE) * WRITE_SIZE);
-        syncop();
-        wait_cb();
-        cleanup();
         closefile();
         operator delete[](data
                 #ifndef __MACH__
@@ -285,6 +276,8 @@ public:
         if (opencnt.fetch_sub(1) - 1)
             return;
 
+        syncop();
+        cleanup();
         #ifdef _POSIX_VERSION
         close(fd);
         fd = -1;
@@ -445,6 +438,7 @@ public:
         if (opencnt.fetch_sub(1) - 1)
             return;
 
+        syncop();
         file.close();
 
         #ifdef _POSIX_VERSION
@@ -493,48 +487,49 @@ public:
     }
 
     TAI_INLINE
-    virtual void wait_cb() override
+    virtual void wait_cb_common(bool busy) 
     {
         using namespace std;
         using namespace chrono_literals;
 
         #ifdef _POSIX_VERSION
-        for (; aio_error(&(cbs[tid].back())) == EINPROGRESS; this_thread::sleep_for(1ms));
-        #else
-        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
-        #endif
-    }
-
-    TAI_INLINE
-    virtual void busywait_cb() override
-    {
-        using namespace std;
-
-        #ifdef _POSIX_VERSION
-        while (aio_error(&(cbs[tid].back())) == EINPROGRESS);
-        #else
-        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
-        #endif
-    }
-
-    TAI_INLINE
-    virtual void cleanup() override
-    {
-        using namespace std;
-
-        #ifdef _POSIX_VERSION
         for (auto &i : cbs[tid])
-            if (unlikely(aio_error(&i) && aio_error(&i) != EINPROGRESS))
+        {
+            int err;
+            for (; (err = aio_error(&i)) == EINPROGRESS;)
+                if (!busy)
+                    this_thread::sleep_for(1ms);
+            if (unlikely(err))
             {
-                cerr << aio_error(&i) <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
+                cerr << err <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
                 cerr << "reqprio: " << i.aio_reqprio << ", offset: " << i.aio_offset << " , nbytes: " << i.aio_nbytes << endl; 
                 exit(-1);
             }
             else
                 aio_return(&i);
+        }
+        reset_cb();
         #else
         cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
+    }
+
+    TAI_INLINE
+    virtual void wait_cb() override
+    {
+        wait_cb_common(false);
+    }
+
+    TAI_INLINE
+    virtual void busywait_cb() override
+    {
+        wait_cb_common(true);
+    }
+
+    TAI_INLINE
+    virtual void cleanup() override
+    {
+        wait_cb();
     }
 
 
@@ -653,6 +648,8 @@ public:
         using namespace std;
 
         #ifdef __linux__
+        for (auto &i : cbs[tid])
+            delete i;
         cbs[tid].clear();
         #else
         cerr << "Warning: LibAIO is not supported on non-Linux system." << endl;
@@ -681,6 +678,9 @@ public:
         }
         #endif
         cnt = 0;
+        if (concurrent)
+            lck.unlock();
+        reset_cb();
     }
 
     // No way to busy wait.
@@ -757,9 +757,7 @@ public:
     TAI_INLINE
     virtual void cleanup() override
     {
-        for (auto &i : cbs[tid])
-            delete i;
-        cbs[tid].clear();
+        wait_cb();
     }
 
 
@@ -796,21 +794,40 @@ public:
     }
 
     TAI_INLINE
-    virtual void wait_cb() override
+    virtual void wait_cb_common(bool busy)
     {
+        using namespace std;
         using namespace tai;
 
         for (auto& i : cbs[tid])
-            aio_wait(&i);
+        {
+            int err;
+            if (busy)
+                while ((err = aio_error(&i)) == EINPROGRESS);
+            else
+                err = aio_wait(&i);
+            if (unlikely(err))
+            {
+                cerr << err <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
+                cerr << "reqprio: " << i.aio_reqprio << ", offset: " << i.aio_offset << " , nbytes: " << i.aio_nbytes << endl; 
+                exit(-1);
+            }
+            else
+                aio_return(&i);
+        }
+        reset_cb();
+    }
+
+    TAI_INLINE
+    virtual void wait_cb() override
+    {
+        wait_cb_common(false);
     }
 
     TAI_INLINE
     virtual void busywait_cb() override
     {
-        using namespace tai;
-
-        for (auto& i : cbs[tid])
-            while (aio_error(&i) == EINPROGRESS);
+        wait_cb_common(true);
     }
 
     TAI_INLINE
@@ -819,16 +836,7 @@ public:
         using namespace std;
         using namespace tai;
 
-        for (auto &i : cbs[tid])
-            if (unlikely(aio_error(&i) && aio_error(&i) != EINPROGRESS))
-            {
-                cerr << aio_error(&i) <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
-                cerr << "reqprio: " << i.aio_reqprio << ", offset: " << i.aio_offset << " , nbytes: " << i.aio_nbytes << endl; 
-                exit(-1);
-            }
-            else
-                aio_return(&i);
-        cbs[tid].clear();
+        wait_cb();
         #ifdef _POSIX_VERSION
         if (fsync(fd))
         {
@@ -904,6 +912,8 @@ public:
 
         if (opencnt.fetch_sub(1) > 1)
             return;
+        syncop();
+        wait_cb();
         deregister_fd(fd);
         #ifdef _POSIX_VERSION
         close(fd);
