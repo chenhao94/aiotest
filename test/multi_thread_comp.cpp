@@ -11,7 +11,7 @@
 #include "iotest.hpp"
 
 template<bool read, bool write>
-static void run_common(std::unique_ptr<RandomWrite>& rw)
+static void run_common(RandomWrite* rw)
 {
     using namespace std;
     using namespace tai;
@@ -81,22 +81,22 @@ static void run_common(std::unique_ptr<RandomWrite>& rw)
                 );
 }
 
-void run_readonly(std::unique_ptr<RandomWrite>& rw)
+void run_readonly(RandomWrite* rw)
 {
     run_common<true, false>(rw);
 }
 
-void run_writeonly(std::unique_ptr<RandomWrite>& rw)
+void run_writeonly(RandomWrite* rw)
 {
     run_common<false, true>(rw);
 }
 
-void run_readwrite(std::unique_ptr<RandomWrite>& rw)
+void run_readwrite(RandomWrite* rw)
 {
     run_common<true, true>(rw);
 }
 
-void run(std::unique_ptr<RandomWrite>& rw, int tid)
+void run(RandomWrite* rw, int tid)
 {
     using namespace std;
 
@@ -124,25 +124,28 @@ int main(int argc, char* argv[])
     long long time;
     if (SINGLE_FILE)
     {
-        auto rw = RandomWrite::getInstance(testType, true);
+        auto rw = RandomWrite::getInstance(testType, true).release();
         epoch = high_resolution_clock::now();
         for (size_t i = 0; i < thread_num; ++i)
             threads.emplace_back([&rw, i](){ run(rw, i); });
         for (auto& t : threads)
             t.join();
         time = duration_cast<nanoseconds>(high_resolution_clock::now() - epoch).count();
+        delete rw;
     }
     else
     {
-        vector<unique_ptr<RandomWrite>> rw;
+        vector<RandomWrite*> rw;
         for (size_t i = 0; i < thread_num; ++i)
-            rw.emplace_back(RandomWrite::getInstance(testType));
+            rw.emplace_back(RandomWrite::getInstance(testType).release());
         epoch = high_resolution_clock::now();
         for (size_t i = 0; i < rw.size(); ++i)
             threads.emplace_back([&rw, i](){ run(rw[i], i); });
         for (auto& t : threads)
             t.join();
         time = duration_cast<nanoseconds>(high_resolution_clock::now() - epoch).count();
+        for (auto i : rw)
+            delete i;
     }
 
     Log::log(testname[testType], " random ", wlname[workload], ": ",
