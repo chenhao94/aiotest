@@ -143,11 +143,11 @@ public:
     {
         using namespace std;
 
+        syncop();
+        cleanup();
         if (opencnt.fetch_sub(1) - 1)
             return;
 
-        syncop();
-        cleanup();
         #ifdef _POSIX_VERSION
         close(fd);
         fd = -1;
@@ -733,10 +733,10 @@ public:
         using namespace std;
         using namespace tai;
 
-        if (opencnt.fetch_sub(1) > 1)
-            return;
         syncop();
         wait_cb();
+        if (opencnt.fetch_sub(1) > 1)
+            return;
         deregister_fd(fd);
         #ifdef _POSIX_VERSION
         close(fd);
@@ -796,15 +796,15 @@ public:
         using namespace tai;
 
         syncop();
+        cleanup();
         if (opencnt.fetch_sub(1) > 1)
             return;
-        if (unlikely((*ios[tid].emplace_back(bt->detach(*ctrl)))() == IOCtrl::Rejected))
+        if (unlikely((*ios[tid].emplace_back(bt->detach(*ctrl))).wait() != IOCtrl::Done))
         {
             cerr << "Error at TAI detach." << endl;
             exit(-1);
         }
         bt.reset(nullptr);
-        cleanup();
     }
 
     TAI_INLINE
