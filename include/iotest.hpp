@@ -105,6 +105,7 @@ public:
     int fd = -1;
     int openflags;
     std::atomic<size_t> opencnt = 0;
+    std::atomic<bool> opened = false;
 
     RandomWrite()
     {
@@ -129,13 +130,17 @@ public:
         using namespace std;
 
         if (opencnt.fetch_add(1))
+        {
+            while (!opened.load());
             return;
+        }
 
         #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags);
         #else
         cerr << "RandomWrite::openfile() needs POSIX support." << endl;
         #endif
+        opened.store(true);
     }
 
     TAI_INLINE
@@ -278,7 +283,10 @@ public:
         using namespace std;
 
         if (opencnt.fetch_add(1))
+        {
+            while (!opened.load());
             return;
+        }
 
         #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags); // fd for fsync
@@ -287,6 +295,7 @@ public:
         if (file.is_open())
             file.close();
         file.open(filename, ios::binary | ios::in | ios::out);
+        opened.store(true);
     }
 
     virtual void closefile() override
@@ -718,13 +727,17 @@ public:
         using namespace tai;
 
         if (opencnt.fetch_add(1) > 0)
+        {
+            while (!opened.load());
             return;
+        }
         #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags);
         register_fd(fd, filename);
         #else
         cerr << "RandomWrite::openfile() needs POSIX support." << endl;
         #endif
+        opened.store(true);
     }
 
     TAI_INLINE
@@ -780,13 +793,17 @@ public:
         using namespace tai;
 
         if (opencnt.fetch_add(1) > 0)
+        {
+            while (!opened.load());
             return;
+        }
         ios[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         bt.reset(new BTree<44, 4, 4, 12>(new POSIXEngine(filename, O_CREAT | O_RDWR
                         #ifdef __linux__
                         | O_DIRECT
                         #endif
                         )));
+        opened.store(true);
     }
 
     TAI_INLINE
