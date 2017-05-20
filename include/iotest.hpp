@@ -319,18 +319,6 @@ class AIOWrite : public RandomWrite
     #endif
 
 public:
-    TAI_INLINE
-    AIOWrite()
-    {
-        using namespace std;
-
-        #ifdef _POSIX_VERSION
-        for (auto& i : cbs)
-            i.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
-        #else
-        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
-        #endif
-    }
 
     TAI_INLINE
     virtual void reset_cb() override
@@ -455,6 +443,16 @@ public:
         #endif
     }
 
+    TAI_INLINE
+    virtual void openfile(const std::string& filename)
+    {
+        RandomWrite::openfile(filename);
+        #ifdef _POSIX_VERSION
+        cbs[tid].reserve(8 * IO_ROUND);
+        #else
+        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
+        #endif
+    }
 };
 
 template <bool concurrent = false>
@@ -479,8 +477,6 @@ public:
             cerr << err << " " << strerror(err) << endl;
             exit(-1);
         }
-        for (auto& i : cbs)
-            i.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         openflags |= O_DIRECT;
         #else
         cerr << "Warning: LibAIO is not supported on non-Linux system." << endl;
@@ -605,6 +601,16 @@ public:
         wait_cb();
     }
 
+    TAI_INLINE
+    virtual void openfile(const std::string& filename)
+    {
+        RandomWrite::openfile(filename);
+        #ifdef _POSIX_VERSION
+        cbs[tid].reserve(8 * IO_ROUND);
+        #else
+        cerr << "Warning: LibAIOWrite needs POSIX support." << endl;
+        #endif
+    }
 };
 
 class TAIAIOWrite : public RandomWrite
@@ -615,8 +621,8 @@ public:
     TAI_INLINE
     TAIAIOWrite()
     {
-        for (auto& i : cbs)
-            i.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        for (auto &i : cbs)
+            i.reserve(8 * IO_ROUND);
     }
 
     TAI_INLINE
@@ -734,6 +740,7 @@ public:
         #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags);
         register_fd(fd, filename);
+        //cbs[tid].reserve(8 * IO_ROUND);
         #else
         cerr << "RandomWrite::openfile() needs POSIX support." << endl;
         #endif
@@ -797,7 +804,7 @@ public:
             while (!opened.load());
             return;
         }
-        ios[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        ios[tid].reserve(8 * IO_ROUND);
         bt.reset(new BTree<44, 4, 4, 12>(new POSIXEngine(filename, O_CREAT | O_RDWR
                         #ifdef __linux__
                         | O_DIRECT
