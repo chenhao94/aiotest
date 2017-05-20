@@ -242,7 +242,7 @@ template <bool concurrent = false>
 class FstreamWrite : public BlockingWrite
 {
     std::fstream file;
-    std::mutex writeLock;
+    std::mutex mtx;
 
 public: 
     TAI_INLINE
@@ -254,20 +254,20 @@ public:
     virtual void writeop(off_t offset, char* data) override
     {
         if (concurrent)
-            writeLock.lock();
+            mtx.lock();
         file.seekp(offset).write(data, WRITE_SIZE);
         if (concurrent)
-            writeLock.unlock();
+            mtx.unlock();
     }
 
     TAI_INLINE
     virtual void readop(off_t offset, char* data) override
     {
         if (concurrent)
-            writeLock.lock();
+            mtx.lock();
         file.seekg(offset).read(data, READ_SIZE);
         if (concurrent)
-            writeLock.unlock();
+            mtx.unlock();
     }
 
     TAI_INLINE

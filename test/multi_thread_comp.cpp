@@ -15,7 +15,9 @@ static void run_common(RandomWrite* rw)
 {
     using namespace std;
     using namespace tai;
-    char *data, *buf;
+
+    char* data = nullptr;
+    char* buf = nullptr;
     rw->openfile("tmp/file" + to_string(SINGLE_FILE ? 0 : rw->tid));
     if (write)    
     {
@@ -54,7 +56,7 @@ static void run_common(RandomWrite* rw)
             }
             rw->writeop(offs.emplace_back(randgen(WRITE_SIZE)), data);
         }
-        else // readonly
+        else if (read)  // Read-only
         {
             if (i && !(i & ~-WAIT_RATE))
                 rw->wait_cb();
@@ -67,18 +69,16 @@ static void run_common(RandomWrite* rw)
         for (auto j = IO_ROUND - WAIT_RATE; j < IO_ROUND; ++j)
             rw->readop(offs[j], buf + (j & ~-WAIT_RATE) * READ_SIZE);
     rw->closefile();
-    if (write)
-        operator delete[](data
-                #ifndef __MACH__
-                , align_val_t(4096)
-                #endif
-                );
-    if (read)
-        operator delete[](buf
-                #ifndef __MACH__
-                , align_val_t(4096)
-                #endif
-                );
+    operator delete[](data
+            #ifndef __MACH__
+            , align_val_t(4096)
+            #endif
+            );
+    operator delete[](buf
+            #ifndef __MACH__
+            , align_val_t(4096)
+            #endif
+            );
 }
 
 void run(RandomWrite* rw, int tid)
