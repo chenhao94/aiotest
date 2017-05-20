@@ -81,21 +81,6 @@ static void run_common(RandomWrite* rw)
                 );
 }
 
-void run_readonly(RandomWrite* rw)
-{
-    run_common<true, false>(rw);
-}
-
-void run_writeonly(RandomWrite* rw)
-{
-    run_common<false, true>(rw);
-}
-
-void run_readwrite(RandomWrite* rw)
-{
-    run_common<true, true>(rw);
-}
-
 void run(RandomWrite* rw, int tid)
 {
     using namespace std;
@@ -103,9 +88,9 @@ void run(RandomWrite* rw, int tid)
     rw->tid = tid;
 
     array<function<void()>, 3>{
-        [&](){ run_readonly(rw); },
-        [&](){ run_writeonly(rw); },
-        [&](){ run_readwrite(rw); }
+        [=](){ run_common<1, 0>(rw); },
+        [=](){ run_common<0, 1>(rw); },
+        [=](){ run_common<1, 1>(rw); }
     }[workload]();
 }
 
