@@ -20,7 +20,7 @@ export TESTEXES = $(patsubst $(TESTS_DIR)/%.cpp,$(TARGETS_DIR)/%,$(TESTS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
-export TEST_LOAD ?= $(shell nproc --all)
+export TEST_LOAD ?= 2#$(shell nproc --all)
 export TEST_ARGS ?= 30 64 64 14 8 10
 export TEST_TYPE ?= $(shell seq 0 6)
 # For test_mt only:
@@ -45,7 +45,7 @@ export CXXFLAGS += -lm -lpthread
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-lrt -laio'; fi)
 export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address -mllvm -asan-use-private-alias
 export AR = llvm-ar
-export MKDIR = @mkdir -p
+export MKDIR = mkdir -p
 export CMP = cmp -b
 
 export CP = cp -rf
@@ -57,27 +57,27 @@ export RM = rm -rf
 all: $(LIBTAI) $(TESTEXES)
 
 $(TESTEXES): $(TARGETS_DIR)/%: $(OBJS_DIR)/%.cpp.o $(LIBTAI)
-	$(MKDIR) $(TARGETS_DIR)
+	@$(MKDIR) $(TARGETS_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 $(TESTOBJS): $(OBJS_DIR)/%.o: $(TESTS_DIR)/% $(PCHS)
-	$(MKDIR) $(OBJS_DIR)
+	@$(MKDIR) $(OBJS_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(OBJS): $(OBJS_DIR)/%.o: $(SRCS_DIR)/% $(PCHS)
-	$(MKDIR) $(OBJS_DIR)
+	@$(MKDIR) $(OBJS_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(DEPS): $(DEPS_DIR)/%.d: $(SRCS_DIR)/%
-	$(MKDIR) $(DEPS_DIR)
+	@$(MKDIR) $(DEPS_DIR)
 	$(CXX) $(CXXFLAGS) -MM $^ -o $@
 
 $(PCHS): %.gch: %
 	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 $(LIBTAI): $(OBJS)
-	$(MKDIR) $(LIBS_DIR)
-	$(RM) $@
+	@$(MKDIR) $(LIBS_DIR)
+	@$(RM) $@
 	$(AR) cr $@ $(OBJS)
 
 .PHONY: pre_test
@@ -93,25 +93,25 @@ pre_test:
 	@echo 'Wait Rate    = 1/'`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\6/' | bc`
 	@echo '================================'
 	@echo
-	sudo sync
-	if [ $(OS) == Darwin ]; then sudo purge; fi
-	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	$(MKDIR) tmp
-	$(RM) tmp/*
-	for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do                                                                                              \
+	@sudo sync
+	@if [ $(OS) == Darwin ]; then sudo purge; fi
+	@if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	@$(RM) tmp
+	@$(MKDIR) tmp
+	@for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do                                                                                              \
 	    if [ $(OS) == Darwin ]; then dd if=/dev/zero of=tmp/file$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1;      \
 	    else dd if=/dev/zero of=tmp/file$$i bs=1048576 count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; fi;   \
 	done
-	sync
-	if [ $(OS) == Darwin ]; then sudo purge; fi
-	if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
+	@sync
+	@if [ $(OS) == Darwin ]; then sudo purge; fi
+	@if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
 
 .PHONY: test
 test: pre_test
-	$(MV) tmp/file0 tmp/sync
-	for i in aio tai; do if [ $(OS) == Darwin ]; then dd if=tmp/sync of=tmp/$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1; else $(CP) tmp/sync tmp/$$i; fi; done
-	sync
-	for i in 1 2 4; do                                                                                                          \
+	@$(MV) tmp/file0 tmp/sync
+	@for i in aio tai; do if [ $(OS) == Darwin ]; then dd if=tmp/sync of=tmp/$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1; else $(CP) tmp/sync tmp/$$i; fi; done
+	@sync
+	@for i in 1 2 4; do                                                                                                         \
 	    if [ $(OS) == Darwin ]; then sudo purge; fi;                                                                            \
 	    if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;                                         \
 	    time (bin/fixSizedWrites $$i `xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\4/' | bc`); \
@@ -122,23 +122,45 @@ test: pre_test
 
 .PHONY: test_mt
 test_mt: pre_test
-	for i in $(TEST_TYPE); do for j in `seq 0 2`; do for k in `seq $(TEST_LOAD)`; do for l in `seq 0 1`; do                     	\
-	    if [ $(OS) == Darwin ]; then sudo purge; fi;                                                                            	\
-	    if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;                                         	\
-	    time (`if [ $(OS) == _Linux ]; then echo 'sudo perf stat -age cs'; fi` bin/multi_thread_comp $$k $$i $$j $(TEST_ARGS) $$l); \
-	    time (sync tmp/*);                                                                                                      	\
-	    time sync;                                                                                                              	\
+	@for i in $(TEST_TYPE); do                                                                          \
+	    for j in `seq 0 2`; do                                                                          \
+		    for k in `seq $(TEST_LOAD)`; do                                                             \
+			    for l in `seq 0 1`; do                                                                  \
+	                if [ $(OS) == Darwin ]; then sudo purge; fi;                                        \
+	                if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;     \
+	                $(MKDIR) tmp/log/$$i/$$j/$$k log/last;                                              \
+	                time (`if [ $(OS) == _Linux ]; then echo 'sudo perf stat -age cs'; fi`              \
+	                    bin/multi_thread_comp $$i $$j $$k $$l $(TEST_ARGS) 2>&1                         \
+						| tee tmp/log/$$i/$$j/$$k/$$l.log                                               \
+	                );                                                                                  \
+	                time (sync tmp/*);                                                                  \
+	                $(MV) tmp/log/$$i/$$j/$$k/0.log tmp/log/$$i/$$j/$$k/multi.log 2>/dev/null;          \
+	                $(MV) tmp/log/$$i/$$j/$$k/1.log tmp/log/$$i/$$j/$$k/single.log 2>/dev/null;         \
+	                $(MV) tmp/log/$$i/0 tmp/log/$$i/r 2>/dev/null;                                      \
+	                $(MV) tmp/log/$$i/1 tmp/log/$$i/w 2>/dev/null;                                      \
+	                $(MV) tmp/log/$$i/2 tmp/log/$$i/rw 2>/dev/null;                                     \
+	                $(MV) tmp/log/0 tmp/log/Posix 2>/dev/null;                                          \
+	                $(MV) tmp/log/1 tmp/log/DIO 2>/dev/null;                                            \
+	                $(MV) tmp/log/2 tmp/log/Fstream 2>/dev/null;                                        \
+	                $(MV) tmp/log/3 tmp/log/PosixAIO 2>/dev/null;                                       \
+	                $(MV) tmp/log/4 tmp/log/LibAIO 2>/dev/null;                                         \
+	                $(MV) tmp/log/5 tmp/log/TaiAIO 2>/dev/null;                                         \
+	                $(MV) tmp/log/6 tmp/log/Tai 2>/dev/null;                                            \
+					$(MKDIR) log/last;                                                                  \
+	                rsync -a log/last/ tmp/log/;                                                        \
+	                $(MV) log/last log/~last;                                                           \
+	                $(MV) tmp/log log/last;                                                             \
+	                $(RM) log/~last;                                                                    \
 	done done done done
 
 .PHONY: test_lat
 test_lat: pre_test
-	for i in $(TEST_TYPE); do for j in `seq 0 1`; do                                    \
+	@for i in $(TEST_TYPE); do for j in `seq 0 1`; do                                   \
 	    sync;                                                                           \
 	    if [ $(OS) == Darwin ]; then sudo purge; fi;                                    \
 	    if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi; \
-	    bin/latency 1 $$i 1 $(TEST_ARGS) $$j;                                           \
+	    bin/latency $$i 1 1 $$j $(TEST_ARGS);                                           \
 	    sync tmp/*;                                                                     \
-	    sync;                                                                           \
 	done done
 	
 

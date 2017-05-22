@@ -2,36 +2,44 @@
 
 mkdir -p log
 
-if [ `hostname` == erode-lom ]; then
-    /mnt/ssd/flsm/lock_server.sh hao_tongliang
-    if [ `cat /mnt/ssd/flsm/lock` != "hao_tongliang" ]; then
-        echo "Server lock acquiring failed: held by" `cat /mnt/ssd/flsm/lock`
-        exit 1
-    fi
-fi
-
 export ASAN_OPTIONS=use_odr_indicator=1
 
 export TEST_TYPE='0 1 2 3 4 5 6'
 
-make test_mt TEST_ARGS='25 4 4 19 16 16' 2>&1 | tee log/4K-Overlay.log
-for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s\# -t; echo; echo; done
+NAMES="\
+4K-Overlay
+4K-Discrete
+64K-Overlay
+64K-Discrete
+1M-Overlay
+1M-Discrete
+"
 
-make test_mt TEST_ARGS='34 4 4 19 16 16' 2>&1 | tee log/4K-Discrete.log
-for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s\# -t; echo; echo; done
+ARGS="\
+25 4 4 19 16 16
+34 4 4 19 16 16
+27 64 64 17 14 14
+34 64 64 17 14 14
+27 1024 1024 13 10 10
+35 1024 1024 13 10 10
+"
 
-make test_mt TEST_ARGS='27 64 64 17 14 14' 2>&1 | tee log/64K-Overlay.log
-for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s\# -t; echo; echo; done
+# ARGS="\
+# 20 4 4 10 10 10
+# 20 4 4 10 10 10
+# 20 64 64 10 10 10
+# 20 64 64 10 10 10
+# 20 1024 1024 10 10 10
+# 20 1024 1024 10 10 10
+# "
 
-make test_mt TEST_ARGS='34 64 64 17 14 14' 2>&1 | tee log/64K-Discrete.log
-for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s\# -t; echo; echo; done
+for i in $(seq $(expr $(wc -l <<<"$ARGS") - 1)); do
+    rm -rf log/last
+    if [ -e log/$(head -n$i <<<"$NAMES" | tail -n1) ]; then
+        cp -rf log/$(head -n$i <<<"$NAMES" | tail -n1) log/last
+    fi
+    make test_mt TEST_ARGS="$(head -n$i <<<"$ARGS" | tail -n1)"
+    rm -rf log/$(head -n$i <<<"$NAMES" | tail -n1)
+    mv log/last log/$(head -n$i <<<"$NAMES" | tail -n1)
+done
 
-make test_mt TEST_ARGS='27 1024 1024 13 10 10' 2>&1 | tee log/1M-Overlay.log
-for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s\# -t; echo; echo; done
-
-make test_mt TEST_ARGS='35 1024 1024 13 10 10' 2>&1 | tee log/1M-Discrete.log
-for i in `ls log/*.log`; do echo $i; head -n11 $i | tail -n+2; grep iops $i | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s\# -t; echo; echo; done
-
-if [ `hostname` == erode-lom ]; then
-    /mnt/ssd/flsm/unlock_server.sh hao_tongliang
-fi
