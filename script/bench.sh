@@ -5,9 +5,12 @@ mkdir -p log
 export ASAN_OPTIONS=use_odr_indicator=1
 
 export TEST_TYPE='0 1 2 3 4 5 6'
-export TEST_TYPE='0 2'
 
-NAMES="\
+if [ $1 == hdd ]; then
+export TEST_TYPE='0 2 3 4 5 6'
+fi
+
+export NAMES="\
 4K-Overlay
 4K-Discrete
 64K-Overlay
@@ -16,24 +19,36 @@ NAMES="\
 1M-Discrete
 "
 
-NAMES="\
-4K-Overlay
-64K-Overlay
+export ARGS="\
+24 4 4 15 8 10
+30 4 4 10 7 9
+25 64 64 14 9 11
+30 64 64 10 6 8
+26 1024 1024 10 5 7
+31 1024 1024 8 4 6
 "
 
-ARGS="\
-25 4 4 19 16 16
-34 4 4 19 16 16
-27 64 64 17 14 14
-34 64 64 17 14 14
-27 1024 1024 13 10 10
-35 1024 1024 13 10 10
+if [ $1 == ssd ]; then
+export ARGS="\
+25 4 4 19 17 17
+34 4 4 19 17 17
+27 64 64 17 15 15
+34 64 64 17 15 15
+27 1024 1024 13 11 11
+35 1024 1024 13 11 11
 "
+fi
 
-ARGS="\
-20 4 4 10 10 10
-20 64 64 10 10 10
+if [ $1 == hdd ]; then
+export ARGS="\
+24 4 4 17 15 15
+29 4 4 12 10 10
+25 64 64 14 12 12
+29 64 64 11 9 9
+26 1024 1024 12 9 9
+31 1024 1024 9 7 7
 "
+fi
 
 for i in $(seq $(expr $(wc -l <<<"$ARGS") - 1)); do
     rm -rf log/last

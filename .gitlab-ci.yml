@@ -70,9 +70,8 @@ Try-test_lat:
   variables:
     ASAN_OPTIONS: use_odr_indicator=1
   script:
-    - nice -n 0 make test_mt TEST_ARGS='24 4 4 15 8 10' 2>&1 | tee log/test_mt/4K-Overlay.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-    - grep iops log/test_mt/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - make test_mt TEST_ARGS='24 4 4 15 8 10'
+    - mv -f log/last log/test_mt/4K-Overlay
   artifacts:
     paths:
       - log/
@@ -88,9 +87,8 @@ Try-test_lat:
   variables:
     ASAN_OPTIONS: use_odr_indicator=1
   script:
-    - nice -n 0 make test_mt TEST_ARGS='30 4 4 10 7 9' 2>&1 | tee log/test_mt/4K-Discrete.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-    - grep iops log/test_mt/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - make test_mt TEST_ARGS='30 4 4 10 7 9'
+    - mv -f log/last log/test_mt/4K-Discrete
   artifacts:
     paths:
       - log/
@@ -106,9 +104,8 @@ Try-test_lat:
   variables:
     ASAN_OPTIONS: use_odr_indicator=1
   script:
-    - nice -n 0 make test_mt TEST_ARGS='25 64 64 14 9 11' 2>&1 | tee log/test_mt/64K-Overlay.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-    - grep iops log/test_mt/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - make test_mt TEST_ARGS='25 64 64 14 9 11'
+    - mv -f log/last log/test_mt/64K-Overlay
   artifacts:
     paths:
       - log/
@@ -124,9 +121,8 @@ Try-test_lat:
   variables:
     ASAN_OPTIONS: use_odr_indicator=1
   script:
-    - nice -n 0 make test_mt TEST_ARGS='30 64 64 10 6 8' 2>&1 | tee log/test_mt/64K-Discrete.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-    - grep iops log/test_mt/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - make test_mt TEST_ARGS='30 64 64 10 6 8'
+    - mv -f log/last log/test_mt/64K-Discrete
   artifacts:
     paths:
       - log/
@@ -142,9 +138,8 @@ Try-test_lat:
   variables:
     ASAN_OPTIONS: use_odr_indicator=1
   script:
-    - nice -n 0 make test_mt TEST_ARGS='26 1024 1024 10 5 7' 2>&1 | tee log/test_mt/1M-Overlay.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-    - grep iops log/test_mt/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - make test_mt TEST_ARGS='26 1024 1024 10 5 7'
+    - mv -f log/last log/test_mt/1M-Overlay
   artifacts:
     paths:
       - log/
@@ -160,15 +155,14 @@ Try-test_lat:
   variables:
     ASAN_OPTIONS: use_odr_indicator=1
   script:
-    - nice -n 0 make test_mt TEST_ARGS='31 1024 1024 8 4 6' 2>&1 | tee log/test_mt/1M-Discrete.log
-    - head -n11 log/test_mt/*.log | tail -n+2
-    - grep iops log/test_mt/*.log | sed 's/:.*, /:#/' | sed 's/#\([0-9][0-9]\.\)/# \1/' | column -s# -t
+    - make test_mt TEST_ARGS='31 1024 1024 8 4 6'
+    - mv -f log/last log/test_mt/1M-Discrete
   artifacts:
     paths:
       - log/
     expire_in: 1 day
 
-.collect:
+collect:
   stage: collect
   tags:
     - docker
@@ -183,7 +177,7 @@ Try-test_lat:
     paths:
       - log/
 
-.latency:
+latency:
   stage: test_lat
   tags:
     - docker
@@ -193,13 +187,13 @@ Try-test_lat:
   variables:
     ASAN_OPTIONS: use_odr_indicator=1
   script:
-    - for k in `seq 2 12 | sed 's/\([0-9]*\)/2^\1/g' | bc`; do for l in `seq 0 6`; do nice -n 0 make test_lat TEST_LOAD=1 TEST_ARGS="31 $k $k 10 $l $l" 2>&1 | tee 'log/test_lat/latency-'$k'KB-'$l'Round.log'; done done 
+    - for k in `seq 2 12 | sed 's/\([0-9]*\)/2^\1/g' | bc`; do for l in `seq 0 6`; do make test_lat TEST_LOAD=1 TEST_ARGS="31 $k $k 7 $l $l" 2>&1 | tee 'log/test_lat/latency-'$k'KB-'$l'Round.log'; done done 
   artifacts:
     paths:
       - log/
     expire_in: 1 day
 
-analysis:
+.analysis:
   stage: analysis
   tags:
     - docker
