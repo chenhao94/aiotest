@@ -20,7 +20,7 @@ export TESTEXES = $(patsubst $(TESTS_DIR)/%.cpp,$(TARGETS_DIR)/%,$(TESTS))
 
 export LIBTAI = $(LIBS_DIR)/libtai.a
 
-export TEST_LOAD ?= 2#$(shell nproc --all)
+export TEST_LOAD ?= $(shell nproc --all)
 export TEST_ARGS ?= 30 64 64 14 8 10
 export TEST_TYPE ?= $(shell seq 0 6)
 # For test_mt only:
