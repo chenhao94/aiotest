@@ -141,9 +141,9 @@ int main(int argc, char* argv[])
             thread_num, " threads, ",
             1e9 * IO_ROUND * (int(workload == 2) + 1) * thread_num / time, " iops");
 
-    if (testType == 4 || testType == 6)
+    if (testType == 5 || testType == 6)
     {
-        if (testType == 4)
+        if (testType == 5)
             aio_end();
         else
             TAIWrite::end();
