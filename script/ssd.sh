@@ -5,6 +5,7 @@ mkdir -p log
 export ASAN_OPTIONS=use_odr_indicator=1
 
 export TEST_TYPE='0 1 2 3 4 5 6'
+export TEST_TYPE='0 2'
 
 NAMES="\
 4K-Overlay
@@ -13,6 +14,11 @@ NAMES="\
 64K-Discrete
 1M-Overlay
 1M-Discrete
+"
+
+NAMES="\
+4K-Overlay
+64K-Overlay
 "
 
 ARGS="\
@@ -24,14 +30,10 @@ ARGS="\
 35 1024 1024 13 10 10
 "
 
-# ARGS="\
-# 20 4 4 10 10 10
-# 20 4 4 10 10 10
-# 20 64 64 10 10 10
-# 20 64 64 10 10 10
-# 20 1024 1024 10 10 10
-# 20 1024 1024 10 10 10
-# "
+ARGS="\
+20 4 4 10 10 10
+20 64 64 10 10 10
+"
 
 for i in $(seq $(expr $(wc -l <<<"$ARGS") - 1)); do
     rm -rf log/last

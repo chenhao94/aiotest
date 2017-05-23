@@ -128,24 +128,24 @@ test_mt: pre_test
 			    for l in `seq 0 1`; do                                                                  \
 	                if [ $(OS) == Darwin ]; then sudo purge; fi;                                        \
 	                if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;     \
-	                $(MKDIR) tmp/log/$$i/$$j/$$k log/last;                                              \
+	                $(MKDIR) tmp/log/$$l/$$i/$$j log/last;                                              \
 	                time (`if [ $(OS) == _Linux ]; then echo 'sudo perf stat -age cs'; fi`              \
 	                    bin/multi_thread_comp $$i $$j $$k $$l $(TEST_ARGS) 2>&1                         \
-						| tee tmp/log/$$i/$$j/$$k/$$l.log                                               \
+						| tee tmp/log/$$l/$$i/$$j/$$k.log                                               \
 	                );                                                                                  \
 	                time (sync tmp/*);                                                                  \
-	                $(MV) tmp/log/$$i/$$j/$$k/0.log tmp/log/$$i/$$j/$$k/multi.log 2>/dev/null;          \
-	                $(MV) tmp/log/$$i/$$j/$$k/1.log tmp/log/$$i/$$j/$$k/single.log 2>/dev/null;         \
-	                $(MV) tmp/log/$$i/0 tmp/log/$$i/r 2>/dev/null;                                      \
-	                $(MV) tmp/log/$$i/1 tmp/log/$$i/w 2>/dev/null;                                      \
-	                $(MV) tmp/log/$$i/2 tmp/log/$$i/rw 2>/dev/null;                                     \
-	                $(MV) tmp/log/0 tmp/log/Posix 2>/dev/null;                                          \
-	                $(MV) tmp/log/1 tmp/log/DIO 2>/dev/null;                                            \
-	                $(MV) tmp/log/2 tmp/log/Fstream 2>/dev/null;                                        \
-	                $(MV) tmp/log/3 tmp/log/PosixAIO 2>/dev/null;                                       \
-	                $(MV) tmp/log/4 tmp/log/LibAIO 2>/dev/null;                                         \
-	                $(MV) tmp/log/5 tmp/log/TaiAIO 2>/dev/null;                                         \
-	                $(MV) tmp/log/6 tmp/log/Tai 2>/dev/null;                                            \
+	                $(MV) tmp/log/$$l/$$i/0 tmp/log/$$l/$$i/r 2>/dev/null;                              \
+	                $(MV) tmp/log/$$l/$$i/1 tmp/log/$$l/$$i/w 2>/dev/null;                              \
+	                $(MV) tmp/log/$$l/$$i/2 tmp/log/$$l/$$i/rw 2>/dev/null;                             \
+	                $(MV) tmp/log/$$l/0 tmp/log/$$l/Posix 2>/dev/null;                                  \
+	                $(MV) tmp/log/$$l/1 tmp/log/$$l/DIO 2>/dev/null;                                    \
+	                $(MV) tmp/log/$$l/2 tmp/log/$$l/Fstream 2>/dev/null;                                \
+	                $(MV) tmp/log/$$l/3 tmp/log/$$l/PosixAIO 2>/dev/null;                               \
+	                $(MV) tmp/log/$$l/4 tmp/log/$$l/LibAIO 2>/dev/null;                                 \
+	                $(MV) tmp/log/$$l/5 tmp/log/$$l/TaiAIO 2>/dev/null;                                 \
+	                $(MV) tmp/log/$$l/6 tmp/log/$$l/Tai 2>/dev/null;                                    \
+	                $(MV) tmp/log/0 tmp/log/Multi 2>/dev/null;                                          \
+	                $(MV) tmp/log/1 tmp/log/Single 2>/dev/null;                                         \
 					$(MKDIR) log/last;                                                                  \
 	                rsync -a log/last/ tmp/log/;                                                        \
 	                $(MV) log/last log/~last;                                                           \
