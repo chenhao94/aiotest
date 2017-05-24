@@ -166,10 +166,16 @@ public:
     virtual void syncop() = 0;
 
     TAI_INLINE
+    virtual void osync() { syncop(); }
+
+    TAI_INLINE
     virtual void reset_cb() {}
 
     TAI_INLINE
     virtual void wait_cb() {}
+
+    TAI_INLINE
+    virtual void wait_back(int num) { wait_cb(); }
 
     TAI_INLINE
     virtual void busywait_cb() {}
@@ -618,12 +624,6 @@ class TAIAIOWrite : public RandomWrite
     std::array<std::vector<tai::aiocb, tai::Alloc<tai::aiocb>>, MAX_THREAD_NUM> cbs;
 
 public: 
-    TAI_INLINE
-    TAIAIOWrite()
-    {
-        for (auto &i : cbs)
-            i.reserve(8 * IO_ROUND);
-    }
 
     TAI_INLINE
     virtual void reset_cb() override
@@ -668,6 +668,29 @@ public:
         wait_cb_common(true);
     }
 
+    TAI_INLINE
+    virtual void wait_back(int num) override
+    {
+        using namespace std;
+        using namespace tai;
+        for (; num && !cbs[tid].empty(); --num)
+        {
+            auto i = &*(cbs[tid].end() - 1);
+            auto err = aio_wait(i);
+            if (unlikely(err))
+            {
+                cerr << err <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
+                cerr << "reqprio: " << i->aio_reqprio << ", offset: " << i->aio_offset << " , nbytes: " << i->aio_nbytes << endl; 
+                exit(-1);
+            }
+            else
+                aio_return(i);
+            cbs[tid].pop_back();
+        }
+
+    }
+
+    TAI_INLINE
     TAI_INLINE
     virtual void cleanup() override
     {
@@ -727,11 +750,17 @@ public:
     }
 
     TAI_INLINE
+    virtual void osync() override
+    {
+    }
+
+    TAI_INLINE
     virtual void openfile(const std::string& filename) override
     {
         using namespace std;
         using namespace tai;
 
+        cbs[tid].reserve(8 * IO_ROUND);
         if (opencnt.fetch_add(1) > 0)
         {
             while (!opened.load());
@@ -740,7 +769,6 @@ public:
         #ifdef _POSIX_VERSION
         fd = open(filename.c_str(), openflags);
         register_fd(fd, filename);
-        //cbs[tid].reserve(8 * IO_ROUND);
         #else
         cerr << "RandomWrite::openfile() needs POSIX support." << endl;
         #endif
@@ -849,6 +877,19 @@ public:
     }
 
     TAI_INLINE
+    virtual void wait_back(int num) override
+    {
+        using namespace std;
+        using namespace chrono_literals;
+        for (; num && !ios[tid].empty(); --num)
+        {
+            ios[tid].back()->wait(32ms);
+            ios[tid].pop_back();
+        }
+
+    }
+
+    TAI_INLINE
     virtual void busywait_cb() override
     {
         using namespace tai;
@@ -895,6 +936,11 @@ public:
             cerr << "Error at TAI sync." << endl;
             exit(-1);
         }
+    }
+
+    TAI_INLINE
+    virtual void osync() override
+    {
     }
 
     TAI_INLINE
