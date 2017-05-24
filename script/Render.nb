@@ -1,0 +1,302 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     12008,        294]
+NotebookOptionsPosition[     11691,        279]
+NotebookOutlinePosition[     12046,        295]
+CellTagsIndexPosition[     12003,        292]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{
+       RowBox[{
+        RowBox[{"Through", "@", 
+         RowBox[{
+          RowBox[{"{", 
+           RowBox[{"(*", 
+            RowBox[{"Print", ","}], "*)"}], 
+           RowBox[{
+            RowBox[{"Export", "[", 
+             RowBox[{
+              RowBox[{
+               RowBox[{
+                RowBox[{"(", 
+                 RowBox[{
+                  RowBox[{
+                   RowBox[{
+                    RowBox[{"If", "[", 
+                    RowBox[{
+                    RowBox[{"\[Not]", 
+                    RowBox[{"DirectoryQ", "@", "#"}]}], ",", 
+                    RowBox[{"CreateDirectory", "[", 
+                    RowBox[{"#", ",", 
+                    RowBox[{
+                    "CreateIntermediateDirectories", "\[Rule]", "True"}]}], 
+                    "]"}]}], "]"}], "&"}], "@", 
+                   RowBox[{"DirectoryName", "@", "#"}]}], ";", "#"}], ")"}], 
+                "&"}], "@", 
+               RowBox[{"FileNameJoin", "@", 
+                RowBox[{"{", 
+                 RowBox[{
+                  RowBox[{"DirectoryName", "@", 
+                   RowBox[{"NotebookDirectory", "[", "]"}]}], ",", 
+                  "\"\<tmp\>\"", ",", "\"\<Performance.pdf\>\""}], "}"}]}]}], 
+              ",", "#"}], "]"}], "&"}], "}"}], "@", 
+          RowBox[{"TableForm", "[", 
+           RowBox[{"#", ",", 
+            RowBox[{"TableDirections", "\[Rule]", 
+             RowBox[{"{", 
+              RowBox[{"Row", ",", "Column"}], "}"}]}]}], "]"}]}]}], "&"}], 
+       "@", 
+       RowBox[{"Values", "@", 
+        RowBox[{"GroupBy", "[", 
+         RowBox[{"#", ",", 
+          RowBox[{
+           RowBox[{
+            RowBox[{"FileNameDrop", "[", 
+             RowBox[{
+              RowBox[{
+              "#", "\[LeftDoubleBracket]", "2", "\[RightDoubleBracket]"}], 
+              ",", "2"}], "]"}], "&"}], "\[Rule]", 
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"#", "\[LeftDoubleBracket]", 
+              RowBox[{"-", "1"}], "\[RightDoubleBracket]"}], "&"}], ")"}]}]}],
+          "]"}]}]}], "&"}], "@", 
+     RowBox[{"ParallelMap", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"Append", "[", 
+         RowBox[{
+          RowBox[{"#", "\[LeftDoubleBracket]", 
+           RowBox[{"1", ",", "1"}], "\[RightDoubleBracket]"}], ",", 
+          RowBox[{"BarChart", "[", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"#", "\[LeftDoubleBracket]", 
+              RowBox[{"All", ",", "All", ",", 
+               RowBox[{"-", "1"}]}], "\[RightDoubleBracket]"}], 
+             "\[Transpose]"}], ",", 
+            RowBox[{"PlotTheme", "\[Rule]", 
+             RowBox[{"{", 
+              RowBox[{"\"\<Wide\>\"", ",", "\"\<Detailed\>\""}], "}"}]}], ",", 
+            RowBox[{"PlotLabel", "\[Rule]", 
+             RowBox[{"Style", "[", 
+              RowBox[{
+               RowBox[{"#", "\[LeftDoubleBracket]", 
+                RowBox[{"1", ",", "1", ",", "2"}], "\[RightDoubleBracket]"}], 
+               ",", "Larger", ",", "Bold"}], "]"}]}], ",", 
+            RowBox[{"AxesLabel", "\[Rule]", 
+             RowBox[{"{", 
+              RowBox[{"\"\<\>\"", ",", "\"\<iops\>\""}], "}"}]}], ",", 
+            RowBox[{"GridLines", "\[Rule]", "Automatic"}], ",", 
+            RowBox[{"GridLinesStyle", "\[Rule]", 
+             RowBox[{"Directive", "[", 
+              RowBox[{"Dotted", ",", " ", "Gray"}], "]"}]}], ",", 
+            RowBox[{"ChartLabels", "\[Rule]", 
+             RowBox[{"{", 
+              RowBox[{
+               RowBox[{"Placed", "[", 
+                RowBox[{
+                 RowBox[{
+                  RowBox[{
+                   RowBox[{"(", 
+                    RowBox[{"\"\<[\>\"", "<>", 
+                    RowBox[{"FileBaseName", "@", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "4", 
+                    "\[RightDoubleBracket]"}]}], "<>", "\"\<]\>\"", "<>", 
+                    RowBox[{"FileBaseName", "@", 
+                    RowBox[{"DirectoryName", "@", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "4", 
+                    "\[RightDoubleBracket]"}]}]}]}], ")"}], "&"}], "/@", 
+                  RowBox[{
+                  "#", "\[LeftDoubleBracket]", "1", 
+                   "\[RightDoubleBracket]"}]}], ",", "Below"}], "]"}], ",", 
+               RowBox[{"Array", "[", 
+                RowBox[{
+                 RowBox[{"\"\<\>\"", "&"}], ",", 
+                 RowBox[{
+                  RowBox[{"Dimensions", "[", "#", "]"}], 
+                  "\[LeftDoubleBracket]", "2", "\[RightDoubleBracket]"}]}], 
+                "]"}]}], "}"}]}], ",", 
+            RowBox[{"ChartLegends", "\[Rule]", 
+             RowBox[{"#", "\[LeftDoubleBracket]", 
+              RowBox[{"All", ",", "1", ",", "3"}], 
+              "\[RightDoubleBracket]"}]}], ",", 
+            RowBox[{"BarSpacing", "\[Rule]", 
+             RowBox[{"{", 
+              RowBox[{"0", ",", "1"}], "}"}]}], ",", 
+            RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}]}], "]"}], 
+        "&"}], ",", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"Values", "@", 
+          RowBox[{"GroupBy", "[", 
+           RowBox[{"#", ",", 
+            RowBox[{
+             RowBox[{"#", "\[LeftDoubleBracket]", 
+              RowBox[{"1", ",", "2"}], "\[RightDoubleBracket]"}], "&"}]}], 
+           "]"}]}], "&"}], "@", "#"}]}], "]"}]}], "&"}], "@", 
+   RowBox[{"ParallelMap", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{
+       RowBox[{
+        RowBox[{"Join", "[", 
+         RowBox[{"#", ",", 
+          RowBox[{
+           RowBox[{"Outer", "[", 
+            RowBox[{
+             RowBox[{
+              RowBox[{
+               RowBox[{
+               "#2", "\[LeftDoubleBracket]", "2", "\[RightDoubleBracket]"}], 
+               "@", 
+               RowBox[{"SelectFirst", "[", 
+                RowBox[{"#1", ",", 
+                 RowBox[{"StringContainsQ", "@", 
+                  RowBox[{
+                  "#2", "\[LeftDoubleBracket]", "1", 
+                   "\[RightDoubleBracket]"}]}]}], "]"}]}], "&"}], ",", 
+             RowBox[{"{", 
+              RowBox[{"StringTrim", "/@", 
+               RowBox[{"StringSplit", "[", 
+                RowBox[{
+                 RowBox[{
+                  RowBox[{"FindList", "[", 
+                   RowBox[{
+                    RowBox[{"FileNameJoin", "@", "#"}], ",", "\"\<iops\>\""}],
+                    "]"}], "\[LeftDoubleBracket]", "1", 
+                  "\[RightDoubleBracket]"}], ",", 
+                 RowBox[{"{", 
+                  RowBox[{"\"\<,\>\"", ",", "\"\<:\>\""}], "}"}]}], "]"}]}], 
+              "}"}], ",", 
+             RowBox[{"(", GridBox[{
+                {"\"\<iops\>\"", 
+                 RowBox[{
+                  RowBox[{"ToExpression", "@", 
+                   RowBox[{"StringDrop", "[", 
+                    RowBox[{"#", ",", 
+                    RowBox[{"-", "5"}]}], "]"}]}], "&"}]}
+               }], ")"}], ",", "1"}], "]"}], "\[LeftDoubleBracket]", "1", 
+           "\[RightDoubleBracket]"}]}], "]"}], "&"}], "/@", 
+       RowBox[{"Thread", "@", 
+        RowBox[{"Append", "[", 
+         RowBox[{"#", ",", 
+          RowBox[{
+           RowBox[{
+            RowBox[{"FileNameTake", "[", 
+             RowBox[{"#", ",", 
+              RowBox[{"-", "2"}]}], "]"}], "&"}], "/@", 
+           RowBox[{"AlphabeticSort", "@", 
+            RowBox[{"FileNames", "[", 
+             RowBox[{"\"\<*.log\>\"", ",", 
+              RowBox[{"FileNameJoin", "@", "#"}], ",", "\[Infinity]"}], 
+             "]"}]}]}]}], "]"}]}]}], "&"}], ",", 
+     RowBox[{"Outer", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"FileNameTake", "@", "##"}], "&"}], ",", 
+       RowBox[{"Union", "[", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"DirectoryName", "[", 
+           RowBox[{"#", ",", "2"}], "]"}], "&"}], "/@", 
+         RowBox[{"FileNames", "[", 
+          RowBox[{"\"\<*.log\>\"", ",", 
+           RowBox[{"FileNameJoin", "@", 
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"DirectoryName", "@", 
+               RowBox[{"NotebookDirectory", "[", "]"}]}], ",", 
+              "\"\<log\>\""}], "}"}]}], ",", "\[Infinity]"}], "]"}]}], "]"}], 
+       ",", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"(", GridBox[{
+            {"1", "#"},
+            {
+             RowBox[{"#", "+", "1"}], 
+             RowBox[{"-", "2"}]},
+            {
+             RowBox[{"-", "1"}], 
+             RowBox[{"-", "1"}]}
+           }], ")"}], "&"}], "@", 
+        RowBox[{"FileNameDepth", "@", 
+         RowBox[{"NotebookDirectory", "[", "]"}]}]}], ",", "1"}], "]"}]}], 
+    "]"}]}], ";"}]], "Input",
+ CellChangeTimes->{{3.704509641064165*^9, 3.704509660176725*^9}, {
+   3.7045111869677477`*^9, 3.704511278884733*^9}, {3.7045113586012297`*^9, 
+   3.704511364473374*^9}, {3.7045114047547407`*^9, 3.704511425103476*^9}, {
+   3.704511644856224*^9, 3.7045116470176888`*^9}, {3.704511754330265*^9, 
+   3.7045117784350843`*^9}, {3.704511819298608*^9, 3.7045118246486473`*^9}, {
+   3.704511970675091*^9, 3.7045119727536716`*^9}, {3.704512013895521*^9, 
+   3.7045120169563837`*^9}, {3.7045120474956703`*^9, 3.704512113292254*^9}, {
+   3.7045121704825277`*^9, 3.7045121806576033`*^9}, {3.704512230356864*^9, 
+   3.704512258771687*^9}, {3.7045124102415133`*^9, 3.704512507236957*^9}, {
+   3.704512598006213*^9, 3.7045128575578117`*^9}, {3.704512895860664*^9, 
+   3.704513052375658*^9}, {3.704513097888075*^9, 3.704513114879139*^9}, {
+   3.704513149548881*^9, 3.7045132664957113`*^9}, {3.704513354366056*^9, 
+   3.704513363589903*^9}, {3.7045137111767282`*^9, 3.7045137217212954`*^9}, {
+   3.704513756458919*^9, 3.7045137739806147`*^9}, {3.704513847253656*^9, 
+   3.7045138769020452`*^9}, {3.704513910888114*^9, 3.704513978177807*^9}, {
+   3.704514032503635*^9, 3.7045140408375397`*^9}, {3.704514120243554*^9, 
+   3.704514145163218*^9}, {3.704514266433547*^9, 3.7045143713159933`*^9}, {
+   3.704514412182156*^9, 3.70451443993813*^9}, {3.7045144827546263`*^9, 
+   3.7045145191518707`*^9}, {3.704514585771557*^9, 3.704514586609832*^9}, {
+   3.704514657450137*^9, 3.704514659111885*^9}, {3.7045147312403517`*^9, 
+   3.7045147315789013`*^9}, {3.7045147816916513`*^9, 3.704514827192482*^9}, {
+   3.7045148759716797`*^9, 3.7045148945751657`*^9}, 3.704514937026429*^9, {
+   3.704514981214522*^9, 3.704515013835164*^9}, {3.704515046474996*^9, 
+   3.704515059793981*^9}, {3.7045150898524647`*^9, 3.704515129845983*^9}, {
+   3.704515426981557*^9, 3.7045154589143257`*^9}, {3.704515506257388*^9, 
+   3.7045155352533417`*^9}, {3.704515576038475*^9, 3.7045155770020237`*^9}, {
+   3.7045156145532103`*^9, 3.7045157333219748`*^9}, {3.704515773294297*^9, 
+   3.704515906384326*^9}, {3.704515965399276*^9, 3.70451611861872*^9}, {
+   3.704516152801713*^9, 3.704516250356938*^9}, {3.7045162857694407`*^9, 
+   3.704516344464943*^9}, {3.70451639073186*^9, 3.7045164584527082`*^9}, {
+   3.704516513013382*^9, 3.7045166323574038`*^9}, {3.70451667856868*^9, 
+   3.704516783137895*^9}},ExpressionUUID->"8fc061d8-8ded-4df3-986d-\
+19d5c139cd2c"]
+},
+WindowSize->{Full, Full},
+WindowMargins->{{Automatic, 0}, {Automatic, 0}},
+FrontEndVersion->"11.1 for Mac OS X x86 (32-bit, 64-bit Kernel) (March 16, \
+2017)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 11129, 257, 369, "Input", "ExpressionUUID" -> \
+"8fc061d8-8ded-4df3-986d-19d5c139cd2c"]
+}
+]
+*)
+

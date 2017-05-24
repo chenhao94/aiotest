@@ -41,9 +41,6 @@ namespace tai
         // Worker thread handle.
         std::unique_ptr<std::thread> handle = nullptr;
 
-        // Neighbor list used for tree-style communication.
-        std::array<size_t, 2> neighbor;
-
     public:
         using Task = std::function<void()>;
 
@@ -64,7 +61,6 @@ namespace tai
             gid(_.gid),
             cleanup(_.cleanup),
             handle(std::move(_.handle)),
-            neighbor(std::move(_.neighbor)),
             id(_.id),
             state(_.state.load(std::memory_order_relaxed)),
             reject(_.reject.load(std::memory_order_relaxed))

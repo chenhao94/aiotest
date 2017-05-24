@@ -25,12 +25,6 @@ namespace tai
     {
         if (!pool.pop(gid))
             gid = poolSize.fetch_add(1, std::memory_order_relaxed);
-        neighbor[0] = id * neighbor.size() + 1;
-            for (size_t i = 1; i < neighbor.size(); ++i)
-                neighbor[i] = neighbor[i - 1] + 1;
-        for (auto& i : neighbor)
-            if (i >= ctrl.concurrency)
-                i = -1;
     }
 
     void Worker::go()
@@ -41,15 +35,14 @@ namespace tai
 
         #ifdef _POSIX_THREADS
         #ifndef __APPLE__
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        if (ctrl.affinity)
-            CPU_SET(getGID() % thread::hardware_concurrency(), &cpuset);
-        else
-            for (auto i = thread::hardware_concurrency(); i--; CPU_SET(i, &cpuset));
-
-        if (auto err = pthread_setaffinity_np(handle->native_handle(), sizeof(cpu_set_t), &cpuset))
-            Log::log("Warning: Failed to set thread affinity (Error: ", err, " ", strerror(err), ").");
+        if (ctrl.affinity && id)
+        {
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            CPU_SET(id % thread::hardware_concurrency(), &cpuset);
+            if (auto err = pthread_setaffinity_np(handle->native_handle(), sizeof(cpu_set_t), &cpuset))
+                Log::log("Warning: Failed to set thread affinity (Error: ", err, " ", strerror(err), ").");
+        }
         #endif
         #endif
     }

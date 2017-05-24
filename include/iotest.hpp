@@ -33,7 +33,7 @@
 
 #define unlikely(x)     __builtin_expect((x),0)
 
-static const std::string testname[] = {"Posix", "DIO", "PosixAIO", "LibAIO", "TaiAIO", "STL", "Tai"};
+static const std::string testname[] = {"Posix", "DIO", "STL", "PosixAIO", "LibAIO", "TaiAIO", "Tai"};
 static const std::string wlname[] = {"read", "write", "read&write"};
 
 extern size_t testType;
@@ -41,9 +41,9 @@ extern size_t FILE_SIZE;
 extern size_t WRITE_SIZE;
 extern size_t IO_ROUND;
 
-extern size_t thread_num;
 extern size_t testType;
 extern size_t workload;
+extern size_t thread_num;
 extern size_t FILE_SIZE;
 extern size_t READ_SIZE;
 extern size_t WRITE_SIZE;
@@ -51,7 +51,7 @@ extern size_t IO_ROUND;
 extern size_t SYNC_RATE;
 extern size_t WAIT_RATE;
 
-extern bool SINGLE_FILE;
+extern size_t SINGLE_FILE;
 
 static constexpr size_t MAX_THREAD_NUM = 8;
 
@@ -60,33 +60,32 @@ static void processArgs(int argc, char* argv[])
     using namespace std;
     using namespace tai;
 
-    if (argc < 10)
+    if (argc < 11)
     {
         cerr << "Need arguments for thread number, type of IO to test and workload type" << endl;
         exit(-1);
     }
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 1])); }({
-            &thread_num,
+
+    size_t off = 1;
+
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + off])); off += _.size(); }({
             &testType,
             &workload,
+            &thread_num,
+            &SINGLE_FILE
             });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 4])); }({
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + off])); off += _.size(); }({
             &FILE_SIZE,
             });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + 5])); }({
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = stoll(argv[i + off]) << 10); off += _.size(); }({
             &READ_SIZE,
-            &WRITE_SIZE,
+            &WRITE_SIZE
             });
-    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + 7])); }({
+    [&](vector<size_t*> _){ for (auto i = _.size(); i--; *_[i] = 1ll << stoll(argv[i + off])); off += _.size(); }({
             &IO_ROUND,
             &SYNC_RATE,
             &WAIT_RATE
             });
-    if (argc > 10)
-        SINGLE_FILE = (stoll(argv[10]) > 0);
-
-    READ_SIZE = READ_SIZE << 10;
-    WRITE_SIZE = WRITE_SIZE << 10;
 
     Log::log("thread number: ", thread_num);
     Log::log(testname[testType], " on ", SINGLE_FILE ? "single file" : "multiple files");
@@ -248,7 +247,7 @@ template <bool concurrent = false>
 class FstreamWrite : public BlockingWrite
 {
     std::fstream file;
-    std::mutex writeLock;
+    std::mutex mtx;
 
 public: 
     TAI_INLINE
@@ -260,20 +259,20 @@ public:
     virtual void writeop(off_t offset, char* data) override
     {
         if (concurrent)
-            writeLock.lock();
+            mtx.lock();
         file.seekp(offset).write(data, WRITE_SIZE);
         if (concurrent)
-            writeLock.unlock();
+            mtx.unlock();
     }
 
     TAI_INLINE
     virtual void readop(off_t offset, char* data) override
     {
         if (concurrent)
-            writeLock.lock();
+            mtx.lock();
         file.seekg(offset).read(data, READ_SIZE);
         if (concurrent)
-            writeLock.unlock();
+            mtx.unlock();
     }
 
     TAI_INLINE

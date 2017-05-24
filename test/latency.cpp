@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 
     delete[] data;
 
-    if (testType == 4)
+    if (testType == 5)
         aio_end();
     if (testType == 6)
         TAIWrite::end();
