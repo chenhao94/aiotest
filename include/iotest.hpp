@@ -326,6 +326,17 @@ class AIOWrite : public RandomWrite
 public:
 
     TAI_INLINE
+    AIOWrite()
+    {
+        #ifdef _POSIX_VERSION
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            cbs[i].reserve(8 * IO_ROUND);
+        #else
+        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
+        #endif
+    }
+
+    TAI_INLINE
     virtual void reset_cb() override
     {
         using namespace std;
@@ -448,16 +459,6 @@ public:
         #endif
     }
 
-    TAI_INLINE
-    virtual void openfile(const std::string& filename)
-    {
-        RandomWrite::openfile(filename);
-        #ifdef _POSIX_VERSION
-        cbs[tid].reserve(8 * IO_ROUND);
-        #else
-        cerr << "Warning: POSIX AIO needs POSIX support." << endl;
-        #endif
-    }
 };
 
 template <bool concurrent = false>
@@ -477,6 +478,8 @@ public:
         using namespace std;
 
         #ifdef __linux__
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            cbs[i].reserve(8 * IO_ROUND);
         if (auto err = io_setup(131072, &io_cxt))
         {
             cerr << err << " " << strerror(err) << endl;
@@ -606,16 +609,6 @@ public:
         wait_cb();
     }
 
-    TAI_INLINE
-    virtual void openfile(const std::string& filename)
-    {
-        RandomWrite::openfile(filename);
-        #ifdef _POSIX_VERSION
-        cbs[tid].reserve(8 * IO_ROUND);
-        #else
-        cerr << "Warning: LibAIOWrite needs POSIX support." << endl;
-        #endif
-    }
 };
 
 class TAIAIOWrite : public RandomWrite
@@ -623,6 +616,13 @@ class TAIAIOWrite : public RandomWrite
     std::array<std::vector<tai::aiocb, tai::Alloc<tai::aiocb>>, MAX_THREAD_NUM> cbs;
 
 public: 
+
+    TAI_INLINE
+    TAIAIOWrite()
+    {
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            cbs[i].reserve(8 * IO_ROUND);
+    }
 
     TAI_INLINE
     virtual void reset_cb() override
@@ -689,7 +689,6 @@ public:
 
     }
 
-    TAI_INLINE
     TAI_INLINE
     virtual void cleanup() override
     {
@@ -759,7 +758,6 @@ public:
         using namespace std;
         using namespace tai;
 
-        cbs[tid].reserve(8 * IO_ROUND);
         if (opencnt.fetch_add(1) > 0)
         {
             while (!opened.load());
@@ -784,6 +782,7 @@ public:
         wait_cb();
         if (opencnt.fetch_sub(1) > 1)
             return;
+        Log::log("closing up...");
         deregister_fd(fd);
         #ifdef _POSIX_VERSION
         close(fd);
@@ -812,6 +811,8 @@ public:
         static atomic_flag master = ATOMIC_FLAG_INIT;
         static atomic<bool> slave(false);
 
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            ios[i].reserve(8 * IO_ROUND);
         if (!master.test_and_set(memory_order_acq_rel))
         {
             ctrl.reset(new Controller(1ll << 30, 1ll << 32, -1));
@@ -831,7 +832,6 @@ public:
             while (!opened.load());
             return;
         }
-        ios[tid].reserve(8 * IO_ROUND);
         bt.reset(new BTree<44, 4, 4, 12>(new POSIXEngine(filename, O_CREAT | O_RDWR
                         #ifdef __linux__
                         | O_DIRECT

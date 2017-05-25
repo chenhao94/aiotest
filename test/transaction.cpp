@@ -39,11 +39,13 @@ void run(RandomWrite *rw, int tid)
         rw->readop(py, buf + READ_SIZE);
         rw->wait_back(2);
         rw->writeop(px, data);
-        rw->osync();
+        //rw->osync();
         rw->writeop(py, data);
-        rw->osync();
+        //rw->osync();
         rw->writeop(pz, data);
-        rw->osync();
+        //rw->osync();
+        if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
+            Log::log("[Thread ", rw->tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
     }
     rw->syncop();
     rw->cleanup();
@@ -80,9 +82,9 @@ int main(int argc, char* argv[])
     rw->closefile();
     auto time = duration_cast<nanoseconds>(high_resolution_clock::now() - start).count();
 
-    if (testType == 4 || testType == 6)
+    if (testType == 5 || testType == 6)
     {
-        if (testType == 4)
+        if (testType == 5)
             aio_end();
         else
             TAIWrite::end();

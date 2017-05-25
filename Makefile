@@ -153,6 +153,18 @@ test_mt: pre_test
 	                $(RM) log/~last;                                                                    \
 	done done done done
 
+.PHONY: test_tx
+test_tx: pre_test
+	@for i in $(TEST_TYPE); do for k in `seq $(TEST_LOAD)`; do 								\
+		if [ $(OS) == Darwin ]; then sudo purge; fi;                                        \
+		if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;     \
+		$(MKDIR) tmp/log/tx/$$i;                                              \
+		time (`if [ $(OS) == _Linux ]; then echo 'sudo perf stat -age cs'; fi`              \
+		bin/transaction $$i 0 $$k 1 $(TEST_ARGS) 2>&1                        		\
+		| tee tmp/log/tx/$$i/$$k.log                                               	\
+		);                                                                                  \
+	done done
+
 .PHONY: test_lat
 test_lat: pre_test
 	@for i in $(TEST_TYPE); do for j in `seq 0 1`; do                                   \
