@@ -871,7 +871,7 @@ public:
         using namespace chrono_literals;
 
         for (auto& i : ios[tid])
-            i->wait(32ms);
+            i->wait(1ms);
         reset_cb();
     }
 
@@ -882,7 +882,7 @@ public:
         using namespace chrono_literals;
         for (; num && !ios[tid].empty(); --num)
         {
-            ios[tid].back()->wait(32ms);
+            ios[tid].back()->wait(1ms);
             ios[tid].pop_back();
         }
 

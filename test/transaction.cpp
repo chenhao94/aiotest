@@ -21,8 +21,8 @@ void run(RandomWrite *rw, int tid)
     #ifndef __MACH__
         (align_val_t(4096))
     #endif
-        char[WRITE_SIZE];
-    memset(data, 'a', sizeof(WRITE_SIZE));
+        char[WRITE_SIZE * 2];
+    memset(data, 'a', sizeof(WRITE_SIZE * 2));
     buf = new
     #ifndef __MACH__
         (align_val_t(4096))
@@ -38,12 +38,18 @@ void run(RandomWrite *rw, int tid)
         rw->readop(px, buf);
         rw->readop(py, buf + READ_SIZE);
         rw->wait_back(2);
+        for (auto j = 16; j--; rw->writeop(randgen(WRITE_SIZE), data));
         rw->writeop(px, data);
-        //rw->osync();
+        //rw->syncop();
         rw->writeop(py, data);
-        //rw->osync();
-        rw->writeop(pz, data);
-        //rw->osync();
+        rw->syncop();
+        auto dxy = (long long *)data;
+        auto dz = (long long *)(data + WRITE_SIZE);
+        for (size_t j = 0; j < WRITE_SIZE / 8; ++j)
+            for (size_t k = 0; k < WRITE_SIZE / 8; k += WRITE_SIZE / 1024)
+                dz[j] = (dz[j] >> 1) ^ (dz[j] << sizeof(dz[j]) * 8 - 1) ^ dxy[k];
+        rw->writeop(pz, data + WRITE_SIZE);
+        rw->syncop();
         if (!i || i * 10 / IO_ROUND > (i - 1) * 10 / IO_ROUND)
             Log::log("[Thread ", rw->tid, "]", "Progess ", i * 100 / IO_ROUND, "\% finished.");
     }
@@ -95,6 +101,6 @@ int main(int argc, char* argv[])
             IO_ROUND, " tx/thread, ",
             READ_SIZE >> 10, " KB/IO, " ,
             thread_num, " threads, ",
-            1e9 * IO_ROUND * thread_num / time, " txps");
+            1e9 * IO_ROUND * thread_num / time, " iops");
     return 0;
 }
