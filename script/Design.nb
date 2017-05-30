@@ -1,0 +1,1186 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.1' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     48013,       1178]
+NotebookOptionsPosition[     47691,       1163]
+NotebookOutlinePosition[     48049,       1179]
+CellTagsIndexPosition[     48006,       1176]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"rec", ":=", 
+   RowBox[{
+    RowBox[{"Rectangle", "[", 
+     RowBox[{"##", ",", 
+      RowBox[{"RoundingRadius", "\[Rule]", 
+       FractionBox["1", "8"]}]}], "]"}], "&"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"Print", "@", 
+         RowBox[{
+         "#", "\[LeftDoubleBracket]", "2", "\[RightDoubleBracket]"}]}], ";", 
+        RowBox[{"If", "[", 
+         RowBox[{
+          RowBox[{"\[Not]", 
+           RowBox[{"DirectoryQ", "@", 
+            RowBox[{
+            "#", "\[LeftDoubleBracket]", "1", "\[RightDoubleBracket]"}]}]}], 
+          ",", 
+          RowBox[{"CreateDirectory", "@", 
+           RowBox[{
+           "#", "\[LeftDoubleBracket]", "1", "\[RightDoubleBracket]"}]}]}], 
+         "]"}], ";", 
+        RowBox[{"Export", "[", 
+         RowBox[{
+          RowBox[{"FileNameJoin", "@", 
+           RowBox[{"{", 
+            RowBox[{
+             RowBox[{
+             "#", "\[LeftDoubleBracket]", "1", "\[RightDoubleBracket]"}], 
+             ",", "\"\<Arch.pdf\>\""}], "}"}]}], ",", 
+          RowBox[{
+          "#", "\[LeftDoubleBracket]", "2", "\[RightDoubleBracket]"}]}], 
+         "]"}]}], ")"}], "&"}], "@", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"FileNameJoin", "@", 
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"DirectoryName", "@", 
+           RowBox[{"NotebookDirectory", "[", "]"}]}], ",", "\"\<doc\>\"", 
+          ",", "\"\<imgs\>\""}], "}"}]}], ",", "#"}], "}"}]}], "&"}], "@", 
+   RowBox[{"Show", "[", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{
+      RowBox[{
+       RowBox[{"Graphics", "/@", 
+        RowBox[{"Join", "[", 
+         RowBox[{
+          RowBox[{"{", 
+           RowBox[{"Arrowheads", "@", 
+            FractionBox["1", "80"]}], "}"}], ",", "\[IndentingNewLine]", 
+          RowBox[{"(", GridBox[{
+             {
+              RowBox[{"EdgeForm", "@", "Thick"}], "LightBlue", 
+              RowBox[{
+               RowBox[{
+                RowBox[{
+                 RowBox[{
+                  RowBox[{"(", 
+                   RowBox[{"rec", "@@", 
+                    RowBox[{"(", 
+                    RowBox[{
+                    RowBox[{"(", GridBox[{
+                    {"0", "0"},
+                    {
+                    RowBox[{
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}], "+", "8"}], "21"}
+                    }], ")"}], "+", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}]}], ")"}]}], ")"}], "&"}], "/@", 
+                 
+                 RowBox[{"Thread", "@", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}], ",", 
+                    RowBox[{"Reverse", "@", 
+                    FractionBox[
+                    RowBox[{"Range", "[", 
+                    RowBox[{"0", ",", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}]}], "]"}], 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}]]}]}], "}"}]}]}], "&"}], "@", 
+               RowBox[{"{", 
+                RowBox[{"#", ",", "2"}], "}"}]}], "Black", 
+              RowBox[{"Style", "[", 
+               RowBox[{
+                RowBox[{"Text", "[", 
+                 RowBox[{"\"\<Controller\>\"", ",", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{
+                    RowBox[{
+                    FractionBox["3", "2"], "#"}], "+", "4"}], ",", "20"}], 
+                   "}"}]}], "]"}], ",", "Larger"}], "]"}]},
+             {
+              RowBox[{"EdgeForm", "@", "Black"}], "LightOrange", 
+              RowBox[{"rec", "@@", 
+               RowBox[{"(", GridBox[{
+                  {"1", "4"},
+                  {
+                   RowBox[{
+                    RowBox[{"3", "#"}], "+", "5"}], "6"}
+                 }], ")"}]}], "Black", 
+              RowBox[{"Style", "[", 
+               RowBox[{"Text", "[", 
+                RowBox[{"\"\<Cache\>\"", ",", 
+                 RowBox[{"{", 
+                  RowBox[{
+                   RowBox[{
+                    RowBox[{"3", "#"}], "+", "3"}], ",", "5"}], "}"}]}], 
+                "]"}], "]"}]},
+             {
+              RowBox[{"EdgeForm", "@", "Black"}], "LightGreen", 
+              RowBox[{"rec", "@@", 
+               RowBox[{"(", GridBox[{
+                  {"1", "1"},
+                  {
+                   RowBox[{
+                    RowBox[{"3", "#"}], "+", "5"}], "3"}
+                 }], ")"}]}], "Black", 
+              RowBox[{"Style", "[", 
+               RowBox[{"Text", "[", 
+                RowBox[{"\"\<Tasks\>\"", ",", 
+                 RowBox[{"{", 
+                  RowBox[{
+                   RowBox[{
+                    RowBox[{"3", "#"}], "+", "3"}], ",", "2"}], "}"}]}], 
+                "]"}], "]"}]},
+             {
+              RowBox[{"EdgeForm", "@", "Black"}], "Transparent", 
+              RowBox[{"Rectangle", "@@", 
+               RowBox[{"(", GridBox[{
+                  {
+                   FractionBox["5", "4"], 
+                   FractionBox["17", "4"]},
+                  {
+                   RowBox[{
+                    RowBox[{"3", "#"}], "+", "1"}], 
+                   FractionBox["23", "4"]}
+                 }], ")"}]}], 
+              RowBox[{"EdgeForm", "@", "Thin"}], 
+              RowBox[{
+               RowBox[{
+                RowBox[{"(", 
+                 RowBox[{"Rectangle", "@@", 
+                  RowBox[{"(", GridBox[{
+                    {"#", 
+                    FractionBox["17", "4"]},
+                    {"#", 
+                    FractionBox["23", "4"]}
+                    }], ")"}]}], ")"}], "&"}], "/@", 
+               RowBox[{"(", 
+                RowBox[{"RandomReal", "[", 
+                 RowBox[{
+                  RowBox[{"{", 
+                   RowBox[{
+                    FractionBox["5", "4"], ",", 
+                    RowBox[{
+                    RowBox[{"3", "#"}], "+", "1"}]}], "}"}], ",", 
+                  RowBox[{"10", "#"}]}], "]"}], ")"}]}]},
+             {
+              RowBox[{"EdgeForm", "@", "Black"}], "Transparent", 
+              RowBox[{"Rectangle", "@@", 
+               RowBox[{"(", GridBox[{
+                  {
+                   FractionBox["5", "4"], 
+                   FractionBox["5", "4"]},
+                  {
+                   RowBox[{
+                    RowBox[{"3", "#"}], "+", "1"}], 
+                   FractionBox["11", "4"]}
+                 }], ")"}]}], 
+              RowBox[{"EdgeForm", "@", "Thin"}], 
+              RowBox[{
+               RowBox[{
+                RowBox[{"(", 
+                 RowBox[{"Rectangle", "@@", 
+                  RowBox[{"(", GridBox[{
+                    {"#", 
+                    FractionBox["5", "4"]},
+                    {"#", 
+                    FractionBox["11", "4"]}
+                    }], ")"}]}], ")"}], "&"}], "/@", 
+               RowBox[{"(", 
+                RowBox[{
+                 RowBox[{
+                  RowBox[{"#", "+", 
+                   RowBox[{
+                    FractionBox[
+                    RowBox[{"#2", "-", "#"}], "#3"], 
+                    RowBox[{"Range", "@", "#3"}]}]}], "&"}], "[", 
+                 RowBox[{
+                  FractionBox["5", "4"], ",", 
+                  RowBox[{
+                   RowBox[{"3", "#"}], "+", "1"}], ",", 
+                  RowBox[{"10", "#"}]}], "]"}], ")"}]}]},
+             {
+              RowBox[{"EdgeForm", "@", "Thick"}], "LightBrown", 
+              RowBox[{"rec", "@@", 
+               RowBox[{"(", GridBox[{
+                  {
+                   RowBox[{"-", "2"}], "0"},
+                  {
+                   RowBox[{"-", "8"}], "22"}
+                 }], ")"}]}], "Black", 
+              RowBox[{"Style", "[", 
+               RowBox[{
+                RowBox[{"Text", "[", 
+                 RowBox[{"\"\<Virtual I/O\>\"", ",", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{"-", "5"}], ",", "21"}], "}"}]}], "]"}], ",", 
+                "Larger"}], "]"}]},
+             {
+              RowBox[{"EdgeForm", "@", "Thick"}], "LightOrange", 
+              RowBox[{"rec", "@@", 
+               RowBox[{"(", GridBox[{
+                  {
+                   RowBox[{"-", "10"}], "0"},
+                  {
+                   RowBox[{"-", "16"}], "22"}
+                 }], ")"}]}], "Black", 
+              RowBox[{"Style", "[", 
+               RowBox[{
+                RowBox[{"Text", "[", 
+                 RowBox[{"\"\<Physical I/O\>\"", ",", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{"-", "13"}], ",", "21"}], "}"}]}], "]"}], ",", 
+                "Larger"}], "]"}]},
+             {
+              RowBox[{"EdgeForm", "@", "Thick"}], "LightGreen", 
+              RowBox[{
+               RowBox[{
+                RowBox[{
+                 RowBox[{
+                  RowBox[{"(", 
+                   RowBox[{"rec", "@@", 
+                    RowBox[{"(", 
+                    RowBox[{
+                    RowBox[{"(", GridBox[{
+                    {
+                    RowBox[{"-", "3"}], 
+                    RowBox[{"-", "18"}]},
+                    {
+                    RowBox[{"-", "16"}], 
+                    RowBox[{"-", "3"}]}
+                    }], ")"}], "+", "#"}], ")"}]}], ")"}], "&"}], "/@", 
+                 RowBox[{"Reverse", "@", 
+                  FractionBox[
+                   RowBox[{"Range", "[", 
+                    RowBox[{"0", ",", "#"}], "]"}], "#"]}]}], "&"}], "@", 
+               "4"}], "Black", 
+              RowBox[{"Style", "[", 
+               RowBox[{
+                RowBox[{"Text", "[", 
+                 RowBox[{"\"\<BTree\>\"", ",", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{"-", 
+                    FractionBox["19", "2"]}], ",", 
+                    RowBox[{"-", "4"}]}], "}"}]}], "]"}], ",", "Larger"}], 
+               "]"}]},
+             {
+              RowBox[{"EdgeForm", "@", "Thick"}], "LightOrange", 
+              RowBox[{"rec", "@@", 
+               RowBox[{"(", GridBox[{
+                  {
+                   RowBox[{"-", "3"}], 
+                   RowBox[{"-", "18"}]},
+                  {
+                   RowBox[{"-", "16"}], 
+                   RowBox[{"-", "16"}]}
+                 }], ")"}]}], "Black", 
+              RowBox[{"Style", "[", 
+               RowBox[{
+                RowBox[{"Text", "[", 
+                 RowBox[{"\"\<File Handle\>\"", ",", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{"-", 
+                    FractionBox["19", "2"]}], ",", 
+                    RowBox[{"-", "17"}]}], "}"}]}], "]"}], ",", "Larger"}], 
+               "]"}]},
+             {
+              RowBox[{"EdgeForm", "@", "Thick"}], "LightMagenta", 
+              RowBox[{"rec", "@@", 
+               RowBox[{"(", GridBox[{
+                  {"0", 
+                   RowBox[{"-", "18"}]},
+                  {"6", 
+                   RowBox[{"-", "3"}]}
+                 }], ")"}]}], "Black", 
+              RowBox[{"Style", "[", 
+               RowBox[{
+                RowBox[{"Text", "[", 
+                 RowBox[{"\"\<API\>\"", ",", 
+                  RowBox[{"{", 
+                   RowBox[{"3", ",", 
+                    RowBox[{"-", "4"}]}], "}"}]}], "]"}], ",", "Larger"}], 
+               "]"}]},
+             {
+              RowBox[{"EdgeForm", "@", "Thick"}], "LightRed", 
+              RowBox[{
+               RowBox[{
+                RowBox[{
+                 RowBox[{
+                  RowBox[{"(", 
+                   RowBox[{"rec", "@@", 
+                    RowBox[{"(", 
+                    RowBox[{
+                    RowBox[{"(", GridBox[{
+                    {"8", 
+                    RowBox[{"-", "14"}]},
+                    {
+                    RowBox[{
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}], "+", "8"}], 
+                    RowBox[{"-", "3"}]}
+                    }], ")"}], "+", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}]}], ")"}]}], ")"}], "&"}], "/@", 
+                 
+                 RowBox[{"Thread", "@", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}], ",", 
+                    RowBox[{"Reverse", "@", 
+                    FractionBox[
+                    RowBox[{"Range", "[", 
+                    RowBox[{"0", ",", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}]}], "]"}], 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}]]}]}], "}"}]}]}], "&"}], "@", 
+               RowBox[{"{", 
+                RowBox[{"#", ",", "4"}], "}"}]}], "Black", 
+              RowBox[{"Style", "[", 
+               RowBox[{
+                RowBox[{"Text", "[", 
+                 RowBox[{"\"\<IOCtrl\>\"", ",", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{
+                    RowBox[{
+                    FractionBox["3", "2"], "#"}], "+", "8"}], ",", 
+                    RowBox[{"-", "4"}]}], "}"}]}], "]"}], ",", "Larger"}], 
+               "]"}]},
+             {
+              RowBox[{"EdgeForm", "@", "Thick"}], "LightBlue", 
+              RowBox[{"rec", "@@", 
+               RowBox[{"(", GridBox[{
+                  {"8", 
+                   RowBox[{"-", "18"}]},
+                  {
+                   RowBox[{
+                    RowBox[{"3", "#"}], "+", "9"}], 
+                   RowBox[{"-", "15"}]}
+                 }], ")"}]}], "Black", 
+              RowBox[{"Style", "[", 
+               RowBox[{
+                RowBox[{"Text", "[", 
+                 RowBox[{"\"\<Invoke TAI\>\"", ",", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{
+                    RowBox[{
+                    FractionBox["3", "2"], "#"}], "+", "8"}], ",", 
+                    RowBox[{"-", 
+                    FractionBox["33", "2"]}]}], "}"}]}], "]"}], ",", 
+                "Larger"}], "]"}]}
+            }], ")"}], ",", "\[IndentingNewLine]", 
+          RowBox[{"Array", "[", 
+           RowBox[{
+            RowBox[{
+             RowBox[{
+              RowBox[{
+               RowBox[{"{", 
+                RowBox[{
+                 RowBox[{"EdgeForm", "@", "Black"}], ",", "LightYellow", ",", 
+                 
+                 RowBox[{"rec", "@@", "#"}], ",", "LightMagenta", ",", 
+                 RowBox[{"rec", "@@", 
+                  RowBox[{"(", GridBox[{
+                    {
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"1", ",", "1"}], "\[RightDoubleBracket]"}], "+", 
+                    FractionBox["1", "4"]}], 
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "2"}], "\[RightDoubleBracket]"}], "-", 
+                    FractionBox["7", "2"]}]},
+                    {
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "1"}], "\[RightDoubleBracket]"}], "-", 
+                    FractionBox["1", "4"]}], 
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "2"}], "\[RightDoubleBracket]"}], "-", 
+                    "2"}]}
+                    }], ")"}]}], ",", "LightGreen", ",", 
+                 RowBox[{"rec", "@@", 
+                  RowBox[{"(", GridBox[{
+                    {
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"1", ",", "1"}], "\[RightDoubleBracket]"}], "+", 
+                    FractionBox["1", "4"]}], 
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "2"}], "\[RightDoubleBracket]"}], "-", 
+                    FractionBox["13", "2"]}]},
+                    {
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "1"}], "\[RightDoubleBracket]"}], "-", 
+                    FractionBox["1", "4"]}], 
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "2"}], "\[RightDoubleBracket]"}], "-", 
+                    "5"}]}
+                    }], ")"}]}], ",", "LightRed", ",", 
+                 RowBox[{"rec", "@@", 
+                  RowBox[{"(", GridBox[{
+                    {
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"1", ",", "1"}], "\[RightDoubleBracket]"}], "+", 
+                    FractionBox["1", "4"]}], 
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "2"}], "\[RightDoubleBracket]"}], "-", 
+                    FractionBox["19", "2"]}]},
+                    {
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "1"}], "\[RightDoubleBracket]"}], "-", 
+                    FractionBox["1", "4"]}], 
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "2"}], "\[RightDoubleBracket]"}], "-", 
+                    "8"}]}
+                    }], ")"}]}], ",", 
+                 RowBox[{"Style", "[", 
+                  RowBox[{
+                   RowBox[{"Text", "[", 
+                    RowBox[{"\"\<Worker\>\"", ",", 
+                    RowBox[{"{", 
+                    RowBox[{
+                    RowBox[{"Mean", "@", 
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"All", ",", "1"}], "\[RightDoubleBracket]"}]}], 
+                    ",", 
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "2"}], "\[RightDoubleBracket]"}], "-", 
+                    "1"}]}], "}"}]}], "]"}], ",", "Black", ",", "Larger"}], 
+                  "]"}], ",", "Black", ",", 
+                 RowBox[{"Arrow", "@", 
+                  RowBox[{"Thread", "@", 
+                   RowBox[{"{", 
+                    RowBox[{
+                    RowBox[{"Mean", "@", 
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"All", ",", "1"}], "\[RightDoubleBracket]"}]}], 
+                    ",", 
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{"2", ",", "2"}], "\[RightDoubleBracket]"}], "-", 
+                    RowBox[{"{", 
+                    RowBox[{
+                    FractionBox["7", "2"], ",", 
+                    FractionBox["19", "4"]}], "}"}]}]}], "}"}]}]}]}], "}"}], 
+               "&"}], "@", 
+              RowBox[{"(", GridBox[{
+                 {
+                  RowBox[{
+                   RowBox[{"3", "#"}], "-", "2"}], "7"},
+                 {
+                  RowBox[{
+                   RowBox[{"3", "#"}], "+", 
+                   FractionBox["1", "2"]}], "19"}
+                }], ")"}]}], "&"}], ",", "#"}], "]"}], ",", 
+          "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{
+            RowBox[{
+             RowBox[{"(", GridBox[{
+                {"Black"},
+                {
+                 RowBox[{"Style", "[", 
+                  RowBox[{
+                   RowBox[{"Text", "[", 
+                    RowBox[{
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}], ",", 
+                    RowBox[{"{", 
+                    RowBox[{
+                    RowBox[{
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{
+                    RowBox[{"-", "1"}], ",", "2", ",", "1"}], 
+                    "\[RightDoubleBracket]"}], "-", "2"}], ",", 
+                    RowBox[{"Mean", "@", 
+                    RowBox[{"#", "\[LeftDoubleBracket]", 
+                    RowBox[{
+                    RowBox[{"-", "1"}], ",", "All", ",", "2"}], 
+                    "\[RightDoubleBracket]"}]}]}], "}"}]}], "]"}], ",", 
+                   "Larger"}], "]"}]},
+                {
+                 RowBox[{"EdgeForm", "@", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}], ",", 
+                    RowBox[{"Thickness", "@", 
+                    FractionBox["1", "400"]}]}], "}"}]}]},
+                {"Transparent"},
+                {
+                 RowBox[{"rec", "@@", 
+                  RowBox[{"#", "\[LeftDoubleBracket]", 
+                   RowBox[{"-", "1"}], "\[RightDoubleBracket]"}]}]}
+               }], ")"}], "\[Transpose]"}], "&"}], "/@", 
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{
+              RowBox[{"Append", "[", 
+               RowBox[{
+                RowBox[{
+                "#", "\[LeftDoubleBracket]", "2", "\[RightDoubleBracket]"}], 
+                ",", 
+                RowBox[{"(", GridBox[{
+                   {
+                    FractionBox["7", "8"], 
+                    RowBox[{
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "3", 
+                    "\[RightDoubleBracket]"}]}], "+", 
+                    FractionBox["25", "4"]}]},
+                   {
+                    RowBox[{
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}], "+", "5"}], 
+                    RowBox[{
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "3", 
+                    "\[RightDoubleBracket]"}]}], "+", 
+                    FractionBox["33", "4"]}]}
+                  }], ")"}]}], "]"}], "&"}], "/@", 
+             RowBox[{"Thread", "@", 
+              RowBox[{"Prepend", "[", 
+               RowBox[{
+                RowBox[{
+                 RowBox[{
+                  RowBox[{"{", 
+                   RowBox[{"#", ",", 
+                    RowBox[{"Range", "@", 
+                    RowBox[{"Length", "@", "#"}]}]}], "}"}], "&"}], "@", 
+                 RowBox[{"(", GridBox[{
+                    {"\"\<Waiting\>\"", "Dashed"},
+                    {"\"\<Ready\>\"", "Dashed"},
+                    {"\"\<Pending\>\"", "Dotted"}
+                   }], ")"}]}], ",", "#"}], "]"}]}]}], ")"}]}], ",", 
+          "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{
+            RowBox[{
+             RowBox[{
+              RowBox[{
+               RowBox[{"(", GridBox[{
+                  {
+                   RowBox[{"EdgeForm", "@", "Black"}]},
+                  {"LightYellow"},
+                  {
+                   RowBox[{"rec", "@@", 
+                    RowBox[{"(", GridBox[{
+                    {
+                    RowBox[{"-", "7"}], 
+                    RowBox[{"22", "-", 
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]},
+                    {
+                    RowBox[{"-", "3"}], 
+                    RowBox[{"20", "-", 
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]}
+                    }], ")"}]}]},
+                  {"Black"},
+                  {
+                   RowBox[{"Style", "[", 
+                    RowBox[{
+                    RowBox[{"Text", "[", 
+                    RowBox[{
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}], ",", 
+                    RowBox[{"{", 
+                    RowBox[{
+                    RowBox[{"-", "5"}], ",", 
+                    RowBox[{"21", "-", 
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]}], "}"}]}], "]"}], ",", 
+                    "Larger"}], "]"}]}
+                 }], ")"}], "\[Transpose]"}], "&"}], "/@", 
+             RowBox[{"Thread", "@", 
+              RowBox[{"{", 
+               RowBox[{
+                RowBox[{"Range", "@", 
+                 RowBox[{"Length", "@", "#"}]}], ",", "#"}], "}"}]}]}], "&"}],
+            "@", 
+           RowBox[{"{", 
+            RowBox[{
+            "\"\<read()\>\"", ",", "\"\<write()\>\"", ",", "\"\<fsync()\>\"", 
+             ",", "\"\<...\>\""}], "}"}]}], ",", "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{
+            RowBox[{
+             RowBox[{
+              RowBox[{
+               RowBox[{"(", GridBox[{
+                  {
+                   RowBox[{"EdgeForm", "@", "Black"}]},
+                  {"LightYellow"},
+                  {
+                   RowBox[{"rec", "@@", 
+                    RowBox[{"(", GridBox[{
+                    {
+                    RowBox[{"-", "11"}], 
+                    RowBox[{"22", "-", 
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]},
+                    {
+                    RowBox[{"-", "15"}], 
+                    RowBox[{"20", "-", 
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]}
+                    }], ")"}]}]},
+                  {"Black"},
+                  {
+                   RowBox[{"Style", "[", 
+                    RowBox[{
+                    RowBox[{"Text", "[", 
+                    RowBox[{
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}], ",", 
+                    RowBox[{"{", 
+                    RowBox[{
+                    RowBox[{"-", "13"}], ",", 
+                    RowBox[{"21", "-", 
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]}], "}"}]}], "]"}], ",", 
+                    "Larger"}], "]"}]}
+                 }], ")"}], "\[Transpose]"}], "&"}], "/@", 
+             RowBox[{"Thread", "@", 
+              RowBox[{"{", 
+               RowBox[{
+                RowBox[{"Range", "@", 
+                 RowBox[{"Length", "@", "#"}]}], ",", "#"}], "}"}]}]}], "&"}],
+            "@", 
+           RowBox[{"{", 
+            RowBox[{
+            "\"\<Posix\>\"", ",", "\"\<<fstream>\>\"", ",", 
+             "\"\<<cstdio>\>\"", ",", "\"\<...\>\""}], "}"}]}], ",", 
+          "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{
+            RowBox[{
+             RowBox[{
+              RowBox[{
+               RowBox[{"(", GridBox[{
+                  {
+                   RowBox[{"EdgeForm", "@", "Black"}]},
+                  {"LightYellow"},
+                  {
+                   RowBox[{"rec", "@@", 
+                    RowBox[{"(", GridBox[{
+                    {"1", 
+                    RowBox[{
+                    RowBox[{"-", 
+                    FractionBox["13", "4"]}], "-", 
+                    RowBox[{"2", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]},
+                    {"5", 
+                    RowBox[{
+                    RowBox[{"-", 
+                    FractionBox["19", "4"]}], "-", 
+                    RowBox[{"2", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]}
+                    }], ")"}]}]},
+                  {"Black"},
+                  {
+                   RowBox[{"Style", "[", 
+                    RowBox[{
+                    RowBox[{"Text", "[", 
+                    RowBox[{
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}], ",", 
+                    RowBox[{"{", 
+                    RowBox[{"3", ",", 
+                    RowBox[{
+                    RowBox[{"-", "4"}], "-", 
+                    RowBox[{"2", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]}], "}"}]}], "]"}], ",", 
+                    "Larger"}], "]"}]}
+                 }], ")"}], "\[Transpose]"}], "&"}], "/@", 
+             RowBox[{"Thread", "@", 
+              RowBox[{"{", 
+               RowBox[{
+                RowBox[{"Range", "@", 
+                 RowBox[{"Length", "@", "#"}]}], ",", "#"}], "}"}]}]}], "&"}],
+            "@", 
+           RowBox[{"{", 
+            RowBox[{
+            "\"\<read()\>\"", ",", "\"\<write()\>\"", ",", "\"\<sync()\>\"", 
+             ",", "\"\<hook()\>\"", ",", "\"\<detach()\>\"", ",", 
+             "\"\<...\>\""}], "}"}]}], ",", 
+          RowBox[{
+           RowBox[{
+            RowBox[{
+             RowBox[{
+              RowBox[{
+               RowBox[{"(", GridBox[{
+                  {
+                   RowBox[{"EdgeForm", "@", "Black"}]},
+                  {"LightYellow"},
+                  {
+                   RowBox[{"rec", "@@", 
+                    RowBox[{"(", GridBox[{
+                    {"9", 
+                    RowBox[{
+                    RowBox[{"-", 
+                    FractionBox["13", "4"]}], "-", 
+                    RowBox[{"2", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]},
+                    {"13", 
+                    RowBox[{
+                    RowBox[{"-", 
+                    FractionBox["19", "4"]}], "-", 
+                    RowBox[{"2", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]}
+                    }], ")"}]}]},
+                  {"Black"},
+                  {
+                   RowBox[{"Style", "[", 
+                    RowBox[{
+                    RowBox[{"Text", "[", 
+                    RowBox[{
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}], ",", 
+                    RowBox[{"{", 
+                    RowBox[{"11", ",", 
+                    RowBox[{
+                    RowBox[{"-", "4"}], "-", 
+                    RowBox[{"2", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]}], "}"}]}], "]"}], ",", 
+                    "Larger"}], "]"}]}
+                 }], ")"}], "\[Transpose]"}], "&"}], "/@", 
+             RowBox[{"Thread", "@", 
+              RowBox[{"{", 
+               RowBox[{
+                RowBox[{"Range", "@", 
+                 RowBox[{"Length", "@", "#"}]}], ",", "#"}], "}"}]}]}], "&"}],
+            "@", 
+           RowBox[{"{", 
+            RowBox[{
+            "\"\<status()\>\"", ",", "\"\<wait()\>\"", ",", "\"\<...\>\""}], 
+            "}"}]}], ",", 
+          RowBox[{
+           RowBox[{
+            RowBox[{
+             RowBox[{
+              RowBox[{
+               RowBox[{"(", GridBox[{
+                  {
+                   RowBox[{"EdgeForm", "@", "Black"}]},
+                  {"LightCyan"},
+                  {
+                   RowBox[{"Rectangle", "@@", 
+                    RowBox[{"(", GridBox[{
+                    {"14", 
+                    RowBox[{
+                    RowBox[{"-", 
+                    FractionBox["15", "4"]}], "-", 
+                    RowBox[{
+                    FractionBox["3", "2"], 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]},
+                    {"18", 
+                    RowBox[{
+                    RowBox[{"-", 
+                    FractionBox["21", "4"]}], "-", 
+                    RowBox[{
+                    FractionBox["3", "2"], 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}]}
+                    }], ")"}]}]},
+                  {"Black"},
+                  {
+                   RowBox[{"Style", "[", 
+                    RowBox[{
+                    RowBox[{"Text", "[", 
+                    RowBox[{
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}], ",", 
+                    RowBox[{"{", 
+                    RowBox[{"16", ",", 
+                    FractionBox[
+                    RowBox[{"9", "+", 
+                    RowBox[{"3", 
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}], 
+                    RowBox[{"-", "2"}]]}], "}"}]}], "]"}], ",", "Larger"}], 
+                    "]"}]}
+                 }], ")"}], "\[Transpose]"}], "&"}], "/@", 
+             RowBox[{"Thread", "@", 
+              RowBox[{"{", 
+               RowBox[{
+                RowBox[{"Range", "@", 
+                 RowBox[{"Length", "@", "#"}]}], ",", "#"}], "}"}]}]}], "&"}],
+            "@", 
+           RowBox[{"{", 
+            RowBox[{
+            "\"\<Done\>\"", ",", "\"\<Running\>\"", ",", "\"\<Rejected\>\"", 
+             ",", "\"\<Failed\>\"", ",", "\"\<...\>\""}], "}"}]}], ",", 
+          "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{
+            RowBox[{"Arrow", "/@", 
+             RowBox[{"Thread", "/@", 
+              RowBox[{"(", GridBox[{
+                 {"#", 
+                  RowBox[{"Reverse", "@", "#2"}]},
+                 {
+                  RowBox[{"#", "+", "1"}], "#2"}
+                }], ")"}]}]}], "&"}], "[", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"3", "#"}], "+", 
+             FractionBox["5", "2"]}], ",", 
+            FractionBox[
+             RowBox[{"{", 
+              RowBox[{"45", ",", "49"}], "}"}], "4"]}], "]"}], ",", 
+          "\[IndentingNewLine]", 
+          RowBox[{"{", 
+           RowBox[{"Thick", ",", 
+            RowBox[{"Arrowheads", "@", 
+             FractionBox["1", "40"]}], ",", 
+            RowBox[{"Arrow", "@", 
+             RowBox[{"(", GridBox[{
+                {"18", 
+                 RowBox[{"-", "9"}]},
+                {
+                 RowBox[{
+                  RowBox[{"3", "#"}], "+", "6"}], 
+                 RowBox[{"-", "9"}]},
+                {
+                 RowBox[{
+                  RowBox[{"3", "#"}], "+", "6"}], 
+                 RowBox[{"-", "15"}]}
+               }], ")"}]}], ",", 
+            RowBox[{"Arrow", "/@", 
+             RowBox[{"Thread", "/@", 
+              RowBox[{"(", GridBox[{
+                 {
+                  RowBox[{"{", 
+                   RowBox[{"0", ",", 
+                    RowBox[{"-", "2"}]}], "}"}], "11"},
+                 {
+                  RowBox[{"{", 
+                   RowBox[{"1", ",", 
+                    RowBox[{"-", "2"}]}], "}"}], 
+                  FractionBox["53", "4"]},
+                 {
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{"-", "8"}], ",", 
+                    RowBox[{"-", "10"}]}], "}"}], "11"},
+                 {
+                  RowBox[{"-", "13"}], 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{"-", "2"}], ",", "8"}], "}"}]},
+                 {
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{"-", "3"}], ",", "1"}], "}"}], 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{"-", "2"}], ",", "4"}], "}"}]},
+                 {"3", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{"-", "3"}], ",", "1"}], "}"}]},
+                 {
+                  RowBox[{"{", 
+                   RowBox[{"6", ",", "8"}], "}"}], 
+                  RowBox[{"-", "7"}]},
+                 {
+                  RowBox[{"{", 
+                   RowBox[{"8", ",", "6"}], "}"}], 
+                  RowBox[{"-", 
+                   FractionBox["33", "2"]}]},
+                 {
+                  RowBox[{
+                   RowBox[{"3", "#"}], "+", 
+                   RowBox[{"{", 
+                    RowBox[{"6", ",", "5"}], "}"}]}], 
+                  FractionBox["131", "8"]},
+                 {"11", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{"-", "15"}], ",", 
+                    RowBox[{"-", "11"}]}], "}"}]}
+                }], ")"}]}]}], ",", 
+            RowBox[{"Line", "/@", 
+             RowBox[{"{", 
+              RowBox[{
+               RowBox[{
+                RowBox[{"(", 
+                 RowBox[{
+                  FractionBox[
+                   RowBox[{"(", GridBox[{
+                    {"0", "1", "1", "0", "1", "1", "0", "1", "1", "0"},
+                    {"115", "115", "91", "91", "91", "67", "67", "67", "0", 
+                    "0"}
+                    }], ")"}], 
+                   RowBox[{"{", 
+                    RowBox[{
+                    FractionBox["1", "2"], ",", "8"}], "}"}]], "+", 
+                  RowBox[{"{", 
+                   RowBox[{
+                    RowBox[{
+                    RowBox[{"3", "#"}], "+", "5"}], ",", "2"}], "}"}]}], 
+                 ")"}], "\[Transpose]"}], ",", 
+               RowBox[{"(", GridBox[{
+                  {
+                   RowBox[{"-", "2"}], 
+                   RowBox[{"-", 
+                    FractionBox["5", "2"]}]},
+                  {"3", 
+                   RowBox[{"-", 
+                    FractionBox["5", "2"]}]}
+                 }], ")"}]}], "}"}]}]}], "}"}], ",", "\[IndentingNewLine]", 
+          RowBox[{"{", 
+           RowBox[{
+            RowBox[{"EdgeForm", "@", "Black"}], ",", "LightYellow", ",", 
+            RowBox[{
+             RowBox[{
+              RowBox[{"(", 
+               RowBox[{"Rectangle", "@@", 
+                RowBox[{"(", 
+                 RowBox[{
+                  RowBox[{"(", 
+                   RowBox[{
+                    RowBox[{
+                    RowBox[{"{", 
+                    RowBox[{
+                    RowBox[{"{", 
+                    RowBox[{"0", ",", 
+                    RowBox[{
+                    RowBox[{
+                    "#", "\[LeftDoubleBracket]", "2", 
+                    "\[RightDoubleBracket]"}], "-", 
+                    FractionBox["3", "2"]}]}], "}"}], ",", "#"}], "}"}], 
+                    "\[Transpose]"}], "-", 
+                    RowBox[{"{", 
+                    RowBox[{"15", ",", "4"}], "}"}]}], ")"}], 
+                  "\[Transpose]"}], ")"}]}], ")"}], "&"}], "/@", 
+             RowBox[{"Join", "@@", 
+              RowBox[{"MapIndexed", "[", 
+               RowBox[{
+                RowBox[{
+                 RowBox[{"Reverse", "@", 
+                  RowBox[{"Thread", "@", 
+                   RowBox[{"{", 
+                    RowBox[{
+                    RowBox[{"11", 
+                    FractionBox[
+                    RowBox[{"Range", "@", "#"}], "#"]}], ",", 
+                    RowBox[{
+                    RowBox[{"-", 
+                    FractionBox["3", "2"]}], 
+                    RowBox[{
+                    "#2", "\[LeftDoubleBracket]", "1", 
+                    "\[RightDoubleBracket]"}]}]}], "}"}]}]}], "&"}], ",", 
+                RowBox[{"{", 
+                 RowBox[{
+                 "1", ",", "4", ",", "8", ",", "16", ",", "32", ",", "64"}], 
+                 "}"}]}], "]"}]}]}]}], "}"}], ",", "\[IndentingNewLine]", 
+          RowBox[{"{", "}"}]}], "]"}]}], "&"}], "@", "5"}], ",", 
+     RowBox[{"ImageSize", "\[Rule]", "Large"}], ",", 
+     RowBox[{"AspectRatio", "\[Rule]", "Automatic"}]}], "]"}]}], 
+  ";"}]}], "Input",
+ CellChangeTimes->{{3.704947123688239*^9, 3.704947232850127*^9}, {
+   3.704947274335895*^9, 3.704947280343354*^9}, {3.704947346815145*^9, 
+   3.70494833437042*^9}, {3.704948371509264*^9, 3.7049485137285423`*^9}, {
+   3.704948554362776*^9, 3.7049492214939327`*^9}, {3.704949261173558*^9, 
+   3.704949340946102*^9}, {3.704949376611685*^9, 3.704949377553471*^9}, {
+   3.704949455570712*^9, 3.704949552881303*^9}, {3.7049496323504343`*^9, 
+   3.704949681278346*^9}, {3.704949743501659*^9, 3.7049500692930517`*^9}, {
+   3.704950131658154*^9, 3.704950314299835*^9}, {3.704950350531158*^9, 
+   3.704950379411601*^9}, {3.704950419384398*^9, 3.7049504404077*^9}, {
+   3.704950500310956*^9, 3.70495051231679*^9}, {3.704950678204237*^9, 
+   3.704950679962224*^9}, 3.7049507225295362`*^9, {3.704950819597351*^9, 
+   3.7049508217266417`*^9}, {3.7049508651555347`*^9, 3.70495086570474*^9}, {
+   3.704951021472645*^9, 3.704951245067443*^9}, {3.704951301846753*^9, 
+   3.704951526788739*^9}, {3.7049517415085983`*^9, 3.704951746071875*^9}, {
+   3.70495179884587*^9, 3.7049518360906353`*^9}, {3.704951896289957*^9, 
+   3.704951938226067*^9}, {3.704952012633752*^9, 3.7049520385938663`*^9}, {
+   3.7049520913196497`*^9, 3.7049520919675827`*^9}, {3.704952127813491*^9, 
+   3.704952130713396*^9}, {3.70495216838801*^9, 3.704952422329657*^9}, {
+   3.704952490042102*^9, 3.704952494024585*^9}, {3.70495252507609*^9, 
+   3.7049526658133707`*^9}, {3.704952714748151*^9, 3.7049527999663754`*^9}, {
+   3.704952842038611*^9, 3.704953182881184*^9}, {3.704953213114699*^9, 
+   3.704953279447596*^9}, {3.70495530364283*^9, 3.704955477501266*^9}, {
+   3.7049555089188013`*^9, 3.7049555795791597`*^9}, {3.704955644315484*^9, 
+   3.7049557388259153`*^9}, {3.704955832656498*^9, 3.704955955694872*^9}, {
+   3.704956002448455*^9, 3.704956113614352*^9}, {3.704956147612667*^9, 
+   3.704956333445451*^9}, {3.704956364285511*^9, 3.7049563840589333`*^9}, {
+   3.7049564715131598`*^9, 3.70495655761779*^9}, {3.704956594519782*^9, 
+   3.704956900023758*^9}, {3.7049569337494392`*^9, 3.704956994895378*^9}, {
+   3.704957083865988*^9, 3.704957107539895*^9}, {3.704957200560713*^9, 
+   3.704957466394703*^9}, {3.7049574990243073`*^9, 3.704957576141114*^9}, {
+   3.704957670274301*^9, 3.70495768106179*^9}, {3.704957848339538*^9, 
+   3.70495800897021*^9}, {3.7049580486086063`*^9, 3.704958126234989*^9}, {
+   3.704958185515101*^9, 3.704958198406577*^9}, {3.7049583114917593`*^9, 
+   3.7049583698798447`*^9}, {3.704958407418846*^9, 3.704958607444049*^9}, {
+   3.70495865066781*^9, 3.704958670562961*^9}, {3.704958701872039*^9, 
+   3.704958738610036*^9}, {3.7049588780289717`*^9, 3.704958987220346*^9}, {
+   3.704959150869893*^9, 3.704959152188393*^9}, {3.7049592046157303`*^9, 
+   3.7049592252559357`*^9}, {3.7049592778576193`*^9, 3.704959331386403*^9}, {
+   3.704959374500339*^9, 3.704959386518614*^9}, {3.704959437725047*^9, 
+   3.7049595122074738`*^9}, {3.704959555118455*^9, 3.7049597535874968`*^9}, {
+   3.704959784685231*^9, 3.704959855521473*^9}, {3.704959899842855*^9, 
+   3.7049599471289*^9}, {3.704959979809404*^9, 3.704960019707251*^9}, {
+   3.704960088437172*^9, 3.704960131803412*^9}, {3.7049601756466913`*^9, 
+   3.704960189027233*^9}, {3.7049603453720293`*^9, 3.704960351320813*^9}, {
+   3.704960604796131*^9, 3.704960731817491*^9}, {3.704960770192327*^9, 
+   3.704960897175976*^9}, {3.704960987050967*^9, 3.7049611538197803`*^9}, {
+   3.7049612128480253`*^9, 3.70496142870033*^9}, {3.7049614636501503`*^9, 
+   3.704961857854198*^9}, {3.704961932042676*^9, 3.704961975824925*^9}, {
+   3.70496201533552*^9, 3.7049620415677357`*^9}, {3.704962096150823*^9, 
+   3.704962187671056*^9}, {3.704962258001061*^9, 3.704962269327416*^9}, {
+   3.704962305285693*^9, 3.704962550967649*^9}, {3.704962615413012*^9, 
+   3.704962702336813*^9}, {3.704962737956522*^9, 3.704962809929227*^9}, {
+   3.7049628511332817`*^9, 3.7049628857534018`*^9}, {3.704962931786677*^9, 
+   3.704962934696548*^9}, {3.704962971592305*^9, 3.704963088024912*^9}, {
+   3.704963118495034*^9, 3.704963155995926*^9}, {3.704963212111104*^9, 
+   3.7049632224713*^9}, {3.704963269582362*^9, 3.7049632754223347`*^9}, {
+   3.704963307325015*^9, 3.704963353392932*^9}, {3.704963393343758*^9, 
+   3.704963487271573*^9}, {3.704963530436473*^9, 3.704963545432345*^9}, {
+   3.704963615303884*^9, 3.704963831790267*^9}, {3.7049638711562567`*^9, 
+   3.704963953901794*^9}, {3.704963986370998*^9, 3.70496411075944*^9}, {
+   3.7049641423203*^9, 3.704964155696867*^9}, {3.7049642176231403`*^9, 
+   3.704964374260655*^9}, {3.704964405417729*^9, 3.704964571085413*^9}, {
+   3.704964621485236*^9, 3.704964997382653*^9}, {3.7049650273929377`*^9, 
+   3.704965148058071*^9}, {3.7049651994484262`*^9, 3.704965295790278*^9}, {
+   3.704965351352353*^9, 3.704965486036364*^9}, {3.704965588360406*^9, 
+   3.704965716769168*^9}, {3.7049657997158747`*^9, 3.7049657999157867`*^9}, {
+   3.70496608542561*^9, 3.7049661222771*^9}, {3.704966162285953*^9, 
+   3.7049661732460318`*^9}, {3.7049662192988367`*^9, 3.70496622244237*^9}, {
+   3.704966300573701*^9, 3.7049663007802343`*^9}, {3.70496638510533*^9, 
+   3.704966419513226*^9}, {3.704966590999683*^9, 3.704966678992456*^9}, {
+   3.704966710606583*^9, 3.704966908729157*^9}, {3.704966944921988*^9, 
+   3.704966946175652*^9}, {3.7049669976955833`*^9, 3.70496699895262*^9}, {
+   3.7049680768257017`*^9, 3.704968361977928*^9}, {3.704968395084743*^9, 
+   3.704968426905073*^9}, {3.704968465338847*^9, 3.704968466510899*^9}, {
+   3.704968503512588*^9, 3.704968505096149*^9}, {3.704968536490765*^9, 
+   3.70496865727174*^9}, {3.704968689921097*^9, 3.704968690284137*^9}, {
+   3.7051216291192207`*^9, 3.705121631370018*^9}, {3.705121666391605*^9, 
+   3.705121666651456*^9}, {3.705121710184518*^9, 3.705121733366102*^9}, {
+   3.7051218886892138`*^9, 3.705122013485054*^9}, {3.70512209043174*^9, 
+   3.705122090661565*^9}, {3.705122176203055*^9, 3.705122360729786*^9}, {
+   3.70512242439084*^9, 3.705122432740128*^9}, {3.7051225023753843`*^9, 
+   3.7051227462248077`*^9}, {3.705122779062872*^9, 3.7051229495855503`*^9}, {
+   3.7051229922760887`*^9, 3.705123027526497*^9}, {3.705123073882827*^9, 
+   3.705123135293865*^9}, {3.705123305181109*^9, 
+   3.705123469330123*^9}},ExpressionUUID->"5b3776cd-9f04-4b37-83cc-\
+56966b3eca42"]
+},
+WindowSize->{Full, Full},
+WindowMargins->{{316, Automatic}, {Automatic, 50}},
+FrontEndVersion->"11.1 for Mac OS X x86 (32-bit, 64-bit Kernel) (March 16, \
+2017)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 47129, 1141, 2572, "Input", "ExpressionUUID" -> \
+"5b3776cd-9f04-4b37-83cc-56966b3eca42"]
+}
+]
+*)
+
