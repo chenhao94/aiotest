@@ -31,7 +31,7 @@ export LD = lld
 export CXX = clang++
 # export CXX = g++-7
 # export CXX = g++
-export CXXFLAGS = -std=c++1z -m64 -Wall -O3 -g
+export CXXFLAGS = -std=c++1z -m64 -O3
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-fuse-ld=lld'; fi)
 export CXXFLAGS += -flto -fwhole-program-vtables
 export CXXFLAGS += -D_FILE_OFFSET_BITS=64
@@ -43,7 +43,7 @@ export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
 export CXXFLAGS += -DTAI_JEMALLOC -ljemalloc
 export CXXFLAGS += -lm -lpthread
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-lrt -laio'; fi)
-export CXXFLAGS += -fno-omit-frame-pointer -fsanitize=address -mllvm -asan-use-private-alias
+# export CXXFLAGS += -Wall -g -fno-omit-frame-pointer -fsanitize=address -mllvm -asan-use-private-alias
 export AR = llvm-ar
 export MKDIR = mkdir -p
 export CMP = cmp -b
@@ -152,6 +152,30 @@ test_mt: pre_test
 	                $(MV) tmp/log log/last;                                                             \
 	                $(RM) log/~last;                                                                    \
 	done done done done
+
+.PHONY: test_tx
+test_tx: pre_test
+	@for i in $(TEST_TYPE); do for k in `seq $(TEST_LOAD)`; do                              \
+	    if [ $(OS) == Darwin ]; then sudo purge; fi;                                        \
+	    if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;     \
+	    $(MKDIR) tmp/log/$$i log/last;                                                      \
+	    time (`if [ $(OS) == _Linux ]; then echo 'sudo perf stat -age cs'; fi`              \
+	    bin/transaction $$i 0 $$k 1 $(TEST_ARGS) 2>&1                                       \
+	    | tee tmp/log/$$i/$$k.log                                                           \
+	    );                                                                                  \
+	    $(MV) tmp/log/0 tmp/log/Posix 2>/dev/null;                                          \
+	    $(MV) tmp/log/1 tmp/log/DIO 2>/dev/null;                                            \
+	    $(MV) tmp/log/2 tmp/log/Fstream 2>/dev/null;                                        \
+	    $(MV) tmp/log/3 tmp/log/PosixAIO 2>/dev/null;                                       \
+	    $(MV) tmp/log/4 tmp/log/LibAIO 2>/dev/null;                                         \
+	    $(MV) tmp/log/5 tmp/log/TaiAIO 2>/dev/null;                                         \
+	    $(MV) tmp/log/6 tmp/log/Tai 2>/dev/null;                                            \
+	    $(MKDIR) log/last;                                                                  \
+	    rsync -a log/last/ tmp/log/;                                                        \
+	    $(MV) log/last log/~last;                                                           \
+	    $(MV) tmp/log log/last;                                                             \
+	    $(RM) log/~last;                                                                    \
+	done done
 
 .PHONY: test_lat
 test_lat: pre_test

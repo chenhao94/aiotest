@@ -165,10 +165,16 @@ public:
     virtual void syncop() = 0;
 
     TAI_INLINE
+    virtual void osync() { syncop(); }
+
+    TAI_INLINE
     virtual void reset_cb() {}
 
     TAI_INLINE
     virtual void wait_cb() {}
+
+    TAI_INLINE
+    virtual void wait_back(int num) { wait_cb(); }
 
     TAI_INLINE
     virtual void busywait_cb() {}
@@ -318,14 +324,13 @@ class AIOWrite : public RandomWrite
     #endif
 
 public:
+
     TAI_INLINE
     AIOWrite()
     {
-        using namespace std;
-
         #ifdef _POSIX_VERSION
-        for (auto& i : cbs)
-            i.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            cbs[i].reserve(8 * IO_ROUND);
         #else
         cerr << "Warning: POSIX AIO needs POSIX support." << endl;
         #endif
@@ -473,13 +478,13 @@ public:
         using namespace std;
 
         #ifdef __linux__
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            cbs[i].reserve(8 * IO_ROUND);
         if (auto err = io_setup(131072, &io_cxt))
         {
             cerr << err << " " << strerror(err) << endl;
             exit(-1);
         }
-        for (auto& i : cbs)
-            i.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         openflags |= O_DIRECT;
         #else
         cerr << "Warning: LibAIO is not supported on non-Linux system." << endl;
@@ -611,11 +616,12 @@ class TAIAIOWrite : public RandomWrite
     std::array<std::vector<tai::aiocb, tai::Alloc<tai::aiocb>>, MAX_THREAD_NUM> cbs;
 
 public: 
+
     TAI_INLINE
     TAIAIOWrite()
     {
-        for (auto& i : cbs)
-            i.reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            cbs[i].reserve(8 * IO_ROUND);
     }
 
     TAI_INLINE
@@ -659,6 +665,28 @@ public:
     virtual void busywait_cb() override
     {
         wait_cb_common(true);
+    }
+
+    TAI_INLINE
+    virtual void wait_back(int num) override
+    {
+        using namespace std;
+        using namespace tai;
+        for (; num && !cbs[tid].empty(); --num)
+        {
+            auto i = &*(cbs[tid].end() - 1);
+            auto err = aio_wait(i);
+            if (unlikely(err))
+            {
+                cerr << err <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
+                cerr << "reqprio: " << i->aio_reqprio << ", offset: " << i->aio_offset << " , nbytes: " << i->aio_nbytes << endl; 
+                exit(-1);
+            }
+            else
+                aio_return(i);
+            cbs[tid].pop_back();
+        }
+
     }
 
     TAI_INLINE
@@ -720,6 +748,11 @@ public:
     }
 
     TAI_INLINE
+    virtual void osync() override
+    {
+    }
+
+    TAI_INLINE
     virtual void openfile(const std::string& filename) override
     {
         using namespace std;
@@ -749,6 +782,7 @@ public:
         wait_cb();
         if (opencnt.fetch_sub(1) > 1)
             return;
+        Log::log("closing up...");
         deregister_fd(fd);
         #ifdef _POSIX_VERSION
         close(fd);
@@ -777,6 +811,8 @@ public:
         static atomic_flag master = ATOMIC_FLAG_INIT;
         static atomic<bool> slave(false);
 
+        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+            ios[i].reserve(8 * IO_ROUND);
         if (!master.test_and_set(memory_order_acq_rel))
         {
             ctrl.reset(new Controller(1ll << 30, 1ll << 32, -1));
@@ -796,7 +832,6 @@ public:
             while (!opened.load());
             return;
         }
-        ios[tid].reserve(2 * IO_ROUND + IO_ROUND / SYNC_RATE + 1);
         bt.reset(new BTree<44, 4, 4, 12>(new POSIXEngine(filename, O_CREAT | O_RDWR
                         #ifdef __linux__
                         | O_DIRECT
@@ -836,8 +871,21 @@ public:
         using namespace chrono_literals;
 
         for (auto& i : ios[tid])
-            i->wait(32ms);
+            i->wait(1ms);
         reset_cb();
+    }
+
+    TAI_INLINE
+    virtual void wait_back(int num) override
+    {
+        using namespace std;
+        using namespace chrono_literals;
+        for (; num && !ios[tid].empty(); --num)
+        {
+            ios[tid].back()->wait(1ms);
+            ios[tid].pop_back();
+        }
+
     }
 
     TAI_INLINE
@@ -887,6 +935,11 @@ public:
             cerr << "Error at TAI sync." << endl;
             exit(-1);
         }
+    }
+
+    TAI_INLINE
+    virtual void osync() override
+    {
     }
 
     TAI_INLINE
