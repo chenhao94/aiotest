@@ -98,7 +98,7 @@ pre_test:
 	@sudo sync
 	@if [ $(OS) == Darwin ]; then sudo purge; fi
 	@if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	@$(RM) tmp
+	@$(RM) tmp/*
 	@$(MKDIR) tmp
 	@for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do                                                                                              \
 	    if [ $(OS) == Darwin ]; then dd if=/dev/zero of=tmp/file$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1;      \
