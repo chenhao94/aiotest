@@ -23,7 +23,7 @@ static void run_common(RandomWrite* rw)
     {
         data = new
             #ifndef __MACH__
-            (align_val_t(4096))
+            //(align_val_t(4096))
             #endif
             char[WRITE_SIZE];
         memset(data, 'a', sizeof(WRITE_SIZE));
@@ -32,7 +32,7 @@ static void run_common(RandomWrite* rw)
     {
        buf = new
             #ifndef __MACH__
-            (align_val_t(4096))
+            //(align_val_t(4096))
             #endif
             char[READ_SIZE * WAIT_RATE]; 
     }
@@ -54,7 +54,8 @@ static void run_common(RandomWrite* rw)
                     rw->wait_cb();
                 }
             }
-            rw->writeop(offs.emplace_back(randgen(WRITE_SIZE)), data);
+            offs.emplace_back(randgen(WRITE_SIZE));
+            rw->writeop(offs.back(), data);
         }
         else if (read)  // Read-only
         {
@@ -71,12 +72,12 @@ static void run_common(RandomWrite* rw)
     rw->closefile();
     operator delete[](data
             #ifndef __MACH__
-            , align_val_t(4096)
+            //, align_val_t(4096)
             #endif
             );
     operator delete[](buf
             #ifndef __MACH__
-            , align_val_t(4096)
+            //, align_val_t(4096)
             #endif
             );
 }
@@ -141,18 +142,18 @@ int main(int argc, char* argv[])
             thread_num, " threads, ",
             1e9 * IO_ROUND * (int(workload == 2) + 1) * thread_num / time, " iops");
 
-    if (testType == 5 || testType == 6)
-    {
-        if (testType == 5)
-            aio_end();
-        else
-            TAIWrite::end();
-
-        auto rt = Log::run_time.load() / 1e9;
-        auto st = Log::steal_time.load() / 1e9;
-        auto bt = Log::barrier_time.load() / 1e9;
-        Log::log("Total run time: " , rt, " s, steal time: ", st, " s, barrier time: ", bt, " s");
-    }
+//    if (testType == 5 || testType == 6)
+//    {
+//        if (testType == 5)
+//            aio_end();
+//        else
+//            TAIWrite::end();
+//
+//        auto rt = Log::run_time.load() / 1e9;
+//        auto st = Log::steal_time.load() / 1e9;
+//        auto bt = Log::barrier_time.load() / 1e9;
+//        Log::log("Total run time: " , rt, " s, steal time: ", st, " s, barrier time: ", bt, " s");
+//    }
 
     return 0;
 }

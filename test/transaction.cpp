@@ -19,13 +19,13 @@ void run(RandomWrite *rw, int tid)
     rw->tid = tid;
     data = new
     #ifndef __MACH__
-        (align_val_t(4096))
+        //(align_val_t(4096))
     #endif
         char[WRITE_SIZE * 2];
     memset(data, 'a', sizeof(WRITE_SIZE * 2));
     buf = new
     #ifndef __MACH__
-        (align_val_t(4096))
+        //(align_val_t(4096))
     #endif
         char[READ_SIZE * 2]; 
     rw->reset_cb();
@@ -57,12 +57,12 @@ void run(RandomWrite *rw, int tid)
     rw->cleanup();
     operator delete[](data
             #ifndef __MACH__
-            , align_val_t(4096)
+            //, align_val_t(4096)
             #endif
             );
     operator delete[](buf
             #ifndef __MACH__
-            , align_val_t(4096)
+            //, align_val_t(4096)
             #endif
             );
 }
@@ -88,13 +88,13 @@ int main(int argc, char* argv[])
     rw->closefile();
     auto time = duration_cast<nanoseconds>(high_resolution_clock::now() - start).count();
 
-    if (testType == 5 || testType == 6)
-    {
-        if (testType == 5)
-            aio_end();
-        else
-            TAIWrite::end();
-    }
+//    if (testType == 5 || testType == 6)
+//    {
+//        if (testType == 5)
+//            aio_end();
+//        else
+//            TAIWrite::end();
+//    }
     delete rw;
     Log::log(testname[testType], " TX test: ",
             time / 1e9, " s in total, ",

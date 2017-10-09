@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <ctime>
 #include <chrono>
 #include <thread>
@@ -29,7 +30,7 @@
 #endif
 
 #include "tai.hpp"
-#include "aio.hpp"
+// #include "aio.hpp"
 
 #define unlikely(x)     __builtin_expect((x),0)
 
@@ -103,8 +104,8 @@ class RandomWrite
 public:
     int fd = -1;
     int openflags;
-    std::atomic<size_t> opencnt = 0;
-    std::atomic<bool> opened = false;
+    std::atomic<size_t> opencnt = {0};
+    std::atomic<bool> opened = {false};
 
     RandomWrite()
     {
@@ -401,7 +402,8 @@ public:
         using namespace std;
 
         #ifdef _POSIX_VERSION
-        auto& cb = cbs[tid].emplace_back();
+        cbs[tid].emplace_back();
+        auto& cb = cbs[tid].back(); 
         memset(&cb, 0, sizeof(cb));
         cb.aio_fildes = fd;
         cb.aio_nbytes = WRITE_SIZE;
@@ -423,7 +425,8 @@ public:
         using namespace std;
 
         #ifdef _POSIX_VERSION
-        auto& cb = cbs[tid].emplace_back();
+        cbs[tid].emplace_back();
+        auto& cb = cbs[tid].back();
         memset(&cb, 0, sizeof(cb));
         cb.aio_fildes = fd;
         cb.aio_nbytes = READ_SIZE;
@@ -446,7 +449,8 @@ public:
         using namespace std;
 
         #ifdef _POSIX_VERSION
-        auto& cb = cbs[tid].emplace_back();
+        cbs[tid].emplace_back();
+        auto& cb = cbs[tid].back();
         memset(&cb, 0, sizeof(cb));
         cb.aio_fildes = fd;
         if (aio_fsync(O_SYNC, &cb))
@@ -548,7 +552,8 @@ public:
         if (concurrent)
             lck.lock();
         #ifdef __linux__
-        auto& cb = cbs[tid].emplace_back(new iocb);
+        cbs[tid].emplace_back(new iocb);
+        auto& cb = cbs[tid].back();
         io_prep_pwrite(cb, fd, data, WRITE_SIZE, offset);
         auto err = io_submit(io_cxt, 1, &cb);
         if (err < 1)
@@ -571,7 +576,8 @@ public:
         if (concurrent)
             lck.lock();
         #ifdef __linux__
-        auto& cb = cbs[tid].emplace_back(new iocb);
+        cbs[tid].emplace_back(new iocb);
+        auto& cb = cbs[tid].back();
         io_prep_pread(cb, fd, data, READ_SIZE, offset);
         auto err = io_submit(io_cxt, 1, &cb);
         if (err < 1)
@@ -611,347 +617,347 @@ public:
 
 };
 
-class TAIAIOWrite : public RandomWrite
-{
-    std::array<std::vector<tai::aiocb, tai::Alloc<tai::aiocb>>, MAX_THREAD_NUM> cbs;
-
-public: 
-
-    TAI_INLINE
-    TAIAIOWrite()
-    {
-        for (int i = 0; i < MAX_THREAD_NUM; ++i)
-            cbs[i].reserve(8 * IO_ROUND);
-    }
-
-    TAI_INLINE
-    virtual void reset_cb() override
-    {
-        cbs[tid].clear();
-    }
-
-    TAI_INLINE
-    virtual void wait_cb_common(bool busy)
-    {
-        using namespace std;
-        using namespace tai;
-
-        for (auto& i : cbs[tid])
-        {
-            int err;
-            if (busy)
-                while ((err = aio_error(&i)) == EINPROGRESS);
-            else
-                err = aio_wait(&i);
-            if (unlikely(err))
-            {
-                cerr << err <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
-                cerr << "reqprio: " << i.aio_reqprio << ", offset: " << i.aio_offset << " , nbytes: " << i.aio_nbytes << endl; 
-                exit(-1);
-            }
-            else
-                aio_return(&i);
-        }
-        reset_cb();
-    }
-
-    TAI_INLINE
-    virtual void wait_cb() override
-    {
-        wait_cb_common(false);
-    }
-
-    TAI_INLINE
-    virtual void busywait_cb() override
-    {
-        wait_cb_common(true);
-    }
-
-    TAI_INLINE
-    virtual void wait_back(int num) override
-    {
-        using namespace std;
-        using namespace tai;
-        for (; num && !cbs[tid].empty(); --num)
-        {
-            auto i = &*(cbs[tid].end() - 1);
-            auto err = aio_wait(i);
-            if (unlikely(err))
-            {
-                cerr << err <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
-                cerr << "reqprio: " << i->aio_reqprio << ", offset: " << i->aio_offset << " , nbytes: " << i->aio_nbytes << endl; 
-                exit(-1);
-            }
-            else
-                aio_return(i);
-            cbs[tid].pop_back();
-        }
-
-    }
-
-    TAI_INLINE
-    virtual void cleanup() override
-    {
-        using namespace std;
-        using namespace tai;
-
-        wait_cb();
-        #ifdef _POSIX_VERSION
-        if (fsync(fd))
-        {
-            cerr << "Error " << errno << ": " << strerror(errno) << " at fsync." << endl;
-            exit(-1);
-        }
-        #endif
-    }
-
-    TAI_INLINE
-    virtual void writeop(off_t offset, char* data) override
-    {
-        using namespace std;
-        using namespace tai;
-
-        if (aio_write(&cbs[tid].emplace_back(fd, offset, data, WRITE_SIZE)))
-        {
-            cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_write." << endl;
-            exit(-1);
-        }
-    }
-
-    TAI_INLINE
-    virtual void readop(off_t offset, char* data) override
-    {
-        using namespace std;
-        using namespace tai;
-
-        if (aio_read(&cbs[tid].emplace_back(fd, offset, data, READ_SIZE)))
-        {
-            cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_read." << endl;
-            exit(-1);
-        }
-    }
-
-    TAI_INLINE
-    virtual void syncop() override
-    {
-        using namespace std;
-        using namespace tai;
-
-        #ifndef _POSIX_VERSION
-        auto O_SYNC = 0;
-        #endif
-        if (aio_fsync(O_SYNC, &cbs[tid].emplace_back(fd)))
-        {
-            cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_fsync." << endl;
-            exit(-1);
-        }
-    }
-
-    TAI_INLINE
-    virtual void osync() override
-    {
-    }
-
-    TAI_INLINE
-    virtual void openfile(const std::string& filename) override
-    {
-        using namespace std;
-        using namespace tai;
-
-        if (opencnt.fetch_add(1) > 0)
-        {
-            while (!opened.load());
-            return;
-        }
-        #ifdef _POSIX_VERSION
-        fd = open(filename.c_str(), openflags);
-        register_fd(fd, filename);
-        #else
-        cerr << "RandomWrite::openfile() needs POSIX support." << endl;
-        #endif
-        opened.store(true);
-    }
-
-    TAI_INLINE
-    virtual void closefile() override
-    {
-        using namespace std;
-        using namespace tai;
-
-        syncop();
-        wait_cb();
-        if (opencnt.fetch_sub(1) > 1)
-            return;
-        Log::log("closing up...");
-        deregister_fd(fd);
-        #ifdef _POSIX_VERSION
-        close(fd);
-        fd = -1;
-        #else
-        cerr << "RandomWrite::closefile() needs POSIX support." << endl;
-        #endif
-    }
-
-};
-
-class TAIWrite : public RandomWrite
-{
-    std::unique_ptr<tai::BTreeBase> bt;
-    std::array<tai::IOCtrlVec, MAX_THREAD_NUM> ios;
-
-    static std::unique_ptr<tai::Controller> ctrl;
-
-public: 
-    TAI_INLINE
-    TAIWrite()
-    {
-        using namespace std;
-        using namespace tai;
-
-        static atomic_flag master = ATOMIC_FLAG_INIT;
-        static atomic<bool> slave(false);
-
-        for (int i = 0; i < MAX_THREAD_NUM; ++i)
-            ios[i].reserve(8 * IO_ROUND);
-        if (!master.test_and_set(memory_order_acq_rel))
-        {
-            ctrl.reset(new Controller(1ll << 30, 1ll << 32, -1));
-            slave.store(true, memory_order_release);
-        }
-        while (!slave.load(memory_order_acquire));
-    }
-
-    TAI_INLINE
-    virtual void openfile(const std::string& filename) override 
-    {
-        using namespace std;
-        using namespace tai;
-
-        if (opencnt.fetch_add(1) > 0)
-        {
-            while (!opened.load());
-            return;
-        }
-        bt.reset(new BTree<44, 4, 4, 12>(new POSIXEngine(filename, O_CREAT | O_RDWR
-                        #ifdef __linux__
-                        | O_DIRECT
-                        #endif
-                        )));
-        opened.store(true);
-    }
-
-    TAI_INLINE
-    virtual void closefile() override
-    {
-        using namespace std;
-        using namespace tai;
-
-        syncop();
-        cleanup();
-        if (opencnt.fetch_sub(1) > 1)
-            return;
-        if (unlikely((*ios[tid].emplace_back(bt->detach(*ctrl))).wait() != IOCtrl::Done))
-        {
-            cerr << "Error at TAI detach." << endl;
-            exit(-1);
-        }
-        bt.reset(nullptr);
-    }
-
-    TAI_INLINE
-    virtual void reset_cb() override
-    {
-        ios[tid].clear();
-    }
-
-    TAI_INLINE
-    virtual void wait_cb() override
-    {
-        using namespace std;
-        using namespace chrono_literals;
-
-        for (auto& i : ios[tid])
-            i->wait(1ms);
-        reset_cb();
-    }
-
-    TAI_INLINE
-    virtual void wait_back(int num) override
-    {
-        using namespace std;
-        using namespace chrono_literals;
-        for (; num && !ios[tid].empty(); --num)
-        {
-            ios[tid].back()->wait(1ms);
-            ios[tid].pop_back();
-        }
-
-    }
-
-    TAI_INLINE
-    virtual void busywait_cb() override
-    {
-        using namespace tai;
-
-        for (auto& i : ios[tid])
-            while ((*i)() == IOCtrl::Running);
-        reset_cb();
-    }
-
-    TAI_INLINE
-    virtual void writeop(off_t offset, char* data) override
-    {
-        using namespace std;
-        using namespace tai;
-
-        if (unlikely((*ios[tid].emplace_back(bt->write(*ctrl, offset, READ_SIZE, data)))() == IOCtrl::Rejected))
-        {
-            cerr << "Error at TAI write." << endl;
-            exit(-1);
-        }
-    }
-
-    TAI_INLINE
-    virtual void readop(off_t offset, char* data) override
-    {
-        using namespace std;
-        using namespace tai;
-
-        if (unlikely((*ios[tid].emplace_back(bt->readsome(*ctrl, offset, READ_SIZE, data)))() == IOCtrl::Rejected))
-        {
-            cerr << "Error at TAI read." << endl;
-            exit(-1);
-        }
-    }
-
-    TAI_INLINE
-    virtual void syncop() override
-    {
-        using namespace std;
-        using namespace tai;
-
-        if (unlikely((*ios[tid].emplace_back(bt->fsync(*ctrl)))() == IOCtrl::Rejected))
-        {
-            cerr << "Error at TAI sync." << endl;
-            exit(-1);
-        }
-    }
-
-    TAI_INLINE
-    virtual void osync() override
-    {
-    }
-
-    TAI_INLINE
-    virtual void cleanup() override
-    {
-        wait_cb();
-    }
-
-    TAI_INLINE
-    static void end()
-    {
-        ctrl = nullptr;
-    }
-};
-
+//class TAIAIOWrite : public RandomWrite
+//{
+//    std::array<std::vector<tai::aiocb, tai::Alloc<tai::aiocb>>, MAX_THREAD_NUM> cbs;
+//
+//public: 
+//
+//    TAI_INLINE
+//    TAIAIOWrite()
+//    {
+//        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+//            cbs[i].reserve(8 * IO_ROUND);
+//    }
+//
+//    TAI_INLINE
+//    virtual void reset_cb() override
+//    {
+//        cbs[tid].clear();
+//    }
+//
+//    TAI_INLINE
+//    virtual void wait_cb_common(bool busy)
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        for (auto& i : cbs[tid])
+//        {
+//            int err;
+//            if (busy)
+//                while ((err = aio_error(&i)) == EINPROGRESS);
+//            else
+//                err = aio_wait(&i);
+//            if (unlikely(err))
+//            {
+//                cerr << err <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
+//                cerr << "reqprio: " << i.aio_reqprio << ", offset: " << i.aio_offset << " , nbytes: " << i.aio_nbytes << endl; 
+//                exit(-1);
+//            }
+//            else
+//                aio_return(&i);
+//        }
+//        reset_cb();
+//    }
+//
+//    TAI_INLINE
+//    virtual void wait_cb() override
+//    {
+//        wait_cb_common(false);
+//    }
+//
+//    TAI_INLINE
+//    virtual void busywait_cb() override
+//    {
+//        wait_cb_common(true);
+//    }
+//
+//    TAI_INLINE
+//    virtual void wait_back(int num) override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//        for (; num && !cbs[tid].empty(); --num)
+//        {
+//            auto i = &*(cbs[tid].end() - 1);
+//            auto err = aio_wait(i);
+//            if (unlikely(err))
+//            {
+//                cerr << err <<  " Error " << errno << ": " << strerror(errno) << " at aio_error." << endl;
+//                cerr << "reqprio: " << i->aio_reqprio << ", offset: " << i->aio_offset << " , nbytes: " << i->aio_nbytes << endl; 
+//                exit(-1);
+//            }
+//            else
+//                aio_return(i);
+//            cbs[tid].pop_back();
+//        }
+//
+//    }
+//
+//    TAI_INLINE
+//    virtual void cleanup() override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        wait_cb();
+//        #ifdef _POSIX_VERSION
+//        if (fsync(fd))
+//        {
+//            cerr << "Error " << errno << ": " << strerror(errno) << " at fsync." << endl;
+//            exit(-1);
+//        }
+//        #endif
+//    }
+//
+//    TAI_INLINE
+//    virtual void writeop(off_t offset, char* data) override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        if (aio_write(&cbs[tid].emplace_back(fd, offset, data, WRITE_SIZE)))
+//        {
+//            cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_write." << endl;
+//            exit(-1);
+//        }
+//    }
+//
+//    TAI_INLINE
+//    virtual void readop(off_t offset, char* data) override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        if (aio_read(&cbs[tid].emplace_back(fd, offset, data, READ_SIZE)))
+//        {
+//            cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_read." << endl;
+//            exit(-1);
+//        }
+//    }
+//
+//    TAI_INLINE
+//    virtual void syncop() override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        #ifndef _POSIX_VERSION
+//        auto O_SYNC = 0;
+//        #endif
+//        if (aio_fsync(O_SYNC, &cbs[tid].emplace_back(fd)))
+//        {
+//            cerr << "Error " << errno << ": " << strerror(errno) << " at tai::aio_fsync." << endl;
+//            exit(-1);
+//        }
+//    }
+//
+//    TAI_INLINE
+//    virtual void osync() override
+//    {
+//    }
+//
+//    TAI_INLINE
+//    virtual void openfile(const std::string& filename) override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        if (opencnt.fetch_add(1) > 0)
+//        {
+//            while (!opened.load());
+//            return;
+//        }
+//        #ifdef _POSIX_VERSION
+//        fd = open(filename.c_str(), openflags);
+//        register_fd(fd, filename);
+//        #else
+//        cerr << "RandomWrite::openfile() needs POSIX support." << endl;
+//        #endif
+//        opened.store(true);
+//    }
+//
+//    TAI_INLINE
+//    virtual void closefile() override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        syncop();
+//        wait_cb();
+//        if (opencnt.fetch_sub(1) > 1)
+//            return;
+//        Log::log("closing up...");
+//        deregister_fd(fd);
+//        #ifdef _POSIX_VERSION
+//        close(fd);
+//        fd = -1;
+//        #else
+//        cerr << "RandomWrite::closefile() needs POSIX support." << endl;
+//        #endif
+//    }
+//
+//};
+//
+//class TAIWrite : public RandomWrite
+//{
+//    std::unique_ptr<tai::BTreeBase> bt;
+//    std::array<tai::IOCtrlVec, MAX_THREAD_NUM> ios;
+//
+//    static std::unique_ptr<tai::Controller> ctrl;
+//
+//public: 
+//    TAI_INLINE
+//    TAIWrite()
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        static atomic_flag master = ATOMIC_FLAG_INIT;
+//        static atomic<bool> slave(false);
+//
+//        for (int i = 0; i < MAX_THREAD_NUM; ++i)
+//            ios[i].reserve(8 * IO_ROUND);
+//        if (!master.test_and_set(memory_order_acq_rel))
+//        {
+//            ctrl.reset(new Controller(1ll << 30, 1ll << 32, -1));
+//            slave.store(true, memory_order_release);
+//        }
+//        while (!slave.load(memory_order_acquire));
+//    }
+//
+//    TAI_INLINE
+//    virtual void openfile(const std::string& filename) override 
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        if (opencnt.fetch_add(1) > 0)
+//        {
+//            while (!opened.load());
+//            return;
+//        }
+//        bt.reset(new BTree<44, 4, 4, 12>(new POSIXEngine(filename, O_CREAT | O_RDWR
+//                        #ifdef __linux__
+//                        | O_DIRECT
+//                        #endif
+//                        )));
+//        opened.store(true);
+//    }
+//
+//    TAI_INLINE
+//    virtual void closefile() override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        syncop();
+//        cleanup();
+//        if (opencnt.fetch_sub(1) > 1)
+//            return;
+//        if (unlikely((*ios[tid].emplace_back(bt->detach(*ctrl))).wait() != IOCtrl::Done))
+//        {
+//            cerr << "Error at TAI detach." << endl;
+//            exit(-1);
+//        }
+//        bt.reset(nullptr);
+//    }
+//
+//    TAI_INLINE
+//    virtual void reset_cb() override
+//    {
+//        ios[tid].clear();
+//    }
+//
+//    TAI_INLINE
+//    virtual void wait_cb() override
+//    {
+//        using namespace std;
+//        using namespace chrono_literals;
+//
+//        for (auto& i : ios[tid])
+//            i->wait(1ms);
+//        reset_cb();
+//    }
+//
+//    TAI_INLINE
+//    virtual void wait_back(int num) override
+//    {
+//        using namespace std;
+//        using namespace chrono_literals;
+//        for (; num && !ios[tid].empty(); --num)
+//        {
+//            ios[tid].back()->wait(1ms);
+//            ios[tid].pop_back();
+//        }
+//
+//    }
+//
+//    TAI_INLINE
+//    virtual void busywait_cb() override
+//    {
+//        using namespace tai;
+//
+//        for (auto& i : ios[tid])
+//            while ((*i)() == IOCtrl::Running);
+//        reset_cb();
+//    }
+//
+//    TAI_INLINE
+//    virtual void writeop(off_t offset, char* data) override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        if (unlikely((*ios[tid].emplace_back(bt->write(*ctrl, offset, READ_SIZE, data)))() == IOCtrl::Rejected))
+//        {
+//            cerr << "Error at TAI write." << endl;
+//            exit(-1);
+//        }
+//    }
+//
+//    TAI_INLINE
+//    virtual void readop(off_t offset, char* data) override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        if (unlikely((*ios[tid].emplace_back(bt->readsome(*ctrl, offset, READ_SIZE, data)))() == IOCtrl::Rejected))
+//        {
+//            cerr << "Error at TAI read." << endl;
+//            exit(-1);
+//        }
+//    }
+//
+//    TAI_INLINE
+//    virtual void syncop() override
+//    {
+//        using namespace std;
+//        using namespace tai;
+//
+//        if (unlikely((*ios[tid].emplace_back(bt->fsync(*ctrl)))() == IOCtrl::Rejected))
+//        {
+//            cerr << "Error at TAI sync." << endl;
+//            exit(-1);
+//        }
+//    }
+//
+//    TAI_INLINE
+//    virtual void osync() override
+//    {
+//    }
+//
+//    TAI_INLINE
+//    virtual void cleanup() override
+//    {
+//        wait_cb();
+//    }
+//
+//    TAI_INLINE
+//    static void end()
+//    {
+//        ctrl = nullptr;
+//    }
+//};
+//

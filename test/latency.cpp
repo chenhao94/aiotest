@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 
     auto data = new
         #ifndef __MACH__
-        (align_val_t(512))
+        //(align_val_t(512))
         #endif
         char[WRITE_SIZE];
     memset(data, 'a', WRITE_SIZE);
@@ -71,10 +71,10 @@ int main(int argc, char *argv[])
 
     delete[] data;
 
-    if (testType == 5)
-        aio_end();
-    if (testType == 6)
-        TAIWrite::end();
+//    if (testType == 5)
+//        aio_end();
+//    if (testType == 6)
+//        TAIWrite::end();
 
     return 0;
 }

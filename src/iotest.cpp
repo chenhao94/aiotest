@@ -17,7 +17,7 @@ size_t WAIT_RATE = 1;
 size_t SINGLE_FILE = 0;
 thread_local ssize_t RandomWrite::tid = 0;
 
-std::unique_ptr<tai::Controller> TAIWrite::ctrl;
+//std::unique_ptr<tai::Controller> TAIWrite::ctrl;
 
 std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType, bool concurrent)
 {
@@ -53,14 +53,14 @@ std::unique_ptr<RandomWrite> RandomWrite::getInstance(int testType, bool concurr
         else
             rw.reset(new LibAIOWrite<false>());
         break;
-    case 5:
-        if (first)
-            tai::aio_init();
-        rw.reset(new TAIAIOWrite());
-        break;
-    case 6:
-        rw.reset(new TAIWrite());
-        break;
+//    case 5:
+//        if (first)
+//            tai::aio_init();
+//        rw.reset(new TAIAIOWrite());
+//        break;
+//    case 6:
+//        rw.reset(new TAIWrite());
+//        break;
     default:
         cerr << "Illegal IO-type! Exit..." << endl;
         exit(-1);

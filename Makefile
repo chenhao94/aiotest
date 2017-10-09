@@ -22,29 +22,30 @@ export LIBTAI = $(LIBS_DIR)/libtai.a
 
 export TEST_LOAD ?= $(shell nproc --all)
 export TEST_ARGS ?= 30 64 64 14 8 10
-export TEST_TYPE ?= $(shell seq 0 6)
+export TEST_TYPE ?= 0 2 3 # $(shell seq 0 4)
 # For test_mt only:
 #     read size, write size (KB)
 #     file size, io round, sync rate, wait rate (2^x)
 
 export LD = lld
-export CXX = clang++
+# export CXX = clang++
 # export CXX = g++-7
-# export CXX = g++
+export CXX = g++
 export CXXFLAGS = -std=c++1z -m64 -O3
-export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-fuse-ld=lld'; fi)
-export CXXFLAGS += -flto -fwhole-program-vtables
+# export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-fuse-ld=lld'; fi)
+# export CXXFLAGS += -flto -fwhole-program-vtables
 export CXXFLAGS += -D_FILE_OFFSET_BITS=64
 ifeq ($(mode), debug) 
 	CXXFLAGS += -DTAI_DEBUG
 endif
 export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
-export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
-export CXXFLAGS += -DTAI_JEMALLOC -ljemalloc
-export CXXFLAGS += -lm -lpthread
+# export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
+# export CXXFLAGS += -DTAI_JEMALLOC -ljemalloc
+export CXXFLAGS += -lm -pthread
 export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-lrt -laio'; fi)
 # export CXXFLAGS += -Wall -g -fno-omit-frame-pointer -fsanitize=address -mllvm -asan-use-private-alias
-export AR = llvm-ar
+export AR = ar
+# export AR = llvm-ar
 export MKDIR = mkdir -p
 export CMP = cmp -b
 
@@ -54,11 +55,12 @@ export INSTALL = install
 export RM = rm -rf
 
 .PHONY: all
-all: $(LIBTAI) $(TESTEXES)
+# all: $(LIBTAI) $(TESTEXES)
+all: $(TESTEXES)
 
 $(TESTEXES): $(TARGETS_DIR)/%: $(OBJS_DIR)/%.cpp.o $(LIBTAI)
 	@$(MKDIR) $(TARGETS_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $@
+	$(CXX) $^ -o $@ $(CXXFLAGS) 
 
 $(TESTOBJS): $(OBJS_DIR)/%.o: $(TESTS_DIR)/% $(PCHS)
 	@$(MKDIR) $(OBJS_DIR)
@@ -142,7 +144,6 @@ test_mt: pre_test
 	                $(MV) tmp/log/$$l/2 tmp/log/$$l/Fstream 2>/dev/null;                                \
 	                $(MV) tmp/log/$$l/3 tmp/log/$$l/PosixAIO 2>/dev/null;                               \
 	                $(MV) tmp/log/$$l/4 tmp/log/$$l/LibAIO 2>/dev/null;                                 \
-	                $(MV) tmp/log/$$l/5 tmp/log/$$l/TaiAIO 2>/dev/null;                                 \
 	                $(MV) tmp/log/$$l/6 tmp/log/$$l/Tai 2>/dev/null;                                    \
 	                $(MV) tmp/log/0 tmp/log/Multi 2>/dev/null;                                          \
 	                $(MV) tmp/log/1 tmp/log/Single 2>/dev/null;                                         \
