@@ -84,22 +84,23 @@ $(LIBTAI): $(OBJS)
 
 .PHONY: pre_test
 pre_test:
-	@echo
-	@echo '================================'
-	@echo 'Workload     = '$(TEST_LOAD)' thread(s)'
-	@echo 'File Size    = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^(\1-20)/' | bc -l`' MB'
-	@echo 'Read Size    = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/\2/' | bc`' KB'
-	@echo 'Write Size   = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/\3/' | bc`' KB'
-	@echo 'I/O Rounds   = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\4/' | bc`
-	@echo 'Sync Rate    = 1/'`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\5/' | bc`
-	@echo 'Wait Rate    = 1/'`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\6/' | bc`
-	@echo '================================'
+	@$(RM) tmp/*
+	@$(MKDIR) tmp/log
+	@echo 'Source Build '$(SRC_BUILD) | tee -a tmp/log/info.log
+	@echo 'Test Build '$(TEST_BUILD) | tee -a tmp/log/info.log
+	@echo '================================'  | tee -a tmp/log/info.log
+	@echo 'Workload     = '$(TEST_LOAD)' thread(s)' | tee -a tmp/log/info.log
+	@echo 'File Size    = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^(\1-20)/' | bc -l`' MB' | tee -a tmp/log/info.log
+	@echo 'Read Size    = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/\2/' | bc`' KB' | tee -a tmp/log/info.log
+	@echo 'Write Size   = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/\3/' | bc`' KB' | tee -a tmp/log/info.log
+	@echo 'I/O Rounds   = '`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\4/' | bc` | tee -a tmp/log/info.log
+	@echo 'Sync Rate    = 1/'`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\5/' | bc` | tee -a tmp/log/info.log
+	@echo 'Wait Rate    = 1/'`xargs <<<'$(TEST_ARGS)' | sed 's/\(.*\) \(.*\) \(.*\) \(.*\) \(.*\) \(.*\)/2^\6/' | bc` | tee -a tmp/log/info.log
+	@echo '================================' | tee -a tmp/log/info.log
 	@echo
 	@sudo sync
 	@if [ $(OS) == Darwin ]; then sudo purge; fi
 	@if [ $(OS) == Linux ]; then sudo bash -c "echo 1 > /proc/sys/vm/drop_caches"; fi
-	@$(RM) tmp/*
-	@$(MKDIR) tmp
 	@for i in $$(seq 0 `expr $(TEST_LOAD) - 1`); do                                                                                              \
 	    if [ $(OS) == Darwin ]; then dd if=/dev/zero of=tmp/file$$i bs=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/2^\1/' | bc` count=1;      \
 	    else dd if=/dev/zero of=tmp/file$$i bs=1048576 count=`xargs<<<'$(TEST_ARGS)' | sed 's/\([0-9]*\).*/(2^\1+(2^20-1))\/2^20/' | bc`; fi;   \
@@ -130,7 +131,7 @@ test_mt: pre_test
 			    for l in `seq 0 1`; do                                                                  \
 	                if [ $(OS) == Darwin ]; then sudo purge; fi;                                        \
 	                if [ $(OS) == Linux ]; then sudo sh -c "echo 1 > /proc/sys/vm/drop_caches"; fi;     \
-	                $(MKDIR) tmp/log/$$l/$$i/$$j log/last;                                              \
+	                $(MKDIR) tmp/log/$$l/$$i/$$j log/$(CUR_TIME);                                              \
 	                time (`if [ $(OS) == _Linux ]; then echo 'sudo perf stat -age cs'; fi`              \
 	                    bin/multi_thread_comp $$i $$j $$k $$l $(TEST_ARGS) 2>&1                         \
 						| tee tmp/log/$$l/$$i/$$j/$$k.log                                               \
@@ -147,10 +148,10 @@ test_mt: pre_test
 	                $(MV) tmp/log/$$l/6 tmp/log/$$l/Tai 2>/dev/null;                                    \
 	                $(MV) tmp/log/0 tmp/log/Multi 2>/dev/null;                                          \
 	                $(MV) tmp/log/1 tmp/log/Single 2>/dev/null;                                         \
-					$(MKDIR) log/last;                                                                  \
-	                rsync -a log/last/ tmp/log/;                                                        \
-	                $(MV) log/last log/~last;                                                           \
-	                $(MV) tmp/log log/last;                                                             \
+					$(MKDIR) log/$(CUR_TIME);                                                                  \
+	                rsync -a log/$(CUR_TIME)/ tmp/log/;                                                        \
+	                $(MV) log/$(CUR_TIME) log/~last;                                                           \
+	                $(MV) tmp/log log/$(CUR_TIME);                                                             \
 	                $(RM) log/~last;                                                                    \
 	done done done done
 
