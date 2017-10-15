@@ -38,11 +38,11 @@ export CXXFLAGS += -D_FILE_OFFSET_BITS=64
 ifeq ($(mode), debug) 
 	CXXFLAGS += -DTAI_DEBUG
 endif
-export CXXFLAGS += -I$(INCS_DIR) -I/usr/local/include
+export CXXFLAGS += -I$(INCS_DIR) -I/root/usr/include  -I/usr/local/include
 # export CXXFLAGS += -stdlib=libc++ -lc++ -lc++abi
 # export CXXFLAGS += -DTAI_JEMALLOC -ljemalloc
 export CXXFLAGS += -lm -pthread
-export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-lrt -laio'; fi)
+export CXXFLAGS += $(shell if [ $(OS) = Linux ]; then echo '-L/root/usr/lib -lrt -laio'; fi)
 # export CXXFLAGS += -Wall -g -fno-omit-frame-pointer -fsanitize=address -mllvm -asan-use-private-alias
 export AR = ar
 # export AR = llvm-ar
