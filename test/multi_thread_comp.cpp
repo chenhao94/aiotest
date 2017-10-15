@@ -136,6 +136,9 @@ int main(int argc, char* argv[])
 
     Log::log(testname[testType], " random ", wlname[workload], ": ",
             time / 1e9, " s in total, ",
+            #ifdef _POSIX_VERSION
+            __aio_lockedtime() / 1e9, " s holding lock, ",
+            #endif
             IO_ROUND * (int(workload == 2) + 1), " ops/thread, ",
             READ_SIZE >> 10, " KB/read, " ,
             WRITE_SIZE >> 10, " KB/write, ", 
