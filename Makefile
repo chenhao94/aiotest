@@ -126,6 +126,7 @@ test: pre_test
 .PHONY: test_mt
 test_mt: pre_test
 	#@for i in $(TEST_TYPE); do                                                                        
+	@$(MKDIR) log/$(CUR_TIME)
 	@$(CP) log/others log/$(CUR_TIME)
 	@for i in 3; do                                                                          \
 	    for j in `seq 0 2`; do                                                                          \
