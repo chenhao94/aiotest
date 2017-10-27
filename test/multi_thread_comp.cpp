@@ -138,6 +138,8 @@ int main(int argc, char* argv[])
             time / 1e9, " s in total, ",
             #ifdef _POSIX_VERSION
             aio_lockedtime() / 1e9, " s holding lock, ",
+            aio_avg_true_iotime() / 1e9, " s avg true io time, ",
+            aio_max_true_iotime() / 1e9, " s max true io time, ",
             #endif
             IO_ROUND * (int(workload == 2) + 1), " ops/thread, ",
             READ_SIZE >> 10, " KB/read, " ,

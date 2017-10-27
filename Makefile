@@ -125,7 +125,9 @@ test: pre_test
 
 .PHONY: test_mt
 test_mt: pre_test
-	@for i in $(TEST_TYPE); do                                                                          \
+	#@for i in $(TEST_TYPE); do                                                                        
+	@$(CP) log/others log/$(CUR_TIME)
+	@for i in 3; do                                                                          \
 	    for j in `seq 0 2`; do                                                                          \
 		    for k in `seq $(TEST_LOAD)`; do                                                             \
 			    for l in `seq 0 1`; do                                                                  \

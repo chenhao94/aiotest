@@ -31,15 +31,21 @@ for wid, w in enumerate(workload):
                     fi = open(filepath, "r")
                     res = fi.readlines()[-1]
                     fi.close()
-                    m = re.search("(?P<time>\w+\.\w+) s in total, (?P<lock>\w+\.\w+) s holding lock.*?(?P<iops>\w+\.\w+) iops$", res)
+                    m = re.search("(?P<time>\w+\.\w+) s in total, (?P<lock>\w+\.\w+) s holding lock, (?P<avgio>\w+\.\w+) s avg true io time, (?P<maxio>\w+\.\w+) s max true io time.*?(?P<iops>\w+\.\w+) iops$", res)
                     if m is None:
                         m = re.search("(?P<time>\w+\.\w+) s in total, .*?(?P<iops>\w+\.\w+) iops$", res)
                         lock = 0
+                        avgio = 0
+                        maxio = 0
                     else:
                         lock = float(m.group('lock'))
+                        avgio = float(m.group('avgio'))
+                        maxio = float(m.group('maxio'))
                     y[l].append(float(m.group('iops')) / 1000.)
                     if l == 'PosixAIO':
                        y['locked_time'].append(lock / float(m.group('time'))) 
+                       y['avg_iotime'].append(avgio / float(m.group('time'))) 
+                       y['max_iotime'].append(maxio / float(m.group('time'))) 
                     
         ax1 = axarr[wid, fid]
         plt.title("%s - %s File" % (w, f))
@@ -52,6 +58,8 @@ for wid, w in enumerate(workload):
             legend.append(ax1.bar([i * width + j for j in xrange(0, len(y[l]))], y[l], width, color=color[i])[0])
         ax2 = ax1.twinx()
         ax2.set_ylim(0., 1.)
-        p = ax2.plot(xpos, y['locked_time'], color="black", label = 'locked time ratio')
-        ax2.legend(legend + p, tuple(lib + ['locked ratio']), loc='upper center', ncol=2, bbox_to_anchor=(0.2, 1.10))
+        p = ax2.plot(xpos, y['locked_time'], 'kx', label = 'locked time ratio')
+        p += ax2.plot(xpos, y['avg_iotime'], 'mo', label = 'avg io time ratio')
+        p += ax2.plot(xpos, y['locked_time'], 'c*', label = 'max io time ratio')
+        ax2.legend(legend + p, tuple(lib + ['locked ratio', 'avg io ratio', 'max io ratio']), loc='upper center', ncol=2, bbox_to_anchor=(0.2, 1.10))
 plt.savefig("%s/res.png" % (working_dir))
