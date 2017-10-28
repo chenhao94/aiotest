@@ -129,6 +129,7 @@ test: pre_test
 test_mt: pre_test
 	#@for i in $(TEST_TYPE); do                                                                        
 	@$(MKDIR) log/$(CUR_TIME)
+	@echo log/others/$(TEST_NAME) log/$(CUR_TIME)/
 	@rsync -a log/others/$(TEST_NAME) log/$(CUR_TIME)/
 	@for i in 3; do                                                                          \
 	    for j in `seq 0 2`; do                                                                          \

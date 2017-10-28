@@ -23,6 +23,8 @@ for wid, w in enumerate(workload):
         for l in lib:
             y[l] = []
         y['locked_time'] = []
+        y['avg_iotime'] = []
+        y['max_iotime'] = []
         for t in xrange(1,5):
             for r in rw:
                 x.append(r+str(t))
@@ -48,7 +50,8 @@ for wid, w in enumerate(workload):
                        y['max_iotime'].append(maxio / float(m.group('time'))) 
                     
         ax1 = axarr[wid, fid]
-        plt.title("%s - %s File" % (w, f))
+        ax1.set_title("%s - %s File" % (w, f))
+        print "%s - %s File" % (w, f)
         xpos = [1.5 * width + j for j in xrange(0, len(y[l]))]
         ax1.set_xticks(xpos)
         ax1.set_xticklabels(tuple(x))
@@ -58,8 +61,8 @@ for wid, w in enumerate(workload):
             legend.append(ax1.bar([i * width + j for j in xrange(0, len(y[l]))], y[l], width, color=color[i])[0])
         ax2 = ax1.twinx()
         ax2.set_ylim(0., 1.)
-        p = ax2.plot(xpos, y['locked_time'], 'kx', label = 'locked time ratio')
-        p += ax2.plot(xpos, y['avg_iotime'], 'mo', label = 'avg io time ratio')
-        p += ax2.plot(xpos, y['locked_time'], 'c*', label = 'max io time ratio')
+        p = ax2.plot(xpos, y['locked_time'], 'kx-', label = 'locked time ratio')
+        p += ax2.plot(xpos, y['avg_iotime'], 'mo-', label = 'avg io time ratio')
+        p += ax2.plot(xpos, y['max_iotime'], 'c*-', label = 'max io time ratio')
         ax2.legend(legend + p, tuple(lib + ['locked ratio', 'avg io ratio', 'max io ratio']), loc='upper center', ncol=2, bbox_to_anchor=(0.2, 1.10))
 plt.savefig("%s/res.png" % (working_dir))
