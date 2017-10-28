@@ -54,6 +54,7 @@ export MV = mv -f
 export INSTALL = install
 export RM = rm -rf
 
+export TEST_TIME = $(shell echo $(CUR_TIME) | sed 's/\/.*//')
 export TEST_NAME = $(shell echo $(CUR_TIME) | sed 's/.*\///')
 
 .PHONY: all
@@ -129,8 +130,7 @@ test: pre_test
 test_mt: pre_test
 	#@for i in $(TEST_TYPE); do                                                                        
 	@$(MKDIR) log/$(CUR_TIME)
-	@echo log/others/$(TEST_NAME) log/$(CUR_TIME)/
-	@rsync -a log/others/$(TEST_NAME) log/$(CUR_TIME)/
+	@rsync -a log/others/$(TEST_NAME) log/$(TEST_TIME)/
 	@for i in 3; do                                                                          \
 	    for j in `seq 0 2`; do                                                                          \
 		    for k in `seq $(TEST_LOAD)`; do                                                             \
