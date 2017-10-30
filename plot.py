@@ -42,7 +42,7 @@ for wid, w in enumerate(workload):
                     else:
                         lock = float(m.group('lock'))
                         avgio = float(m.group('avgio'))
-                        avgwait = float(m.group('avwait'))
+                        avgwait = float(m.group('avgwait'))
                     y[l].append(float(m.group('iops')) / 1000.)
                     if l == 'PosixAIO':
                        y['locked_time'].append(lock / float(m.group('time'))) 
